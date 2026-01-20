@@ -7,6 +7,7 @@ import warnings
 warnings.filterwarnings('error', category=RuntimeWarning)
 
 import os
+import csv
 import sys
 import glob
 import ast
@@ -31,10 +32,16 @@ import pufferlib
 import pufferlib.sweep
 import pufferlib.vector
 import pufferlib.pytorch
+ADVANTAGE_KERNEL_AVAILABLE = False
 try:
-    from pufferlib import _C
+    from pufferlib import _C  # noqa: F401
+    ADVANTAGE_KERNEL_AVAILABLE = True
 except ImportError:
-    raise ImportError('Failed to import C/CUDA advantage kernel. If you have non-default PyTorch, try installing with --no-build-isolation')
+    warnings.warn(
+        'pufferlib._C not available; using Python advantage fallback. '
+        'Install with --no-build-isolation to enable the fast kernel.',
+        UserWarning
+    )
 
 import rich
 import rich.traceback
@@ -659,24 +666,36 @@ class PuffeRL:
 
 def compute_puff_advantage(values, rewards, terminals,
         ratio, advantages, gamma, gae_lambda, vtrace_rho_clip, vtrace_c_clip):
-    '''CUDA kernel for puffer advantage with automatic CPU fallback. You need
-    nvcc (in cuda-dev-tools or in a cuda-dev docker base) for PufferLib to
-    compile the fast version.'''
+    '''CUDA kernel for puffer advantage with automatic CPU fallback.
+    Falls back to Python GAE if extension is unavailable.'''
 
-    device = values.device
-    if not ADVANTAGE_CUDA:
-        values = values.cpu()
-        rewards = rewards.cpu()
-        terminals = terminals.cpu()
-        ratio = ratio.cpu()
-        advantages = advantages.cpu()
+    if ADVANTAGE_KERNEL_AVAILABLE:
+        device = values.device
+        if not ADVANTAGE_CUDA:
+            values = values.cpu()
+            rewards = rewards.cpu()
+            terminals = terminals.cpu()
+            ratio = ratio.cpu()
+            advantages = advantages.cpu()
 
-    torch.ops.pufferlib.compute_puff_advantage(values, rewards, terminals,
-        ratio, advantages, gamma, gae_lambda, vtrace_rho_clip, vtrace_c_clip)
+        torch.ops.pufferlib.compute_puff_advantage(values, rewards, terminals,
+            ratio, advantages, gamma, gae_lambda, vtrace_rho_clip, vtrace_c_clip)
 
-    if not ADVANTAGE_CUDA:
-        return advantages.to(device)
+        if not ADVANTAGE_CUDA:
+            return advantages.to(device)
 
+        return advantages
+
+    # Python fallback (GAE)
+    advantages.zero_()
+    last_gae = torch.zeros_like(advantages[:, 0])
+    horizon = rewards.shape[1]
+    for t in range(horizon - 1, -1, -1):
+        nonterminal = 1.0 - terminals[:, t]
+        next_value = values[:, t + 1] if t + 1 < horizon else 0.0
+        delta = rewards[:, t] + gamma * next_value * nonterminal - values[:, t]
+        last_gae = delta + gamma * gae_lambda * nonterminal * last_gae
+        advantages[:, t] = last_gae
     return advantages
 
 
@@ -831,6 +850,34 @@ class NoLogger:
     def close(self, model_path):
         pass
 
+class CSVLogger:
+    def __init__(self, args, csv_log=None, csv_log_dir=None):
+        self.run_id = str(int(100*time.time()))
+        env_name = args.get('env_name', 'run')
+        data_dir = csv_log_dir or args.get('train', {}).get('data_dir', 'experiments')
+        if csv_log is None:
+            filename = f'{env_name}_{self.run_id}.csv'
+            csv_log = os.path.join(data_dir, filename)
+        os.makedirs(os.path.dirname(csv_log), exist_ok=True)
+        self.csv_log = csv_log
+        self._file = open(csv_log, 'w', newline='')
+        self._writer = None
+        self._fields = None
+
+    def log(self, logs, step):
+        if self._fields is None:
+            self._fields = ['step'] + list(logs.keys())
+            self._writer = csv.DictWriter(self._file, fieldnames=self._fields)
+            self._writer.writeheader()
+        row = {field: logs.get(field, '') for field in self._fields}
+        row['step'] = step
+        self._writer.writerow(row)
+        self._file.flush()
+
+    def close(self, model_path):
+        if self._file:
+            self._file.close()
+
 class NeptuneLogger:
     def __init__(self, args, load_id=None, mode='async'):
         import neptune as nept
@@ -936,10 +983,15 @@ def train(env_name, args=None, vecenv=None, policy=None, logger=None, should_sto
         model.forward_eval = policy.forward_eval
         policy = model.to(local_rank)
 
-    if args['neptune']:
-        logger = NeptuneLogger(args)
-    elif args['wandb']:
-        logger = WandbLogger(args)
+    if logger is None:
+        if args['neptune']:
+            logger = NeptuneLogger(args)
+        elif args['wandb']:
+            logger = WandbLogger(args)
+        elif args.get('csv_log') or args.get('csv_log_dir'):
+            logger = CSVLogger(args, args.get('csv_log'), args.get('csv_log_dir'))
+        else:
+            logger = NoLogger(args)
 
     train_config = { **args['train'], 'env': env_name }
     pufferl = PuffeRL(train_config, vecenv, policy, logger)
@@ -1234,6 +1286,8 @@ def make_parser():
     parser.add_argument('--neptune', action='store_true', help='Use neptune for logging')
     parser.add_argument('--neptune-name', type=str, default='pufferai')
     parser.add_argument('--neptune-project', type=str, default='ablations')
+    parser.add_argument('--csv-log', type=str, default=None, help='Write logs to a CSV file')
+    parser.add_argument('--csv-log-dir', type=str, default=None, help='Directory for CSV logs')
     parser.add_argument('--no-model-upload', action='store_true', help='Do not upload models to wandb or neptune')
     parser.add_argument('--local-rank', type=int, default=0, help='Used by torchrun for DDP')
     parser.add_argument('--tag', type=str, default=None, help='Tag for experiment')

@@ -1,0 +1,23 @@
+project:
+  name: "PufferLib Drone Hover"
+  language: "Python"
+  framework: "Gymnasium"
+
+commands:
+  test: "python -m pytest -q"
+
+rules:
+  - "Keep the PRD task list in PufferLib/PRD.md under ## Tasks as checkboxes."
+  - "Use low-level drone control: 4 motor thrusts in [0, 1]."
+  - "Prefer lightweight Gymnasium environments unless explicitly told otherwise."
+  - "Avoid changes to puffertank unless required."
+  - "Add new drone code as a new env module; avoid editing unrelated envs."
+  - "Keep dependencies minimal (numpy, gymnasium) unless explicitly approved."
+
+boundaries:
+  never_touch:
+    - "puffertank/**"
+    - "PufferLib/pufferlib/extensions/**"
+    - "PufferLib/pufferlib/ocean/**"
+  ok_to_modify:
+    - "PufferLib/**"
