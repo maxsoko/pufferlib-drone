@@ -175,6 +175,8 @@ class DroneHoverEnv(gymnasium.Env):
         self.action_space = Box(low=0.0, high=1.0, shape=(4,), dtype=np.float32)
 
         self._rng = None
+        self.episode_count = 0
+        self.hover_episode_count = 0
         self._reset_state()
 
     def _reset_state(self):
@@ -186,8 +188,6 @@ class DroneHoverEnv(gymnasium.Env):
         self.hover_steps = 0
         self.hover_time = 0.0
         self.step_count = 0
-        self.episode_count = 0
-        self.hover_episode_count = 0
 
     def _sample_uniform(self, low, high, size):
         return self._rng.uniform(low=low, high=high, size=size).astype(np.float32)

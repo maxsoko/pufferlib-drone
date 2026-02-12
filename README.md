@@ -21,3 +21,7 @@ All of our documentation is hosted at [puffer.ai](https://puffer.ai "PufferLib D
    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=pufferai/pufferlib&type=Date" />
  </picture>
 </a>
+
+## Ralph Loop (Codex)
+
+For iterative PRD-driven Codex execution, run `./scripts/ralph-loop.sh` from `PufferLib/` (set `RALPH_UNSAFE=1` only if you explicitly want bypass mode).

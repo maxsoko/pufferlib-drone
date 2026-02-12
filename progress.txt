@@ -1,0 +1,37 @@
+# Ralph Progress
+
+## Iteration 1 - 2026-02-12T19:14:13Z
+- Fixed curriculum progression bug:
+  - Updated `pufferlib/environments/drone_hover/environment.py` so `episode_count` and `hover_episode_count` are lifetime counters and are not reset in `_reset_state()`.
+- Added focused regression tests in `tests/test_drone_hover_env.py`:
+  - `test_curriculum_progress_accumulates_across_resets`
+  - `test_hover_curriculum_target_seconds_accumulates`
+  - `test_pd_assist_anneal_scale_accumulates`
+- Removed duplicate workspace folder: `drone_rl/`.
+- Validation:
+  - Ran: `python -m pytest tests/test_drone_hover_env.py -q`
+  - Result: `6 passed`
+
+## Iteration 2 - 2026-02-12T19:14:13Z
+- Added Codex Ralph loop script:
+  - `scripts/ralph-loop.sh`
+  - Safe default: `codex exec --full-auto`
+  - Unsafe opt-in: `RALPH_UNSAFE=1` adds `--dangerously-bypass-approvals-and-sandbox`
+- Added README pointer:
+  - `README.md` section `Ralph Loop (Codex)`.
+- Validation:
+  - Ran: `bash -n scripts/ralph-loop.sh`
+  - Result: syntax OK
+
+## Iteration 3 - 2026-02-12T19:14:13Z
+- Ran post-fix CPU validation train/eval and appended results to `PRD.md`.
+- Training:
+  - Command: `python -m pufferlib.pufferl train drone_hover_robust --load-model-path experiments/drone_hover_robust_176940098863.pt --train.total-timesteps 100000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 512 --train.minibatch-size 512 --train.device cpu --train.optimizer adam --train.learning-rate 0.0003 --train.ent-coef 0.0 --csv-log-dir experiments`
+  - New model: `experiments/drone_hover_robust_177049920214.pt`
+  - Train log: `experiments/drone_hover_robust_curriculumfix_train_100k.log`
+- Eval (deterministic, 100 episodes, seed 42):
+  - `experiments/drone_hover_robust_eval_177049920214_wind03_kp38_kd35_100ep.csv`: 100/100, mean reward -165.126, mean hover 30.000
+  - `experiments/drone_hover_robust_eval_177049920214_wind04_kp38_kd35_100ep.csv`: 90/100, mean reward -197.172, mean hover 27.380
+  - `experiments/drone_hover_robust_eval_177049920214_wind04_kp42_kd39_100ep.csv`: 94/100, mean reward -184.144, mean hover 28.299
+- Outcome:
+  - No regression versus previous robust baseline under matched seeds/settings.
