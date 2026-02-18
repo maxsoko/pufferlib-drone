@@ -27,6 +27,31 @@
   - Manual piloting tools.
   - Multi-agent coordination.
 
+## Execution Strategy (v3.1)
+- Decision: progress incrementally, but stay inside the race objective as early as possible.
+- Rationale:
+  - Going directly to full race can be unstable (sparse success signal).
+  - Staying too long on hover can overfit to "stay still" behavior instead of fast gate completion.
+- Operational policy:
+  - Keep hover as a regression/safety check only.
+  - Main training should run on staged race curricula that increase task difficulty.
+- Curriculum ladder (race-first):
+  - Tier 1 (`drone_race_curriculum_tier1`): single-gate / low-randomization / low-wind.
+  - Tier 2 (`drone_race_curriculum_tier2`): short gate sequence / moderate randomization.
+  - Tier 3 (`drone_race_curriculum_tier3`): full gate sequence / stronger randomization (leaderboard prep).
+
+## Interface Assumptions (Qualifier)
+- Assumption: gate geometry/sequence and runtime interfaces will be provided by challenge organizers.
+- Assumption: sensor telemetry and visual/camera feed will be available through the official simulator interface.
+- Implication for implementation:
+  - Keep perception stack modular so we can swap from current state-vector baseline to official camera/sensor adapters quickly.
+  - Do not hardcode private shortcuts or privileged state that bypasses the provided interface.
+
+## PRD File Strategy
+- Keep one primary PRD file (`PRD.md`) with versioned sections (`v3`, `v3.1`, etc.) and archive blocks.
+- Create a separate PRD only when scope truly diverges (example: dedicated hardware flight program with separate acceptance gates and risks).
+- Current decision: continue in this single PRD and append incremental updates.
+
 ## PufferLib Correlation (Implementation Mapping)
 - Environment:
   - Add a new env package (proposed: `pufferlib/environments/drone_race/`) with gates, timing, ordered checkpoints, and invalid-run logic.
@@ -70,6 +95,23 @@
 - [ ] Define reward/objective shaping around progress-to-next-gate and completion time.
 - [x] Add `scripts/eval_drone_race.py` with summary CSV output for checkpoint comparison.
 - [x] Create fixed-seed benchmark suite and reporting template for challenge submissions.
+
+## Curriculum Runbook (Race-First)
+- Stage progression:
+  - Train `drone_race_curriculum_tier1` until stable valid completion.
+  - Continue with `drone_race_curriculum_tier2` (initialize from Tier 1 checkpoint).
+  - Continue with `drone_race_curriculum_tier3` (initialize from Tier 2 checkpoint).
+- Configs:
+  - `pufferlib/config/drone_race_curriculum_tier1.ini`
+  - `pufferlib/config/drone_race_curriculum_tier2.ini`
+  - `pufferlib/config/drone_race_curriculum_tier3.ini`
+- Example training commands:
+  - `python -m pufferlib.pufferl train drone_race_curriculum_tier1 --csv-log-dir experiments`
+  - `python -m pufferlib.pufferl train drone_race_curriculum_tier2 --load-model-path experiments/<tier1_ckpt>.pt --csv-log-dir experiments`
+  - `python -m pufferlib.pufferl train drone_race_curriculum_tier3 --load-model-path experiments/<tier2_ckpt>.pt --csv-log-dir experiments`
+- Fixed-seed parity eval (recommended each stage):
+  - `PYTHONPATH=. python scripts/eval_drone_race.py --mode policy --suite drone_race_v1_quick20 --model-path experiments/<ckpt>.pt --csv-path experiments/drone_race_eval_quick20.csv --summary-csv-path experiments/drone_race_eval_quick20_summary.csv --deterministic`
+  - `PYTHONPATH=. python scripts/eval_drone_race.py --mode policy --suite drone_race_v1_full100 --model-path experiments/<ckpt>.pt --csv-path experiments/drone_race_eval_full100.csv --summary-csv-path experiments/drone_race_eval_full100_summary.csv --deterministic`
 
 ## `drone_race` Env API Contract (v0.1)
 ### Environment IDs

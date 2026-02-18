@@ -165,3 +165,27 @@
   - Suite smoke result (`quick20`): `valid_rate=100%`, `success_rate=100%`, `mean_completion_time=12.178s`.
 - Next step:
   - Add a submission reporting helper that formats leaderboard-ready summary from summary CSV outputs.
+
+## Iteration 9 - 2026-02-18T02:59:47Z
+- Recorded execution decision in PRD: incremental progression inside race objective (hover kept as regression gate, not main training target).
+- Recorded PRD structure decision: continue a single versioned `PRD.md`; do not split into a new PRD unless scope diverges (e.g., dedicated hardware program).
+- Added staged race curriculum configs:
+  - `pufferlib/config/drone_race_curriculum_tier1.ini`
+  - `pufferlib/config/drone_race_curriculum_tier2.ini`
+  - `pufferlib/config/drone_race_curriculum_tier3.ini`
+- Added `Curriculum Runbook (Race-First)` section to `PRD.md` with tiered train/eval commands.
+- Validation:
+  - Ran config load check via `pufferl.load_config` for all three tiers -> pass.
+  - Ran: `python -m pytest tests/test_drone_race_env.py tests/test_eval_drone_race.py -q` -> `7 passed`.
+- Next step:
+  - Start Tier 1 training and gate promotion to Tier 2 on fixed-seed `quick20` validity/time metrics.
+
+## Iteration 10 - 2026-02-18T04:46:41Z
+- Added qualifier interface assumptions to `PRD.md` based on challenge brief alignment:
+  - gates/spec interfaces provided by organizers.
+  - sensor telemetry + visual/camera feed provided via official simulator interface.
+- Clarified implementation constraint:
+  - keep perception modular for fast adapter swap to official feeds.
+  - avoid hardcoded privileged state shortcuts outside provided interfaces.
+- Next step:
+  - add camera/sensor adapter abstraction in env wrapper once official interface docs are released.
