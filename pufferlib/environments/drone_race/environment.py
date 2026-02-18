@@ -6,6 +6,7 @@ from gymnasium.spaces import Box
 import pufferlib
 import pufferlib.emulation
 from .adapters import make_perception_adapter
+from .planner import make_planner
 
 
 def env_creator(name='drone_race'):
@@ -33,10 +34,6 @@ def _yaw_rotation(yaw):
         [[cy, -sy, 0.0], [sy, cy, 0.0], [0.0, 0.0, 1.0]],
         dtype=np.float32,
     )
-
-
-def _wrap_angle(angle):
-    return (angle + np.pi) % (2.0 * np.pi) - np.pi
 
 
 class DroneRaceEnv(gymnasium.Env):
@@ -85,6 +82,15 @@ class DroneRaceEnv(gymnasium.Env):
         camera_noise_std=0.0,
         camera_dropout_prob=0.0,
         allow_perception_fallback=True,
+        planner='gate_setpoint',
+        planner_speed_scale=0.85,
+        planner_forward_gain=0.8,
+        planner_lateral_gain=1.2,
+        planner_vertical_gain=1.0,
+        planner_yaw_gain=1.5,
+        planner_smoothing=1.0,
+        planner_confidence_threshold=0.25,
+        planner_fallback_forward_scale=0.15,
         render_mode=None,
     ):
         super().__init__()
@@ -123,6 +129,7 @@ class DroneRaceEnv(gymnasium.Env):
         self.camera_noise_std = float(max(camera_noise_std, 0.0))
         self.camera_dropout_prob = float(np.clip(camera_dropout_prob, 0.0, 1.0))
         self.allow_perception_fallback = bool(allow_perception_fallback)
+        self.planner_name = str(planner)
 
         self.gate_radius = float(gate_radius)
         self._build_course(
@@ -145,6 +152,17 @@ class DroneRaceEnv(gymnasium.Env):
             camera_noise_std=self.camera_noise_std,
             camera_dropout_prob=self.camera_dropout_prob,
             allow_perception_fallback=self.allow_perception_fallback,
+        )
+        self.planner = make_planner(
+            self.planner_name,
+            speed_scale=planner_speed_scale,
+            forward_gain=planner_forward_gain,
+            lateral_gain=planner_lateral_gain,
+            vertical_gain=planner_vertical_gain,
+            yaw_gain=planner_yaw_gain,
+            smoothing=planner_smoothing,
+            confidence_threshold=planner_confidence_threshold,
+            fallback_forward_scale=planner_fallback_forward_scale,
         )
         self.episode_count = 0
         self._reset_state()
@@ -233,6 +251,7 @@ class DroneRaceEnv(gymnasium.Env):
         self.wind = np.zeros(3, dtype=np.float32)
         self._initial_remaining_distance = 1.0
         self.perception_output = None
+        self.last_planner_output = None
 
     def _curriculum_progress(self):
         if not self.curriculum:
@@ -365,6 +384,7 @@ class DroneRaceEnv(gymnasium.Env):
         self._rng = np.random.default_rng(seed)
         self._reset_state()
         self.episode_count += 1
+        self.planner.reset()
 
         if self.start_position is not None:
             start = self.start_position.copy()
@@ -399,11 +419,21 @@ class DroneRaceEnv(gymnasium.Env):
         self._initial_remaining_distance = self._remaining_distance(self.position, self.current_gate_index)
         self.progress = self._compute_progress()
         self.perception_output = self.perception.observe(self)
+        self.last_planner_output = self.planner.plan(self, self.perception_output)
         info = {
             "perception_source": self.perception_output.source,
             "perception_confidence": float(self.perception_output.confidence),
             "perception_valid": int(bool(self.perception_output.valid)),
             "perception_schema_version": int(self.perception_output.schema_version),
+            "planner_source": self.last_planner_output.source,
+            "planner_fallback": int(bool(self.last_planner_output.fallback_active)),
+            "planner_schema_version": int(self.last_planner_output.schema_version),
+            "planner_target_gate_index": int(self.last_planner_output.target_gate_index),
+            "planner_lookahead_gates": int(self.last_planner_output.lookahead_gates),
+            "planner_setpoint_vx": float(self.last_planner_output.desired_velocity_body[0]),
+            "planner_setpoint_vy": float(self.last_planner_output.desired_velocity_body[1]),
+            "planner_setpoint_vz": float(self.last_planner_output.desired_velocity_body[2]),
+            "planner_setpoint_yaw_rate": float(self.last_planner_output.desired_yaw_rate),
         }
         return self._observation(), info
 
@@ -473,6 +503,7 @@ class DroneRaceEnv(gymnasium.Env):
             reward -= self.invalid_penalty
 
         self.perception_output = self.perception.observe(self)
+        self.last_planner_output = self.planner.plan(self, self.perception_output)
 
         info = {
             "elapsed_time": float(self.elapsed_time),
@@ -489,6 +520,15 @@ class DroneRaceEnv(gymnasium.Env):
             "perception_confidence": float(self.perception_output.confidence),
             "perception_valid": int(bool(self.perception_output.valid)),
             "perception_schema_version": int(self.perception_output.schema_version),
+            "planner_source": self.last_planner_output.source,
+            "planner_fallback": int(bool(self.last_planner_output.fallback_active)),
+            "planner_schema_version": int(self.last_planner_output.schema_version),
+            "planner_target_gate_index": int(self.last_planner_output.target_gate_index),
+            "planner_lookahead_gates": int(self.last_planner_output.lookahead_gates),
+            "planner_setpoint_vx": float(self.last_planner_output.desired_velocity_body[0]),
+            "planner_setpoint_vy": float(self.last_planner_output.desired_velocity_body[1]),
+            "planner_setpoint_vz": float(self.last_planner_output.desired_velocity_body[2]),
+            "planner_setpoint_yaw_rate": float(self.last_planner_output.desired_yaw_rate),
         }
 
         self.last_action = action
@@ -496,40 +536,19 @@ class DroneRaceEnv(gymnasium.Env):
 
     def scripted_action(
         self,
-        speed_scale=0.85,
-        forward_gain=0.8,
-        lateral_gain=1.2,
-        vertical_gain=1.0,
-        yaw_gain=1.5,
     ):
         if self.perception_output is None:
             self.perception_output = self.perception.observe(self)
-        rel_center_body = self.perception_output.relative_gate_center_body
+        self.last_planner_output = self.planner.plan(self, self.perception_output)
 
         max_xy = max(self.max_speed_xy, 1e-6)
         max_z = max(self.max_speed_z, 1e-6)
-
-        target_xy = speed_scale * max_xy
-        forward_target = float(rel_center_body[0])
-        if abs(forward_target) < self.gate_radius:
-            # Keep a small forward bias near the gate plane so we don't stall before crossing.
-            forward_target += 0.5 * self.gate_radius
-        vx_cmd = np.clip(forward_gain * forward_target, -target_xy, target_xy)
-        vy_cmd = np.clip(lateral_gain * rel_center_body[1], -target_xy, target_xy)
-        vz_cmd = np.clip(vertical_gain * rel_center_body[2], -speed_scale * max_z, speed_scale * max_z)
-
-        gate_idx = min(self.current_gate_index, self.gates_total - 1)
-        gate_normal = self.gate_normals[gate_idx]
-        desired_yaw = float(np.arctan2(gate_normal[1], gate_normal[0]))
-        yaw_error = _wrap_angle(desired_yaw - float(self.angles[2]))
-        yaw_rate_cmd = np.clip(yaw_gain * yaw_error, -self.max_yaw_rate, self.max_yaw_rate)
-
         action = np.array(
             [
-                vx_cmd / max_xy,
-                vy_cmd / max_xy,
-                vz_cmd / max_z,
-                yaw_rate_cmd / max(self.max_yaw_rate, 1e-6),
+                self.last_planner_output.desired_velocity_body[0] / max_xy,
+                self.last_planner_output.desired_velocity_body[1] / max_xy,
+                self.last_planner_output.desired_velocity_body[2] / max_z,
+                self.last_planner_output.desired_yaw_rate / max(self.max_yaw_rate, 1e-6),
             ],
             dtype=np.float32,
         )

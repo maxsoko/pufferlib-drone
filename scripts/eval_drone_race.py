@@ -87,12 +87,31 @@ def _eval_once(raw_env, seed, mode, policy, device, deterministic):
     terminated = False
     truncated = False
     info = {}
+    planner_fallback_steps = 0
+    setpoint_delta_sum = 0.0
+    setpoint_delta_count = 0
+    prev_setpoint = None
 
     while True:
         action = _select_action(raw_env, obs, mode, policy, device, deterministic)
         obs, reward, terminated, truncated, info = raw_env.step(action)
         total_reward += reward
         steps += 1
+
+        planner_fallback_steps += int(info.get("planner_fallback", 0))
+        current_setpoint = np.array(
+            [
+                float(info.get("planner_setpoint_vx", 0.0)),
+                float(info.get("planner_setpoint_vy", 0.0)),
+                float(info.get("planner_setpoint_vz", 0.0)),
+            ],
+            dtype=np.float32,
+        )
+        if prev_setpoint is not None:
+            setpoint_delta_sum += float(np.linalg.norm(current_setpoint - prev_setpoint))
+            setpoint_delta_count += 1
+        prev_setpoint = current_setpoint
+
         if terminated or truncated:
             break
 
@@ -120,6 +139,10 @@ def _eval_once(raw_env, seed, mode, policy, device, deterministic):
         "out_of_order": int(info.get("out_of_order", 0)),
         "missed_gate": int(info.get("missed_gate", 0)),
         "progress": float(info.get("progress", 0.0)),
+        "planner_fallback_steps": int(planner_fallback_steps),
+        "planner_fallback_rate": float(planner_fallback_steps / max(steps, 1)),
+        "setpoint_smoothness": float(setpoint_delta_sum / max(setpoint_delta_count, 1)),
+        "planner_target_gate_index_final": int(info.get("planner_target_gate_index", -1)),
     }
 
 
@@ -143,6 +166,8 @@ def _summarize(rows, checkpoint, suite_name):
         "out_of_order_rate": float(np.mean([r["out_of_order"] for r in rows])) if rows else 0.0,
         "missed_gate_rate": float(np.mean([r["missed_gate"] for r in rows])) if rows else 0.0,
         "mean_gates_passed": float(np.mean([r["gates_passed"] for r in rows])) if rows else 0.0,
+        "mean_planner_fallback_rate": float(np.mean([r["planner_fallback_rate"] for r in rows])) if rows else 0.0,
+        "mean_setpoint_smoothness": float(np.mean([r["setpoint_smoothness"] for r in rows])) if rows else 0.0,
     }
     return summary
 

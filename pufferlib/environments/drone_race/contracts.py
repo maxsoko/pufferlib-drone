@@ -21,6 +21,8 @@ class PlannerOutput:
     schema_version: int
     desired_velocity_body: np.ndarray
     desired_yaw_rate: float
+    target_gate_index: int
+    lookahead_gates: int
     fallback_active: bool
     source: str
 

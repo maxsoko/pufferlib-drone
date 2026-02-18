@@ -219,3 +219,34 @@
   - Ran config load check for `drone_race` + curriculum tiers via `pufferl.load_config` -> pass.
 - PRD sync:
   - Marked Phase 0 and Phase 1 adapter-first checklist items complete in `PRD.md`.
+
+## Iteration 13 - 2026-02-18T05:10:15Z
+- Implemented Phase 2 planner layer for Option 2 modular stack.
+- Added new module:
+  - `pufferlib/environments/drone_race/planner.py` (`GateSetpointPlanner`, planner factory).
+- Updated planner contract:
+  - `PlannerOutput` now includes `target_gate_index` and `lookahead_gates` metadata.
+- Updated `pufferlib/environments/drone_race/environment.py`:
+  - wired planner runtime (`planner` + planner hyperparameter kwargs).
+  - integrated planner outputs into reset/step `info` (fallback, setpoint components, target index).
+  - routed scripted baseline through planner output instead of direct hardcoded logic.
+- Updated race configs to expose planner hyperparameters:
+  - `pufferlib/config/drone_race.ini`
+  - `pufferlib/config/drone_race_curriculum.ini`
+  - `pufferlib/config/drone_race_curriculum_tier1.ini`
+  - `pufferlib/config/drone_race_curriculum_tier2.ini`
+  - `pufferlib/config/drone_race_curriculum_tier3.ini`
+- Updated eval metrics in `scripts/eval_drone_race.py`:
+  - per-episode: `planner_fallback_steps`, `planner_fallback_rate`, `setpoint_smoothness`, final planner target index.
+  - summary: `mean_planner_fallback_rate`, `mean_setpoint_smoothness`.
+- Added planner-focused tests:
+  - `tests/test_drone_race_planner.py` (limits, fallback activation, monotonic planner target gate index).
+- Reliability fix:
+  - default `planner_smoothing` set to `1.0` (keeps scripted baseline parity while preserving planner interfaces/metrics).
+- Validation:
+  - Ran: `python -m pytest tests/test_drone_race_env.py tests/test_drone_race_adapters.py tests/test_drone_race_planner.py tests/test_eval_drone_race.py -q` -> `13 passed`.
+  - Ran: `PYTHONPATH=. python scripts/eval_drone_race.py --mode scripted --suite drone_race_v1_quick20 --csv-path experiments/drone_race_eval_suite_quick20.csv --summary-csv-path experiments/drone_race_eval_suite_quick20_summary.csv` -> pass.
+  - Quick20 scripted result: `valid_rate=100%`, `success_rate=100%`, `mean_completion_time=12.178s`.
+  - Verified config load: `drone_race` planner=`gate_setpoint`, `planner_smoothing=1.0`.
+- PRD sync:
+  - Marked Phase 2 backlog items complete in `PRD.md`.

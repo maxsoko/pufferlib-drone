@@ -84,11 +84,11 @@
 - [x] Add deterministic unit tests for adapter output shape/range/failure handling.
 
 ### Phase 2: Planner Layer
-- [ ] Implement planner baseline that outputs smooth setpoints to next gate.
-- [ ] Add planner constraints (speed cap, yaw-rate cap, optional lookahead limit).
-- [ ] Add planner fallback behavior for low-confidence perception frames.
-- [ ] Add planner metrics to eval CSV (setpoint smoothness, fallback count).
-- [ ] Add planner-focused tests (gate order adherence, no backward target jumps).
+- [x] Implement planner baseline that outputs smooth setpoints to next gate.
+- [x] Add planner constraints (speed cap, yaw-rate cap, optional lookahead limit).
+- [x] Add planner fallback behavior for low-confidence perception frames.
+- [x] Add planner metrics to eval CSV (setpoint smoothness, fallback count).
+- [x] Add planner-focused tests (gate order adherence, no backward target jumps).
 
 ### Phase 3: Controller Layer
 - [ ] Add dedicated controller module for setpoint tracking (separate from env step logic).
