@@ -189,3 +189,33 @@
   - avoid hardcoded privileged state shortcuts outside provided interfaces.
 - Next step:
   - add camera/sensor adapter abstraction in env wrapper once official interface docs are released.
+
+## Iteration 11 - 2026-02-18T04:58:21Z
+- Updated `PRD.md` to lock architecture decision to Option 2 (modular perception/planner/controller).
+- Added `Drone Hover Boundary` section to explicitly keep race implementation on `drone_race` surface only.
+- Added `Extended Task Backlog (Option 2)` with phased checklist (interfaces, perception, planner, controller, training, eval/visualization, sim2real hooks).
+- Next step:
+  - implement Phase 0 contracts and wire adapter selection in `drone_race` config/runtime.
+
+## Iteration 12 - 2026-02-18T05:02:42Z
+- Implemented Phase 0 contracts + Phase 1 adapter-first perception wiring for `drone_race`.
+- Added new modules:
+  - `pufferlib/environments/drone_race/contracts.py` (`PerceptionOutput`, `PlannerOutput`, `ControllerOutput`, schema version).
+  - `pufferlib/environments/drone_race/adapters.py` (adapter abstraction + `privileged_state` and `camera_sensor_stub`).
+- Updated `pufferlib/environments/drone_race/environment.py`:
+  - added runtime adapter selection kwargs (`perception_adapter`, camera noise/dropout, fallback flag).
+  - integrated adapter output into observations and scripted baseline path.
+  - added perception diagnostics to `reset`/`step` info (`source`, `confidence`, `valid`, schema version).
+- Updated race configs to expose adapter selection knobs:
+  - `pufferlib/config/drone_race.ini`
+  - `pufferlib/config/drone_race_curriculum.ini`
+  - `pufferlib/config/drone_race_curriculum_tier1.ini`
+  - `pufferlib/config/drone_race_curriculum_tier2.ini`
+  - `pufferlib/config/drone_race_curriculum_tier3.ini`
+- Added tests:
+  - `tests/test_drone_race_adapters.py` (unknown adapter error, privileged adapter info, camera stub invalid/dropout behavior).
+- Validation:
+  - Ran: `python -m pytest tests/test_drone_race_env.py tests/test_drone_race_adapters.py tests/test_eval_drone_race.py -q` -> `10 passed`.
+  - Ran config load check for `drone_race` + curriculum tiers via `pufferl.load_config` -> pass.
+- PRD sync:
+  - Marked Phase 0 and Phase 1 adapter-first checklist items complete in `PRD.md`.

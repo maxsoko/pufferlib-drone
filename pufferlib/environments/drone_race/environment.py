@@ -5,6 +5,7 @@ from gymnasium.spaces import Box
 
 import pufferlib
 import pufferlib.emulation
+from .adapters import make_perception_adapter
 
 
 def env_creator(name='drone_race'):
@@ -80,6 +81,10 @@ class DroneRaceEnv(gymnasium.Env):
         w_time=1.0,
         w_ctrl=0.01,
         invalid_penalty=40.0,
+        perception_adapter='privileged_state',
+        camera_noise_std=0.0,
+        camera_dropout_prob=0.0,
+        allow_perception_fallback=True,
         render_mode=None,
     ):
         super().__init__()
@@ -114,6 +119,10 @@ class DroneRaceEnv(gymnasium.Env):
         self.w_time = float(w_time)
         self.w_ctrl = float(w_ctrl)
         self.invalid_penalty = float(invalid_penalty)
+        self.perception_adapter_name = str(perception_adapter)
+        self.camera_noise_std = float(max(camera_noise_std, 0.0))
+        self.camera_dropout_prob = float(np.clip(camera_dropout_prob, 0.0, 1.0))
+        self.allow_perception_fallback = bool(allow_perception_fallback)
 
         self.gate_radius = float(gate_radius)
         self._build_course(
@@ -131,6 +140,12 @@ class DroneRaceEnv(gymnasium.Env):
         self.action_space = Box(low=-1.0, high=1.0, shape=(4,), dtype=np.float32)
 
         self._rng = None
+        self.perception = make_perception_adapter(
+            self.perception_adapter_name,
+            camera_noise_std=self.camera_noise_std,
+            camera_dropout_prob=self.camera_dropout_prob,
+            allow_perception_fallback=self.allow_perception_fallback,
+        )
         self.episode_count = 0
         self._reset_state()
 
@@ -217,6 +232,7 @@ class DroneRaceEnv(gymnasium.Env):
         self.progress = 0.0
         self.wind = np.zeros(3, dtype=np.float32)
         self._initial_remaining_distance = 1.0
+        self.perception_output = None
 
     def _curriculum_progress(self):
         if not self.curriculum:
@@ -261,7 +277,11 @@ class DroneRaceEnv(gymnasium.Env):
         return rel_center_body, normal_body
 
     def _observation(self):
-        rel_center_body, normal_body = self._relative_gate_pose_body()
+        if self.perception_output is None:
+            self.perception_output = self.perception.observe(self)
+
+        rel_center_body = self.perception_output.relative_gate_center_body
+        normal_body = self.perception_output.gate_normal_body
         remaining = self._remaining_distance(self.position, self.current_gate_index)
         remaining_norm = remaining / max(self._initial_remaining_distance, 1e-6)
         gate_index_norm = self.current_gate_index / max(self.gates_total, 1)
@@ -378,7 +398,14 @@ class DroneRaceEnv(gymnasium.Env):
 
         self._initial_remaining_distance = self._remaining_distance(self.position, self.current_gate_index)
         self.progress = self._compute_progress()
-        return self._observation(), {}
+        self.perception_output = self.perception.observe(self)
+        info = {
+            "perception_source": self.perception_output.source,
+            "perception_confidence": float(self.perception_output.confidence),
+            "perception_valid": int(bool(self.perception_output.valid)),
+            "perception_schema_version": int(self.perception_output.schema_version),
+        }
+        return self._observation(), info
 
     def step(self, action):
         action = np.clip(np.asarray(action, dtype=np.float32), -1.0, 1.0)
@@ -445,6 +472,8 @@ class DroneRaceEnv(gymnasium.Env):
         if terminated and not success:
             reward -= self.invalid_penalty
 
+        self.perception_output = self.perception.observe(self)
+
         info = {
             "elapsed_time": float(self.elapsed_time),
             "gate_index": int(self.current_gate_index),
@@ -456,6 +485,10 @@ class DroneRaceEnv(gymnasium.Env):
             "out_of_order": int(bool(self.out_of_order)),
             "missed_gate": int(bool(self.missed_gate)),
             "progress": float(self.progress),
+            "perception_source": self.perception_output.source,
+            "perception_confidence": float(self.perception_output.confidence),
+            "perception_valid": int(bool(self.perception_output.valid)),
+            "perception_schema_version": int(self.perception_output.schema_version),
         }
 
         self.last_action = action
@@ -469,7 +502,9 @@ class DroneRaceEnv(gymnasium.Env):
         vertical_gain=1.0,
         yaw_gain=1.5,
     ):
-        rel_center_body, _ = self._relative_gate_pose_body()
+        if self.perception_output is None:
+            self.perception_output = self.perception.observe(self)
+        rel_center_body = self.perception_output.relative_gate_center_body
 
         max_xy = max(self.max_speed_xy, 1e-6)
         max_z = max(self.max_speed_z, 1e-6)

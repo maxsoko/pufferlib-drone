@@ -52,6 +52,70 @@
 - Create a separate PRD only when scope truly diverges (example: dedicated hardware flight program with separate acceptance gates and risks).
 - Current decision: continue in this single PRD and append incremental updates.
 
+## Architecture Decision (v3.2)
+- Selected approach: Option 2 modular stack.
+  - Perception: sensor/camera -> gate observations.
+  - Planning: gate observations + race context -> setpoint intent.
+  - Control: setpoint intent -> bounded low-level action (PD + residual path later).
+- Why selected:
+  - Better debuggability than end-to-end monolith.
+  - Cleaner interface boundary for organizer-provided camera/sensor feeds.
+  - Stronger sim2real path due to explicit planner/controller contracts.
+
+## Drone Hover Boundary
+- `drone_hover` is not the active implementation surface for the race system.
+- `drone_hover` remains only:
+  - a regression/safety reference,
+  - an optional controller tuning sandbox.
+- Race development should target `drone_race` modules/configs/scripts only, unless a specific cross-env bug requires shared-core fixes.
+
+## Extended Task Backlog (Option 2)
+### Phase 0: Interfaces and Contracts
+- [x] Define `PerceptionOutput` contract (gate pose/confidence + optional uncertainty).
+- [x] Define `PlannerOutput` contract (setpoint velocity/yaw intent + horizon metadata).
+- [x] Define `ControllerInput/Output` contract (setpoint -> action with bounds/flags).
+- [x] Add schema/version field for each interface payload to prevent integration drift.
+
+### Phase 1: Perception Layer (Adapter-First)
+- [x] Add perception adapter abstraction (`state_adapter` + `camera_sensor_adapter`).
+- [x] Keep current privileged state path as debug adapter only (not leaderboard mode).
+- [x] Implement runtime flag for adapter selection in config.
+- [x] Add perception diagnostics in `info` (source, confidence, validity/dropout flags).
+- [x] Add deterministic unit tests for adapter output shape/range/failure handling.
+
+### Phase 2: Planner Layer
+- [ ] Implement planner baseline that outputs smooth setpoints to next gate.
+- [ ] Add planner constraints (speed cap, yaw-rate cap, optional lookahead limit).
+- [ ] Add planner fallback behavior for low-confidence perception frames.
+- [ ] Add planner metrics to eval CSV (setpoint smoothness, fallback count).
+- [ ] Add planner-focused tests (gate order adherence, no backward target jumps).
+
+### Phase 3: Controller Layer
+- [ ] Add dedicated controller module for setpoint tracking (separate from env step logic).
+- [ ] Add explicit saturation and anti-windup style protection on action outputs.
+- [ ] Add residual hook point (`alpha`) but keep residual disabled by default initially.
+- [ ] Add fallback-to-safe-controller trigger path and event logging.
+- [ ] Add controller tests for saturation, fallback, and deterministic behavior.
+
+### Phase 4: Training and Curriculum Wiring
+- [ ] Train planner/controller stack on Tier 1 until stable valid completion.
+- [ ] Promote to Tier 2 using checkpoint warm-start + fixed-seed eval gates.
+- [ ] Promote to Tier 3 using checkpoint warm-start + fixed-seed eval gates.
+- [ ] Define promotion criteria (valid_rate and completion_time thresholds).
+- [ ] Record promotion decisions and metrics in `PRD.md` + `progress.txt`.
+
+### Phase 5: Evaluation and Visualization
+- [ ] Extend eval output with component diagnostics (perception/planner/controller stats).
+- [ ] Add trajectory logging (position, target, gate index) per episode.
+- [ ] Add visualization script for trajectory overlays and completion-time distributions.
+- [ ] Add leaderboard report template from full100 summary CSV.
+
+### Phase 6: Sim2Real Readiness Hooks
+- [ ] Add latency model knobs (sensor + actuator) and randomization schedule.
+- [ ] Add sensor corruption knobs (bias/noise/dropout) in race configs.
+- [ ] Add disturbance model knobs (gust profile, low-frequency drift).
+- [ ] Add acceptance gates tied to full100 suite and disturbance tiers.
+
 ## PufferLib Correlation (Implementation Mapping)
 - Environment:
   - Add a new env package (proposed: `pufferlib/environments/drone_race/`) with gates, timing, ordered checkpoints, and invalid-run logic.
