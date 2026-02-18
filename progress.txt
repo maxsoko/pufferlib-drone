@@ -35,3 +35,113 @@
   - `experiments/drone_hover_robust_eval_177049920214_wind04_kp42_kd39_100ep.csv`: 94/100, mean reward -184.144, mean hover 28.299
 - Outcome:
   - No regression versus previous robust baseline under matched seeds/settings.
+
+## Next Execution Plan (Sim2Real Checklist)
+- Priority 1: Controller interface freeze
+  - Add explicit config/action-mode plumbing for setpoint/residual interface.
+  - Keep PD baseline in control loop; expose bounded residual gain `alpha`.
+- Priority 2: Sim fidelity gates
+  - Implement latency randomization, actuator lag, sensor bias/dropout, and gust disturbances.
+  - Add deterministic tests for each new dynamics/noise component.
+- Priority 3: Quantitative gates
+  - Run 100-episode eval suites for wind 0.3 and 0.4 using fixed seeds.
+  - Compare against baseline `experiments/drone_hover_robust_177049920214.pt`.
+- Priority 4: Hardware safety prework
+  - Add software envelope checks and automatic fallback-to-PD trigger hooks.
+  - Define telemetry fields needed for loop-rate, delay, and fallback events.
+- Exit criteria before untethered flight:
+  - Wind 0.3 success >=95%, wind 0.4 success >=90%, no NaN/inf events, and no baseline regression.
+
+## Concrete Implementation Checklist (Loop-Ready)
+
+### Phase A: Gate Challenge Environment Scaffold
+- [x] Create `pufferlib/environments/drone_race/environment.py` with:
+  - ordered gate sequence state
+  - elapsed timer
+  - pass/invalidation logic
+- [x] Create `pufferlib/environments/drone_race/__init__.py` + `torch.py` stubs.
+- [x] Add configs:
+  - `pufferlib/config/drone_race.ini`
+  - `pufferlib/config/drone_race_curriculum.ini`
+- [x] Add minimal tests:
+  - gate order validity
+  - timer reset/monotonicity
+  - termination/truncation behavior
+
+### Phase B: Baseline + Eval
+- [x] Add scripted baseline navigator in env or helper module.
+- [x] Add `scripts/eval_drone_race.py`:
+  - per-episode CSV
+  - summary CSV by checkpoint
+  - metrics: valid rate, completion time, crash/invalid counts
+- [ ] Define fixed seed suite for leaderboard parity.
+
+### Phase C: Sim2Real Alignment
+- [ ] Add command interface mode in env config (`setpoint` / `residual`).
+- [ ] Add bounded residual gain parameter (`alpha`) and clamp logic.
+- [ ] Add latency randomization + actuator lag + sensor bias/dropout + gust disturbances.
+- [ ] Add fallback-to-PD hooks and log fallback events in `info`.
+
+### Phase D: Acceptance Gates
+- [ ] 100-episode eval @ wind 0.3: valid success >=95%.
+- [ ] 100-episode eval @ wind 0.4: valid success >=90%.
+- [ ] No regression against `experiments/drone_hover_robust_177049920214.pt` on matched settings.
+- [ ] No NaN/inf events in rollout/eval logs.
+
+## Iteration 4 - 2026-02-14T17:35:35Z
+- Documentation and planning updates completed before loop start.
+- Added concrete loop-ready implementation checklist for gate challenge and sim2real acceptance gates.
+- Added README note for Ray backend quickstart (`--vec.backend Ray`) and when to prefer Multiprocessing.
+- Next action: start `./scripts/ralph-loop.sh` for iterative PRD-driven execution.
+
+
+## Iteration 5 - 2026-02-17T02:57:52Z
+- Troubleshot Ralph loop run-state visibility and confirmed end-to-end execution path.
+- Updated `scripts/ralph-loop.sh`:
+  - Added `JSON_OUTPUT` (default `1`) to pass `--json` to `codex exec`.
+  - Added `SAVE_LAST_MESSAGE` (default `1`) to write per-iteration last-message files.
+  - Added `LOG_DIR` (default `logs/ralph-loop`) and per-iteration log naming.
+  - Piped `codex exec` output through `tee` so progress is visible and tail-able.
+- Validation:
+  - Ran: `bash -n scripts/ralph-loop.sh` -> pass.
+  - Ran: `printf 'Reply with exactly: ok' | codex exec --cd /Users/anon/code/puffer_ai/PufferLib --full-auto --json --output-last-message /tmp/codex_last_msg_test.txt -` -> pass (`ok`).
+  - Ran: isolated end-to-end smoke test with temp PRD/progress and `MAX_ITERATIONS=1` -> pass; produced both `.log` and `.last.txt` artifacts.
+- Operator note:
+  - Live progress: `tail -f logs/ralph-loop/iter_<n>_<timestamp>.log`
+  - Final message artifact: `logs/ralph-loop/iter_<n>_<timestamp>.last.txt`
+
+## Iteration 6 - 2026-02-18T00:16:51Z
+- Completed Phase A scaffold follow-through for `drone_race`.
+- Added config:
+  - `pufferlib/config/drone_race_curriculum.ini` with curriculum/randomization defaults.
+- Added focused tests:
+  - `tests/test_drone_race_env.py`
+  - coverage: out-of-order gate invalidation, elapsed timer monotonicity/reset, timeout truncation behavior.
+- Fixed scaffold bug discovered by tests:
+  - `pufferlib/environments/drone_race/environment.py`
+  - corrected observation shape/normalization scale mismatch (`22` features).
+- Validation:
+  - Ran: `python -m pytest tests/test_drone_race_env.py -q` -> `3 passed`.
+  - Ran: `python -m pytest tests/test_drone_hover_env.py tests/test_drone_race_env.py -q` -> `9 passed`.
+- Next step:
+  - Begin Phase B by adding scripted baseline navigator and `scripts/eval_drone_race.py`.
+
+## Iteration 7 - 2026-02-18T00:30:34Z
+- Completed Phase B baseline/eval core implementation.
+- Updated `pufferlib/environments/drone_race/environment.py`:
+  - added `scripted_action()` deterministic baseline navigator.
+  - fixed out-of-order invalidation bug by excluding already-passed gates from out-of-order checks.
+  - added forward bias near gate plane in scripted policy to prevent stalling before crossing.
+- Added `scripts/eval_drone_race.py`:
+  - supports `--mode scripted` and `--mode policy`.
+  - writes per-episode CSV and summary CSV.
+  - reports valid rate, success rate, completion-time stats, and invalid/crash breakdown.
+- Added test coverage in `tests/test_drone_race_env.py`:
+  - `test_scripted_baseline_completes_simple_course`.
+- Validation:
+  - Ran: `python -m pytest tests/test_drone_race_env.py -q` -> `4 passed`.
+  - Ran: `python -m pytest tests/test_drone_hover_env.py tests/test_drone_race_env.py -q` -> `10 passed`.
+  - Ran: `PYTHONPATH=. python scripts/eval_drone_race.py --mode scripted --episodes 5 --seed 42 --csv-path experiments/drone_race_eval_scripted_smoke.csv --summary-csv-path experiments/drone_race_eval_scripted_smoke_summary.csv` -> pass.
+  - Smoke benchmark result: `valid_rate=100%`, `success_rate=100%`, `mean_completion_time=12.168s` on 5 episodes.
+- Next step:
+  - Define fixed-seed leaderboard suite and automate it via eval script presets/config.

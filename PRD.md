@@ -1,4 +1,150 @@
-# PRD: Drone Hover Training (v2)
+# PRD: Drone Gate Navigation Challenge (v3)
+
+## Challenge Goal (Primary)
+- Build an autonomous drone system that flies through a sequence of gates in the correct order, as fast as possible, inside the virtual environment.
+
+## Challenge Definition
+- Gate recognition: detect and localize mostly standardized gates from available sensors and visual feed.
+- Drone control: command flight dynamics (speed, orientation, thrust) with a tuned speed/accuracy tradeoff.
+- Path planning & navigation: compute and track an efficient route through all gates under realistic drone dynamics limits.
+- Winning metric: shortest valid completion time for all gates in order.
+- Constraints: fully autonomous (no manual control and no hardware advantage assumptions).
+
+## Success Metrics (v3)
+- Primary: completion time over full gate course (lower is better).
+- Required validity: all gates passed in correct order; run invalid if missed/out-of-order.
+- Reliability: success rate over fixed-seed eval suite (target >=90% valid runs).
+- Control quality: low crash rate and bounded attitude/velocity excursions.
+- Robustness: maintain performance under randomized wind/noise/latency settings.
+
+## Scope (v3)
+- In scope:
+  - Simulation-only autonomous stack in PufferLib.
+  - Perception + planning + control integration.
+  - Training/eval pipelines and leaderboard-style timing metrics.
+- Out of scope (initial qualifier phase):
+  - Real hardware flight.
+  - Manual piloting tools.
+  - Multi-agent coordination.
+
+## PufferLib Correlation (Implementation Mapping)
+- Environment:
+  - Add a new env package (proposed: `pufferlib/environments/drone_race/`) with gates, timing, ordered checkpoints, and invalid-run logic.
+  - Keep `drone_hover` as stabilization baseline and controller tuning sandbox.
+- Configs:
+  - Add race configs in `pufferlib/config/` (e.g., `drone_race.ini`, `drone_race_curriculum.ini`).
+  - Reuse existing `pufferl` CLI flow: `python -m pufferlib.pufferl train <env_name>`.
+- Models:
+  - Start with two-track baseline:
+    - Track A: end-to-end policy from observations to control commands.
+    - Track B: hybrid stack (perception/planner + PD/residual controller).
+- Eval:
+  - Extend `scripts/eval_drone_hover.py` pattern into a race eval script (proposed: `scripts/eval_drone_race.py`) with:
+    - completion time
+    - gate pass count/order validity
+    - crash/timeout statistics
+    - summary CSV across checkpoints
+
+## System Design (v3)
+- Perception:
+  - Gate detection/localization from visual and/or state inputs.
+- Planning:
+  - Next-gate targeting and trajectory intent generation.
+- Control:
+  - Low-level actuator command generation with safety bounds.
+  - Prefer PD-assisted residual control for robustness and transferability.
+- Learning loop:
+  - Vectorized rollouts -> PPO updates -> fixed-seed timed eval -> checkpoint ranking by valid completion time.
+
+## Milestones (v3)
+- M0: Define race environment interface and validity rules (ordered gate passing + timing).
+- M1: Build a deterministic scripted baseline that completes the course reliably.
+- M2: Train first autonomous policy to beat scripted baseline on median time.
+- M3: Improve robustness (wind/noise/latency randomization) while preserving completion validity.
+- M4: Optimize for leaderboard objective (best-time runs with reliability constraints).
+
+## Immediate Tasks (v3)
+- [x] Finalize race task spec in env API terms (observations, action semantics, termination, invalidation).
+- [x] Implement gate sequence logic and per-run timer in new `drone_race` environment.
+- [x] Add baseline scripted navigator and benchmark its completion time/success rate.
+- [ ] Define reward/objective shaping around progress-to-next-gate and completion time.
+- [x] Add `scripts/eval_drone_race.py` with summary CSV output for checkpoint comparison.
+- [ ] Create fixed-seed benchmark suite and reporting template for challenge submissions.
+
+## `drone_race` Env API Contract (v0.1)
+### Environment IDs
+- `package = drone_race`
+- `env_name = drone_race` (base) and `drone_race_curriculum` (randomization ramp)
+
+### Observation Space
+- `state` baseline (v0.1, fast iteration): continuous `Box` vector normalized to roughly `[-1, 1]`.
+- Proposed fields (concatenated):
+  - Drone kinematics: position `(x,y,z)`, velocity `(vx,vy,vz)`, attitude `(roll,pitch,yaw)`, angular velocity `(wx,wy,wz)`.
+  - Next-gate relative pose: gate center in drone/body frame `(gx,gy,gz)`, gate normal in body frame `(nx,ny,nz)`, gate size/radius.
+  - Race context: normalized `gate_index`, normalized elapsed time, remaining distance estimate.
+- Optional vision mode (v0.2+):
+  - Add camera input path (image tensor via wrapper/model encoder), while keeping state vector available for debugging.
+
+### Action Space
+- Continuous `Box(shape=(4,), low=-1, high=1)`.
+- Semantics:
+  - `a0,a1,a2`: desired velocity/setpoint commands in local/body frame (`vx_cmd, vy_cmd, vz_cmd`).
+  - `a3`: desired yaw-rate command.
+- Low-level execution:
+  - Commands are converted to motor-level control through PD-assisted residual controller and actuator limits.
+
+### Reward (race objective aligned)
+- `r = w_progress * delta_progress_to_next_gate`
+- `+ w_gate * gate_pass_bonus` when correct gate is passed.
+- `+ w_finish * finish_bonus` on valid course completion.
+- `- w_time * dt` per step (time pressure).
+- `- w_ctrl * ||action||^2` and optional `- w_smooth * ||a_t - a_{t-1}||^2`.
+- Large negative penalty for invalidation events (crash, out-of-order gate pass, timeout if desired).
+
+### Gate Pass and Validity Rules
+- Gates must be passed in strict index order.
+- A gate is counted as passed when trajectory crosses the gate plane within gate aperture bounds and directionality constraint.
+- Passing a non-current gate marks run invalid.
+- Missed-gate logic:
+  - If drone goes beyond gate plane by tolerance without valid crossing, mark invalid or apply heavy penalty (configurable).
+
+### Termination / Truncation
+- `terminated=True` when:
+  - all gates completed validly (success),
+  - crash/unsafe state,
+  - invalid run (out-of-order/missed gate under strict mode).
+- `truncated=True` when:
+  - `max_steps` or race time limit reached.
+
+### Reset
+- Reset drone near start gate with bounded pose/velocity perturbations.
+- Sample course variant (if enabled) and randomize disturbance params (wind/noise/latency) per config.
+- Reset race timer, gate index, validity flags, and per-episode counters.
+
+### Required `info` Fields
+- `elapsed_time`
+- `gate_index` (current target gate index)
+- `gates_passed`
+- `gates_total`
+- `valid_run` (0/1)
+- `completion_time` (set on successful finish)
+- `crash` (0/1)
+- `out_of_order` (0/1)
+- `missed_gate` (0/1)
+- `progress` (course progress scalar)
+
+### Eval Protocol Contract
+- Leaderboard sort key:
+  - primary: valid completion time (ascending),
+  - secondary: number of gates passed (descending) for invalid/unfinished runs.
+- Report for each checkpoint:
+  - valid rate,
+  - median/mean completion time (valid runs),
+  - crash/invalid breakdown,
+  - seed list and deterministic/stochastic action mode.
+
+## Legacy Hover Program (v2 Archive)
+- The sections below capture the completed hover-focused R&D path and remain useful as control/stability groundwork.
 
 ## Goal
 - Train a policy that maintains stable hover for 30 seconds in simulation.
@@ -775,3 +921,37 @@ r = -w_pos * ||p - p_target||^2
   - Lower risk than end-to-end raw-thrust control.
 - Proposed implementation task:
   - Add an env action mode (e.g., `command_mode = distance_vector`) in `drone_hover` and corresponding config options for command bounds and update rate.
+
+## Sim2Real Acceptance Checklist
+- Objective: deploy policy safely by keeping low-level stability on hardware and limiting learned policy authority initially.
+
+### Controller Interface Freeze
+- [ ] Policy output is a high-level command (distance/setpoint or residual), not raw per-motor thrust for first hardware flights.
+- [ ] Runtime command law is fixed and documented (example: `u = clamp(u_pd + alpha * u_residual)`).
+- [ ] Initial residual gain `alpha` is bounded low (start `<= 0.05`) with a runtime knob for controlled ramp-up.
+
+### Sim Fidelity Gates (must pass before hardware)
+- [ ] Add latency randomization (sensor + actuator delay).
+- [ ] Add motor lag / actuator dynamics mismatch.
+- [ ] Add sensor bias + noise + occasional dropout.
+- [ ] Add disturbance profiles beyond Gaussian noise (gusts/impulses).
+- [ ] Re-run deterministic + randomized eval at fixed seeds and compare against current robust baseline.
+
+### Quantitative Go/No-Go Gates
+- [ ] Wind 0.3 randomized eval: success >=95% over 100 episodes.
+- [ ] Wind 0.4 randomized eval: success >=90% over 100 episodes.
+- [ ] No regression against `experiments/drone_hover_robust_177049920214.pt` on matched eval settings.
+- [ ] No NaN/infs in policy outputs, rewards, or logged state during long-run eval.
+
+### Hardware Safety Gates
+- [ ] Independent kill switch tested (manual + software path).
+- [ ] Automatic fallback to pure PD if state exits envelope or policy output invalid.
+- [ ] Hard geofence/altitude/tilt bounds enforced onboard.
+- [ ] Telemetry logging confirms loop-rate and delay are within expected limits.
+
+### Flight Progression Plan
+- [ ] Bench test (props-off telemetry and command sanity).
+- [ ] Tethered hover with pure PD (`alpha=0`).
+- [ ] Tethered hover with tiny residual gain (`alpha<=0.05`).
+- [ ] Safety-cage free hover, then mild disturbance tests.
+- [ ] Expand envelope only after repeated passes with no safety fallbacks triggered.
