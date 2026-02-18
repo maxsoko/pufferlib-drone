@@ -69,7 +69,7 @@
 - [x] Add baseline scripted navigator and benchmark its completion time/success rate.
 - [ ] Define reward/objective shaping around progress-to-next-gate and completion time.
 - [x] Add `scripts/eval_drone_race.py` with summary CSV output for checkpoint comparison.
-- [ ] Create fixed-seed benchmark suite and reporting template for challenge submissions.
+- [x] Create fixed-seed benchmark suite and reporting template for challenge submissions.
 
 ## `drone_race` Env API Contract (v0.1)
 ### Environment IDs

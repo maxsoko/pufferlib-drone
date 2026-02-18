@@ -15,6 +15,36 @@ from pufferlib.environments.drone_race.environment import DroneRaceEnv
 from pufferlib.environments.drone_race.torch import Policy
 
 
+SEED_SUITES = {
+    # Fast, repeatable smoke leaderboard suite.
+    "drone_race_v1_quick20": list(range(42, 62)),
+    # Primary parity suite for checkpoint comparison.
+    "drone_race_v1_full100": list(range(1000, 1100)),
+}
+
+
+def list_seed_suites():
+    suites = {}
+    for name, seeds in SEED_SUITES.items():
+        suites[name] = {
+            "num_seeds": len(seeds),
+            "first_seed": int(seeds[0]),
+            "last_seed": int(seeds[-1]),
+        }
+    return suites
+
+
+def resolve_eval_seeds(episodes, seed, suite):
+    if suite is None:
+        if episodes <= 0:
+            raise ValueError("episodes must be positive")
+        return [int(seed + i) for i in range(episodes)], None
+
+    if suite not in SEED_SUITES:
+        raise ValueError(f"Unknown suite: {suite}")
+    return list(SEED_SUITES[suite]), suite
+
+
 def _ensure_parent(path):
     directory = os.path.dirname(path)
     if directory:
@@ -93,12 +123,16 @@ def _eval_once(raw_env, seed, mode, policy, device, deterministic):
     }
 
 
-def _summarize(rows, checkpoint):
+def _summarize(rows, checkpoint, suite_name):
     valid_times = [r["completion_time"] for r in rows if r["success"] == 1]
+    seeds = [int(r["seed"]) for r in rows]
 
     summary = {
         "checkpoint": checkpoint,
+        "suite": suite_name if suite_name is not None else "custom",
         "episodes": len(rows),
+        "seed_first": min(seeds) if seeds else -1,
+        "seed_last": max(seeds) if seeds else -1,
         "valid_rate": float(np.mean([r["valid_run"] for r in rows])) if rows else 0.0,
         "success_rate": float(np.mean([r["success"] for r in rows])) if rows else 0.0,
         "mean_reward": float(np.mean([r["total_reward"] for r in rows])) if rows else 0.0,
@@ -113,7 +147,7 @@ def _summarize(rows, checkpoint):
     return summary
 
 
-def _evaluate_checkpoint(checkpoint_label, model_path, episodes, seed, mode, device, hidden_size, env_kwargs, deterministic):
+def _evaluate_checkpoint(checkpoint_label, model_path, seeds, suite_name, mode, device, hidden_size, env_kwargs, deterministic):
     raw_env = DroneRaceEnv(**env_kwargs)
     policy = None
     if mode == "policy":
@@ -121,20 +155,21 @@ def _evaluate_checkpoint(checkpoint_label, model_path, episodes, seed, mode, dev
         policy = _load_policy(puffer_env, model_path=model_path, device=device, hidden_size=hidden_size)
 
     rows = []
-    for episode in range(episodes):
+    for episode, rollout_seed in enumerate(seeds):
         row = _eval_once(
             raw_env=raw_env,
-            seed=seed + episode,
+            seed=rollout_seed,
             mode=mode,
             policy=policy,
             device=device,
             deterministic=deterministic,
         )
-        row["episode"] = episode
+        row["episode"] = int(episode)
         row["checkpoint"] = checkpoint_label
+        row["suite"] = suite_name if suite_name is not None else "custom"
         rows.append(row)
 
-    summary = _summarize(rows, checkpoint_label)
+    summary = _summarize(rows, checkpoint_label, suite_name)
     return rows, summary
 
 
@@ -142,6 +177,8 @@ def main():
     parser = argparse.ArgumentParser(description="Evaluate drone_race scripted/policy checkpoints")
     parser.add_argument("--episodes", type=int, default=20)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--suite", type=str, choices=sorted(SEED_SUITES.keys()), default=None)
+    parser.add_argument("--list-suites", action="store_true", help="Print available fixed-seed suites and exit")
     parser.add_argument("--mode", choices=["scripted", "policy"], default="scripted")
     parser.add_argument("--model-path", type=str, default=None)
     parser.add_argument("--model-glob", type=str, default=None)
@@ -153,10 +190,20 @@ def main():
     parser.add_argument("--deterministic", action="store_true", help="Use deterministic actions for policy mode")
     args = parser.parse_args()
 
+    if args.list_suites:
+        for name, meta in list_seed_suites().items():
+            print(f"{name}: num_seeds={meta['num_seeds']}, first_seed={meta['first_seed']}, last_seed={meta['last_seed']}")
+        return
+
     try:
         env_kwargs = json.loads(args.env_kwargs)
     except json.JSONDecodeError as exc:
         raise SystemExit(f"Invalid --env-kwargs JSON: {exc}") from exc
+
+    try:
+        seeds, suite_name = resolve_eval_seeds(args.episodes, args.seed, args.suite)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
 
     checkpoints = []
     if args.mode == "scripted":
@@ -179,8 +226,8 @@ def main():
         rows, summary = _evaluate_checkpoint(
             checkpoint_label=checkpoint_label,
             model_path=model_path,
-            episodes=args.episodes,
-            seed=args.seed,
+            seeds=seeds,
+            suite_name=suite_name,
             mode=args.mode,
             device=args.device,
             hidden_size=args.hidden_size,
@@ -191,7 +238,7 @@ def main():
         summary_rows.append(summary)
 
         print(
-            f"{checkpoint_label}: valid_rate={summary['valid_rate']:.2%}, "
+            f"{checkpoint_label}: suite={summary['suite']}, valid_rate={summary['valid_rate']:.2%}, "
             f"success_rate={summary['success_rate']:.2%}, "
             f"mean_completion_time={summary['mean_completion_time']:.3f}"
         )

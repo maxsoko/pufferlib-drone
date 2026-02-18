@@ -74,7 +74,7 @@
   - per-episode CSV
   - summary CSV by checkpoint
   - metrics: valid rate, completion time, crash/invalid counts
-- [ ] Define fixed seed suite for leaderboard parity.
+- [x] Define fixed seed suite for leaderboard parity.
 
 ### Phase C: Sim2Real Alignment
 - [ ] Add command interface mode in env config (`setpoint` / `residual`).
@@ -145,3 +145,23 @@
   - Smoke benchmark result: `valid_rate=100%`, `success_rate=100%`, `mean_completion_time=12.168s` on 5 episodes.
 - Next step:
   - Define fixed-seed leaderboard suite and automate it via eval script presets/config.
+
+## Iteration 8 - 2026-02-18T00:47:57Z
+- Completed fixed-seed leaderboard suite integration for `drone_race` eval.
+- Updated `scripts/eval_drone_race.py`:
+  - added fixed seed suites:
+    - `drone_race_v1_quick20` (seeds 42..61)
+    - `drone_race_v1_full100` (seeds 1000..1099)
+  - added `--suite` selection for parity runs.
+  - added `--list-suites` to print suite metadata and exit.
+  - summary/episode CSV rows now include suite metadata (`suite`, seed range fields in summary).
+- Added tests:
+  - `tests/test_eval_drone_race.py`
+  - coverage: custom seed expansion, fixed suite seed resolution, suite metadata stability.
+- Validation:
+  - Ran: `python -m pytest tests/test_eval_drone_race.py tests/test_drone_race_env.py -q` -> `7 passed`.
+  - Ran: `PYTHONPATH=. python scripts/eval_drone_race.py --list-suites` -> pass.
+  - Ran: `PYTHONPATH=. python scripts/eval_drone_race.py --mode scripted --suite drone_race_v1_quick20 --csv-path experiments/drone_race_eval_suite_quick20.csv --summary-csv-path experiments/drone_race_eval_suite_quick20_summary.csv` -> pass.
+  - Suite smoke result (`quick20`): `valid_rate=100%`, `success_rate=100%`, `mean_completion_time=12.178s`.
+- Next step:
+  - Add a submission reporting helper that formats leaderboard-ready summary from summary CSV outputs.
