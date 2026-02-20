@@ -14,6 +14,7 @@
 - Install editable (typical): `pip install -e PufferLib`.
 - Build native extension (if needed): `cd PufferLib && python setup.py build_ext --inplace`.
 - Train (example): `python -m pufferlib.pufferl train drone_hover_curriculum --csv-log-dir experiments`.
+- Hover->race warmstart (encoder transfer): `python -m pufferlib.pufferl train drone_race_curriculum_tier1 --warmstart-model-path experiments/<hover_model>.pt --warmstart-prefixes encoder --csv-log-dir experiments`.
 - Evaluate (example): `PYTHONPATH=. python scripts/eval_drone_hover.py --episodes 20 --seed 42 --model-path experiments/<model>.pt`.
 - DAgger/BC helpers: `PYTHONPATH=. python scripts/train_drone_hover_dagger.py ...` or `scripts/train_drone_hover_bc.py ...`.
 
@@ -35,3 +36,4 @@
 ## Notes for Contributors
 - Log major experiment runs and results in `PufferLib/PRD.md`.
 - For eval parity, use `scripts/eval_drone_hover.py` with `--env-kwargs` to match training settings.
+- Warmstart behavior: prefer `--warmstart-model-path` for cross-task transfer (hover->race); reserve `--load-model-path` for same-task resume/eval.

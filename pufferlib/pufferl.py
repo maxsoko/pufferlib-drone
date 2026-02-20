@@ -1191,6 +1191,99 @@ def load_env(env_name, args):
     make_env = env_module.env_creator(env_name)
     return pufferlib.vector.make(make_env, env_kwargs=args['env'], **args['vec'])
 
+def _strip_module_prefix(state_dict):
+    return {k.replace('module.', ''): v for k, v in state_dict.items()}
+
+def _parse_warmstart_prefixes(prefixes):
+    if prefixes is None:
+        return []
+    if isinstance(prefixes, (list, tuple)):
+        return [str(p).strip() for p in prefixes if str(p).strip()]
+    if isinstance(prefixes, str):
+        return [p.strip() for p in prefixes.split(',') if p.strip()]
+    return [str(prefixes).strip()]
+
+def _is_warmstart_key_selected(key, prefixes):
+    if not prefixes:
+        return True
+    return any(key == prefix or key.startswith(f'{prefix}.') for prefix in prefixes)
+
+def _copy_tensor_overlap(dst, src):
+    if dst.ndim != src.ndim:
+        return None
+    slices = tuple(slice(0, min(int(dst.shape[i]), int(src.shape[i]))) for i in range(dst.ndim))
+    if any(s.stop <= 0 for s in slices):
+        return None
+
+    out = dst.clone()
+    out[slices] = src[slices].to(device=dst.device, dtype=dst.dtype)
+    overlap_shape = tuple(int(s.stop) for s in slices)
+    return out, overlap_shape
+
+def _warmstart_state_dict(target_state, source_state, prefixes=None, encoder_overlap=False):
+    prefixes = _parse_warmstart_prefixes(prefixes)
+    merged = {k: v.clone() for k, v in target_state.items()}
+
+    loaded_exact = []
+    loaded_overlap = []
+    skipped_missing = []
+    skipped_shape = []
+
+    for key, dst in target_state.items():
+        if not _is_warmstart_key_selected(key, prefixes):
+            continue
+
+        if key not in source_state:
+            skipped_missing.append(key)
+            continue
+
+        src = source_state[key]
+        if src.shape == dst.shape:
+            merged[key] = src.to(device=dst.device, dtype=dst.dtype)
+            loaded_exact.append(key)
+            continue
+
+        if encoder_overlap and key.startswith('encoder'):
+            copied = _copy_tensor_overlap(dst, src)
+            if copied is not None:
+                merged[key], overlap_shape = copied
+                loaded_overlap.append((key, overlap_shape))
+                continue
+
+        skipped_shape.append((key, tuple(src.shape), tuple(dst.shape)))
+
+    stats = {
+        'prefixes': prefixes,
+        'loaded_exact': loaded_exact,
+        'loaded_overlap': loaded_overlap,
+        'skipped_missing': skipped_missing,
+        'skipped_shape': skipped_shape,
+    }
+    return merged, stats
+
+def _apply_warmstart(policy, warmstart_path, device, prefixes, encoder_overlap):
+    source_state = torch.load(warmstart_path, map_location=device)
+    source_state = _strip_module_prefix(source_state)
+    target_state = policy.state_dict()
+    merged_state, stats = _warmstart_state_dict(
+        target_state=target_state,
+        source_state=source_state,
+        prefixes=prefixes,
+        encoder_overlap=encoder_overlap,
+    )
+    policy.load_state_dict(merged_state, strict=False)
+
+    exact = len(stats['loaded_exact'])
+    overlap = len(stats['loaded_overlap'])
+    missing = len(stats['skipped_missing'])
+    shape = len(stats['skipped_shape'])
+    print(
+        f'Warmstart loaded from {warmstart_path}: '
+        f'{exact} exact tensors, {overlap} overlap tensors, '
+        f'{missing} missing keys, {shape} shape-skipped keys'
+    )
+    return stats
+
 def load_policy(args, vecenv, env_name=''):
     package = args['package']
     module_name = 'pufferlib.ocean' if package == 'ocean' else f'pufferlib.environments.{package}'
@@ -1208,6 +1301,26 @@ def load_policy(args, vecenv, env_name=''):
     policy = policy.to(device)
 
     load_id = args['load_id']
+    load_path = args['load_model_path']
+    if load_path == 'latest':
+        load_path = max(glob.glob(f"experiments/{env_name}*.pt"), key=os.path.getctime)
+
+    warmstart_path = args.get('warmstart_model_path')
+    warmstart_prefixes = args.get('warmstart_prefixes', 'encoder')
+    warmstart_encoder_overlap = bool(args.get('warmstart_encoder_overlap', True))
+
+    if warmstart_path is not None:
+        if load_id is not None or load_path is not None:
+            print('Warmstart skipped because load_id/load_model_path is set')
+        else:
+            _apply_warmstart(
+                policy=policy,
+                warmstart_path=warmstart_path,
+                device=device,
+                prefixes=warmstart_prefixes,
+                encoder_overlap=warmstart_encoder_overlap,
+            )
+
     if load_id is not None:
         if args['neptune']:
             path = NeptuneLogger(args, load_id, mode='read-only').download()
@@ -1217,16 +1330,12 @@ def load_policy(args, vecenv, env_name=''):
             raise pufferlib.APIUsageError('No run id provided for eval')
 
         state_dict = torch.load(path, map_location=device)
-        state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
+        state_dict = _strip_module_prefix(state_dict)
         policy.load_state_dict(state_dict)
-
-    load_path = args['load_model_path']
-    if load_path == 'latest':
-        load_path = max(glob.glob(f"experiments/{env_name}*.pt"), key=os.path.getctime)
 
     if load_path is not None:
         state_dict = torch.load(load_path, map_location=device)
-        state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
+        state_dict = _strip_module_prefix(state_dict)
         policy.load_state_dict(state_dict)
         #state_path = os.path.join(*load_path.split('/')[:-1], 'state.pt')
         #optim_state = torch.load(state_path)['optimizer_state_dict']
@@ -1272,6 +1381,12 @@ def make_parser():
     parser = argparse.ArgumentParser(formatter_class=RichHelpFormatter, add_help=False)
     parser.add_argument('--load-model-path', type=str, default=None,
         help='Path to a pretrained checkpoint')
+    parser.add_argument('--warmstart-model-path', type=str, default=None,
+        help='Path to a source checkpoint for shape-safe warmstart')
+    parser.add_argument('--warmstart-prefixes', type=str, default='encoder',
+        help='Comma-separated parameter prefixes to warmstart (e.g. encoder,value)')
+    parser.add_argument('--warmstart-encoder-overlap', action=argparse.BooleanOptionalAction, default=True,
+        help='Allow overlap copy for encoder tensors with mismatched shapes')
     parser.add_argument('--load-id', type=str,
         default=None, help='Kickstart/eval from from a finished Wandb/Neptune run')
     parser.add_argument('--render-mode', type=str, default='auto',
