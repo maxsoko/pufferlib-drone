@@ -1,1063 +1,145 @@
-# PRD: Drone Gate Navigation Challenge (v3)
-
-## Challenge Goal (Primary)
-- Build an autonomous drone system that flies through a sequence of gates in the correct order, as fast as possible, inside the virtual environment.
-
-## Challenge Definition
-- Gate recognition: detect and localize mostly standardized gates from available sensors and visual feed.
-- Drone control: command flight dynamics (speed, orientation, thrust) with a tuned speed/accuracy tradeoff.
-- Path planning & navigation: compute and track an efficient route through all gates under realistic drone dynamics limits.
-- Winning metric: shortest valid completion time for all gates in order.
-- Constraints: fully autonomous (no manual control and no hardware advantage assumptions).
-
-## Success Metrics (v3)
-- Primary: completion time over full gate course (lower is better).
-- Required validity: all gates passed in correct order; run invalid if missed/out-of-order.
-- Reliability: success rate over fixed-seed eval suite (target >=90% valid runs).
-- Control quality: low crash rate and bounded attitude/velocity excursions.
-- Robustness: maintain performance under randomized wind/noise/latency settings.
-
-## Scope (v3)
-- In scope:
-  - Simulation-only autonomous stack in PufferLib.
-  - Perception + planning + control integration.
-  - Training/eval pipelines and leaderboard-style timing metrics.
-- Out of scope (initial qualifier phase):
-  - Real hardware flight.
-  - Manual piloting tools.
-  - Multi-agent coordination.
-
-## Execution Strategy (v3.1)
-- Decision: progress incrementally, but stay inside the race objective as early as possible.
-- Rationale:
-  - Going directly to full race can be unstable (sparse success signal).
-  - Staying too long on hover can overfit to "stay still" behavior instead of fast gate completion.
-- Operational policy:
-  - Keep hover as a regression/safety check only.
-  - Main training should run on staged race curricula that increase task difficulty.
-- Curriculum ladder (race-first):
-  - Tier 1 (`drone_race_curriculum_tier1`): single-gate / low-randomization / low-wind.
-  - Tier 2 (`drone_race_curriculum_tier2`): short gate sequence / moderate randomization.
-  - Tier 3 (`drone_race_curriculum_tier3`): full gate sequence / stronger randomization (leaderboard prep).
-
-## Interface Assumptions (Qualifier)
-- Assumption: gate geometry/sequence and runtime interfaces will be provided by challenge organizers.
-- Assumption: sensor telemetry and visual/camera feed will be available through the official simulator interface.
-- Implication for implementation:
-  - Keep perception stack modular so we can swap from current state-vector baseline to official camera/sensor adapters quickly.
-  - Do not hardcode private shortcuts or privileged state that bypasses the provided interface.
-
-## PRD File Strategy
-- Keep one primary PRD file (`PRD.md`) with versioned sections (`v3`, `v3.1`, etc.) and archive blocks.
-- Create a separate PRD only when scope truly diverges (example: dedicated hardware flight program with separate acceptance gates and risks).
-- Current decision: continue in this single PRD and append incremental updates.
-
-## Architecture Decision (v3.2)
-- Selected approach: Option 2 modular stack.
-  - Perception: sensor/camera -> gate observations.
-  - Planning: gate observations + race context -> setpoint intent.
-  - Control: setpoint intent -> bounded low-level action (PD + residual path later).
-- Why selected:
-  - Better debuggability than end-to-end monolith.
-  - Cleaner interface boundary for organizer-provided camera/sensor feeds.
-  - Stronger sim2real path due to explicit planner/controller contracts.
-
-## Drone Hover Boundary
-- `drone_hover` is not the active implementation surface for the race system.
-- `drone_hover` remains only:
-  - a regression/safety reference,
-  - an optional controller tuning sandbox.
-- Race development should target `drone_race` modules/configs/scripts only, unless a specific cross-env bug requires shared-core fixes.
-
-## Extended Task Backlog (Option 2)
-### Phase 0: Interfaces and Contracts
-- [x] Define `PerceptionOutput` contract (gate pose/confidence + optional uncertainty).
-- [x] Define `PlannerOutput` contract (setpoint velocity/yaw intent + horizon metadata).
-- [x] Define `ControllerInput/Output` contract (setpoint -> action with bounds/flags).
-- [x] Add schema/version field for each interface payload to prevent integration drift.
-
-### Phase 1: Perception Layer (Adapter-First)
-- [x] Add perception adapter abstraction (`state_adapter` + `camera_sensor_adapter`).
-- [x] Keep current privileged state path as debug adapter only (not leaderboard mode).
-- [x] Implement runtime flag for adapter selection in config.
-- [x] Add perception diagnostics in `info` (source, confidence, validity/dropout flags).
-- [x] Add deterministic unit tests for adapter output shape/range/failure handling.
-
-### Phase 2: Planner Layer
-- [x] Implement planner baseline that outputs smooth setpoints to next gate.
-- [x] Add planner constraints (speed cap, yaw-rate cap, optional lookahead limit).
-- [x] Add planner fallback behavior for low-confidence perception frames.
-- [x] Add planner metrics to eval CSV (setpoint smoothness, fallback count).
-- [x] Add planner-focused tests (gate order adherence, no backward target jumps).
-
-### Phase 3: Controller Layer
-- [ ] Add dedicated controller module for setpoint tracking (separate from env step logic).
-- [ ] Add explicit saturation and anti-windup style protection on action outputs.
-- [ ] Add residual hook point (`alpha`) but keep residual disabled by default initially.
-- [ ] Add fallback-to-safe-controller trigger path and event logging.
-- [ ] Add controller tests for saturation, fallback, and deterministic behavior.
-
-### Phase 4: Training and Curriculum Wiring
-- [ ] Train planner/controller stack on Tier 1 until stable valid completion.
-- [ ] Promote to Tier 2 using checkpoint warm-start + fixed-seed eval gates.
-- [ ] Promote to Tier 3 using checkpoint warm-start + fixed-seed eval gates.
-- [ ] Define promotion criteria (valid_rate and completion_time thresholds).
-- [ ] Record promotion decisions and metrics in `PRD.md` + `progress.txt`.
-
-### Phase 5: Evaluation and Visualization
-- [ ] Extend eval output with component diagnostics (perception/planner/controller stats).
-- [ ] Add trajectory logging (position, target, gate index) per episode.
-- [ ] Add visualization script for trajectory overlays and completion-time distributions.
-- [ ] Add leaderboard report template from full100 summary CSV.
-
-### Phase 6: Sim2Real Readiness Hooks
-- [ ] Add latency model knobs (sensor + actuator) and randomization schedule.
-- [ ] Add sensor corruption knobs (bias/noise/dropout) in race configs.
-- [ ] Add disturbance model knobs (gust profile, low-frequency drift).
-- [ ] Add acceptance gates tied to full100 suite and disturbance tiers.
-
-## PufferLib Correlation (Implementation Mapping)
-- Environment:
-  - Add a new env package (proposed: `pufferlib/environments/drone_race/`) with gates, timing, ordered checkpoints, and invalid-run logic.
-  - Keep `drone_hover` as stabilization baseline and controller tuning sandbox.
-- Configs:
-  - Add race configs in `pufferlib/config/` (e.g., `drone_race.ini`, `drone_race_curriculum.ini`).
-  - Reuse existing `pufferl` CLI flow: `python -m pufferlib.pufferl train <env_name>`.
-- Models:
-  - Start with two-track baseline:
-    - Track A: end-to-end policy from observations to control commands.
-    - Track B: hybrid stack (perception/planner + PD/residual controller).
-- Eval:
-  - Extend `scripts/eval_drone_hover.py` pattern into a race eval script (proposed: `scripts/eval_drone_race.py`) with:
-    - completion time
-    - gate pass count/order validity
-    - crash/timeout statistics
-    - summary CSV across checkpoints
-
-## System Design (v3)
-- Perception:
-  - Gate detection/localization from visual and/or state inputs.
-- Planning:
-  - Next-gate targeting and trajectory intent generation.
-- Control:
-  - Low-level actuator command generation with safety bounds.
-  - Prefer PD-assisted residual control for robustness and transferability.
-- Learning loop:
-  - Vectorized rollouts -> PPO updates -> fixed-seed timed eval -> checkpoint ranking by valid completion time.
-
-## Milestones (v3)
-- M0: Define race environment interface and validity rules (ordered gate passing + timing).
-- M1: Build a deterministic scripted baseline that completes the course reliably.
-- M2: Train first autonomous policy to beat scripted baseline on median time.
-- M3: Improve robustness (wind/noise/latency randomization) while preserving completion validity.
-- M4: Optimize for leaderboard objective (best-time runs with reliability constraints).
-
-## Immediate Tasks (v3)
-- [x] Finalize race task spec in env API terms (observations, action semantics, termination, invalidation).
-- [x] Implement gate sequence logic and per-run timer in new `drone_race` environment.
-- [x] Add baseline scripted navigator and benchmark its completion time/success rate.
-- [ ] Define reward/objective shaping around progress-to-next-gate and completion time.
-- [x] Add `scripts/eval_drone_race.py` with summary CSV output for checkpoint comparison.
-- [x] Create fixed-seed benchmark suite and reporting template for challenge submissions.
-
-## Curriculum Runbook (Race-First)
-- Stage progression:
-  - Train `drone_race_curriculum_tier1` until stable valid completion.
-  - Continue with `drone_race_curriculum_tier2` (initialize from Tier 1 checkpoint).
-  - Continue with `drone_race_curriculum_tier3` (initialize from Tier 2 checkpoint).
-- Configs:
-  - `pufferlib/config/drone_race_curriculum_tier1.ini`
-  - `pufferlib/config/drone_race_curriculum_tier2.ini`
-  - `pufferlib/config/drone_race_curriculum_tier3.ini`
-- Example training commands:
-  - `python -m pufferlib.pufferl train drone_race_curriculum_tier1 --csv-log-dir experiments`
-  - `python -m pufferlib.pufferl train drone_race_curriculum_tier2 --load-model-path experiments/<tier1_ckpt>.pt --csv-log-dir experiments`
-  - `python -m pufferlib.pufferl train drone_race_curriculum_tier3 --load-model-path experiments/<tier2_ckpt>.pt --csv-log-dir experiments`
-- Fixed-seed parity eval (recommended each stage):
-  - `PYTHONPATH=. python scripts/eval_drone_race.py --mode policy --suite drone_race_v1_quick20 --model-path experiments/<ckpt>.pt --csv-path experiments/drone_race_eval_quick20.csv --summary-csv-path experiments/drone_race_eval_quick20_summary.csv --deterministic`
-  - `PYTHONPATH=. python scripts/eval_drone_race.py --mode policy --suite drone_race_v1_full100 --model-path experiments/<ckpt>.pt --csv-path experiments/drone_race_eval_full100.csv --summary-csv-path experiments/drone_race_eval_full100_summary.csv --deterministic`
-
-## `drone_race` Env API Contract (v0.1)
-### Environment IDs
-- `package = drone_race`
-- `env_name = drone_race` (base) and `drone_race_curriculum` (randomization ramp)
-
-### Observation Space
-- `state` baseline (v0.1, fast iteration): continuous `Box` vector normalized to roughly `[-1, 1]`.
-- Proposed fields (concatenated):
-  - Drone kinematics: position `(x,y,z)`, velocity `(vx,vy,vz)`, attitude `(roll,pitch,yaw)`, angular velocity `(wx,wy,wz)`.
-  - Next-gate relative pose: gate center in drone/body frame `(gx,gy,gz)`, gate normal in body frame `(nx,ny,nz)`, gate size/radius.
-  - Race context: normalized `gate_index`, normalized elapsed time, remaining distance estimate.
-- Optional vision mode (v0.2+):
-  - Add camera input path (image tensor via wrapper/model encoder), while keeping state vector available for debugging.
-
-### Action Space
-- Continuous `Box(shape=(4,), low=-1, high=1)`.
-- Semantics:
-  - `a0,a1,a2`: desired velocity/setpoint commands in local/body frame (`vx_cmd, vy_cmd, vz_cmd`).
-  - `a3`: desired yaw-rate command.
-- Low-level execution:
-  - Commands are converted to motor-level control through PD-assisted residual controller and actuator limits.
-
-### Reward (race objective aligned)
-- `r = w_progress * delta_progress_to_next_gate`
-- `+ w_gate * gate_pass_bonus` when correct gate is passed.
-- `+ w_finish * finish_bonus` on valid course completion.
-- `- w_time * dt` per step (time pressure).
-- `- w_ctrl * ||action||^2` and optional `- w_smooth * ||a_t - a_{t-1}||^2`.
-- Large negative penalty for invalidation events (crash, out-of-order gate pass, timeout if desired).
-
-### Gate Pass and Validity Rules
-- Gates must be passed in strict index order.
-- A gate is counted as passed when trajectory crosses the gate plane within gate aperture bounds and directionality constraint.
-- Passing a non-current gate marks run invalid.
-- Missed-gate logic:
-  - If drone goes beyond gate plane by tolerance without valid crossing, mark invalid or apply heavy penalty (configurable).
-
-### Termination / Truncation
-- `terminated=True` when:
-  - all gates completed validly (success),
-  - crash/unsafe state,
-  - invalid run (out-of-order/missed gate under strict mode).
-- `truncated=True` when:
-  - `max_steps` or race time limit reached.
-
-### Reset
-- Reset drone near start gate with bounded pose/velocity perturbations.
-- Sample course variant (if enabled) and randomize disturbance params (wind/noise/latency) per config.
-- Reset race timer, gate index, validity flags, and per-episode counters.
-
-### Required `info` Fields
-- `elapsed_time`
-- `gate_index` (current target gate index)
-- `gates_passed`
-- `gates_total`
-- `valid_run` (0/1)
-- `completion_time` (set on successful finish)
-- `crash` (0/1)
-- `out_of_order` (0/1)
-- `missed_gate` (0/1)
-- `progress` (course progress scalar)
-
-### Eval Protocol Contract
-- Leaderboard sort key:
-  - primary: valid completion time (ascending),
-  - secondary: number of gates passed (descending) for invalid/unfinished runs.
-- Report for each checkpoint:
-  - valid rate,
-  - median/mean completion time (valid runs),
-  - crash/invalid breakdown,
-  - seed list and deterministic/stochastic action mode.
-
-## Legacy Hover Program (v2 Archive)
-- The sections below capture the completed hover-focused R&D path and remain useful as control/stability groundwork.
-
-## Goal
-- Train a policy that maintains stable hover for 30 seconds in simulation.
-
-## Success Metrics
-- >=30s continuous hover without drifting beyond tolerance.
-- Low oscillation in attitude and position.
-- >=80% success rate across randomized initial perturbations.
-
-## Stakeholders
-- Primary: you (learner).
-- Secondary: future demo viewers / open-source readers.
-
-## In Scope
-- Simulation-only, Gymnasium-style environment.
-- Low-level control: 4 motor thrust outputs.
-- Training pipeline + evaluation + logging.
-
-## Out of Scope
-- Real drone hardware.
-- Vision/SLAM.
-- Multi-agent or waypoint navigation.
-
-## Functional Requirements
-- Env exposes standard Gymnasium API.
-- Action space: 4 continuous thrusts in [0, 1] (or normalized).
-- Reward shaping for hover stability (position, velocity, attitude penalties).
-- Train/eval script; metrics for hover time and stability.
-
-## Non-Functional Requirements
-- Runs on single GPU.
-- Reproducible with fixed seeds/config.
-- Baseline training within ~4-8 hours.
-
-## System Design
-- Simulator -> Env wrapper -> Vectorized rollout -> Policy -> PPO/SGD updates.
-- Data: obs -> action (4 thrusts) -> env -> reward -> rollout buffer -> update.
-
-## Environment Spec (Draft)
-### Observation Space (continuous)
-- Position: x, y, z (meters).
-- Velocity: vx, vy, vz (m/s).
-- Orientation: roll, pitch, yaw (radians).
-- Angular velocity: wx, wy, wz (rad/s).
-- Optional: motor speeds or thrust history (4 values) for stability.
-
-Suggested shape: 12 (or 16 with motor history), normalized to ~[-1, 1].
-
-### Action Space (continuous)
-- 4 motor thrusts in [0, 1], one per rotor.
-- Optional action smoothing / rate limits inside env.
-
-### Dynamics / Integration
-- Fixed timestep (e.g., 50-100 Hz).
-- Physics step updates position, velocity, and attitude using thrust + gravity.
-- Domain randomization (later): mass, inertia, wind noise.
-
-### Reward (hover stability)
-- Base: negative L2 distance from hover target.
-- Penalties:
-  - Velocity magnitude.
-  - Angle magnitude (roll/pitch; yaw optional).
-  - Angular velocity magnitude.
-  - Action magnitude or action change (smoothness).
-
-Example (weights tunable):
-```
-r = -w_pos * ||p - p_target||^2
-    -w_vel * ||v||^2
-    -w_ang * ||[roll, pitch]||^2
-    -w_angvel * ||w||^2
-    -w_act * ||a||^2
-    -w_act_delta * ||a - a_prev||^2
-```
-
-### Termination / Truncation
-- Success: hover within tolerance for 30s.
-- Terminate if:
-  - z <= 0 (crash) or |p| > bounds.
-  - |roll| or |pitch| exceeds safety limit.
-  - Episode length exceeds max horizon.
-
-### Reset
-- Randomize initial position/orientation within small bounds.
-- Optionally randomize initial velocity and small angular velocity.
-
-### Metrics to Log
-- Hover time (continuous).
-- Position/velocity RMS.
-- Angle RMS.
-- Action smoothness (delta).
-
-## Assumptions (Auto-Selected Defaults)
-- Lightweight, self-contained Gymnasium env (no external sim engines).
-- Low-level motor thrust control in normalized [0, 1].
-- Simple rigid-body physics (6-DOF) with Euler integration.
-- Training starts in a narrow hover initialization box; domain randomization added later.
-- Long-run training executed as 20k-step CPU runs for local time constraints.
-- If C/CUDA extension build fails, fall back to Python advantage implementation.
-- GPU training is deferred; plan to re-run long curriculum runs on GPU when available.
-- Proceed autonomously with best-guess experiments and document each run here.
-
-## Default Constants (v1)
-- `dt`: 0.02 s (50 Hz)
-- `mass`: 1.0 kg
-- `gravity`: 9.81 m/s^2
-- `arm_length`: 0.2 m
-- `max_thrust_per_motor`: 15.0 N
-- `linear_damping`: 0.05
-- `angular_damping`: 0.02
-- `hover_target`: (0, 0, 1.0)
-- `pos_bounds`: 5 m radius (terminate if |x| or |y| > 5 or z < 0)
-- `max_tilt`: 45 deg (terminate if |roll| or |pitch| > 45 deg)
-- `hover_tolerance`: 0.25 m and 15 deg
-- Reward weights: `w_pos=2.0`, `w_vel=0.1`, `w_ang=0.5`, `w_angvel=0.05`, `w_act=0.01`, `w_act_delta=0.05`
-
-## Milestones
-- M0: Choose lightweight Gymnasium drone env or build minimal one.
-- M1: Implement low-level thrust control + reward.
-- M2: Achieve 30s hover in nominal conditions.
-- M3: Improve robustness (random starts, wind noise).
-
-## Tasks
-- [x] Decide simulator: implement minimal Gymnasium env from scratch or wrap existing simple drone env.
-- [x] Define state, action, reward, and termination constants (weights, thresholds, dt).
-- [x] Implement physics step for 6-DOF rigid body + thrust -> acceleration.
-- [x] Implement Gymnasium env class with `reset`, `step`, `render`, `close`.
-- [x] Add unit tests for env step (determinism, bounds, termination conditions).
-- [x] Create training config for PPO (batch size, horizon, lr, entropy).
-- [x] Add training script using PufferLib `puffer` entry point.
-- [x] Add evaluation script that runs fixed seed suite and logs 30s hover success.
-- [x] Add logging dashboard (CSV or TensorBoard).
-- [x] Run baseline training on CPU and record metrics (GPU unavailable locally).
-- [x] Iterate reward weights (initial pass).
-- [x] Achieve >=80% success in randomized eval (met via PD gain tuning + residual policy).
-- [x] Add domain randomization (mass, wind, sensor noise).
-- [x] Re-evaluate and document performance.
-- [x] Extend eval script to compare multiple checkpoints and write a summary CSV.
-- [x] Add curriculum schedule for randomization (ramp over episodes).
-- [x] Run a longer training pass (>=20k steps) with curriculum.
-- [x] Run a vectorized training pass (Multiprocessing) and record metrics.
-- [x] Attempt to build the `_C` extension for faster advantage computation.
-- [x] Run a longer curriculum pass (200k steps) and evaluate.
-- [x] Run a tuned-weights curriculum pass (100k steps) and evaluate.
-- [x] Add hover-assist reward bonus (tight tolerance) to aid exploration.
-- [x] Add optional action smoothing (low-pass) in env dynamics.
-- [x] Run an assisted training pass (CPU) with hover bonus + action smoothing and evaluate.
-- [x] Run a longer assisted curriculum pass (500k steps) and evaluate.
-- [x] Implement bounded-action policy (squashed Gaussian) to fix logprob mismatch.
-- [x] Add hover-duration curriculum (ramp success hold time).
-- [x] Run squashed-policy + hover-curriculum training pass and evaluate.
-- [x] Add NaN guards in squashed policy (mean/logstd clamp) after training crash.
-- [x] Re-run squashed-policy pass with stronger hover bonus (2.0) and evaluate.
-- [x] Update eval script to support SquashedPolicy explicitly.
-- [x] Run longer squashed-policy pass (300k) with hover bonus=1.0 and evaluate.
-- [x] Run reduced-randomization pass (no randomization) to establish baseline stability.
-- [x] Run low-LR assisted pass (lr=0.003) with slower curriculum ramp.
-- [x] Run no-randomization assisted pass (lr=0.003, bonus=2.0) and evaluate.
-- [x] Run longer no-randomization pass (1M) with best settings and evaluate.
-- [x] Decouple hover curriculum from randomization curriculum; add hover_curriculum_episodes.
-- [x] Initialize squashed policy mean bias near hover thrust for stability.
-- [x] Run no-randomization assisted pass (bonus=3.0, smoothing=0.3, hover_curriculum_episodes=4000) and evaluate.
-- [x] Add action-centered control mode (map actions around hover thrust).
-- [x] Run action-centered no-randomization pass (300k) and evaluate.
-- [x] Run action-centered easy-init + higher damping pass (300k) and evaluate.
-- [x] Add PD-assist residual controller to ease exploration.
-- [x] Extend eval script with `--env-kwargs` for config-matched evaluation.
-- [x] Run PD-assist residual pass (200k) and evaluate with matching env kwargs.
-- [x] Update PD assist to use thrust-vector target (better roll/pitch mapping).
-- [x] Track hover time via step counter to avoid float drift.
-- [x] Run PD gain sweep (no-learning baseline) and record best success rate.
-- [x] Tune PD vertical gains to reach >=80% success over fixed 20-episode seed set.
-- [x] Add deterministic evaluation option for policy mean actions.
-- [x] Attempt behavior cloning from PD baseline (50k samples) and evaluate.
-- [x] Add PD label option to collect expert actions without assist.
-- [x] Run DAgger (3 iters) and evaluate deterministic policy.
-- [x] Run larger DAgger passes (5+ iters) and compare success rates.
-- [x] Add hidden-size option to BC/DAgger + eval script.
-- [x] Try PPO finetune from best DAgger checkpoint.
-- [x] Grid search PD gains on eval seeds (42..61) to hit >=80% success.
-- [x] Run residual PPO fine-tune with PD assist (scale=0.1) and evaluate.
-- [x] Run residual PPO with small PD assist (scale=0.02) + residual penalty and evaluate.
-- [x] Anneal PD assist from 0.02 to 0.0 over ~300k steps and evaluate without assist.
-- [x] Evaluate best residual policy under domain randomization.
-
-## Results (Local Runs)
-### Baseline (5000 steps, CPU, Serial backend)
-- Command: `python -m pufferlib.pufferl train drone_hover --train.total-timesteps 5000 --vec.backend Serial --vec.num-envs 1 --train.env-batch-size 1 --train.num-envs 1 --train.device cpu --train.minibatch-size 64 --train.batch-size 64 --train.optimizer adam --csv-log-dir experiments`
-- Model: `experiments/drone_hover_176886361380/model_drone_hover_000079.pt`
-- Eval: `experiments/drone_hover_eval.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -46.247
-- Mean hover time: 0.039 s
-
-### Tuned Weights (w_pos=3.0, w_ang=1.0, w_act_delta=0.1)
-- Command: `python -m pufferlib.pufferl train drone_hover --train.total-timesteps 5000 --vec.backend Serial --vec.num-envs 1 --train.env-batch-size 1 --train.num-envs 1 --train.device cpu --train.minibatch-size 64 --train.batch-size 64 --train.optimizer adam --env.w-pos 3.0 --env.w-ang 1.0 --env.w-act-delta 0.1 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_176886366533/model_drone_hover_000079.pt`
-- Eval: `experiments/drone_hover_eval_tuned.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -42.979
-- Mean hover time: 0.023 s
-
-### Curriculum + Randomization (Serial, 20k steps)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --train.total-timesteps 20000 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176886391952/model_drone_hover_curriculum_000313.pt`
-- Eval: `experiments/drone_hover_curriculum_eval_serial.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -50.387
-- Mean hover time: 0.021 s
-
-### Curriculum + Randomization (Multiprocessing, 4 envs, 20k steps)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --train.total-timesteps 20000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176886393624/model_drone_hover_curriculum_000079.pt`
-- Eval: `experiments/drone_hover_curriculum_eval_mp.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -45.872
-- Mean hover time: 0.021 s
-
-### Curriculum + Randomization (Multiprocessing, 4 envs, 200k steps)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --train.total-timesteps 200000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176886422663/model_drone_hover_curriculum_000782.pt`
-- Eval: `experiments/drone_hover_curriculum_eval_200k.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -51.766
-- Mean hover time: 0.020 s
-
-### Curriculum + Tuned Weights (Multiprocessing, 4 envs, 100k steps)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --train.total-timesteps 100000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --env.w-pos 4.0 --env.w-vel 0.2 --env.w-ang 1.5 --env.w-act-delta 0.2 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176886428688/model_drone_hover_curriculum_000391.pt`
-- Eval: `experiments/drone_hover_curriculum_eval_tuned100k.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -52.592
-- Mean hover time: 0.020 s
-
-### Curriculum + Assist Bonus + Action Smoothing (Multiprocessing, 4 envs, 100k steps)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --train.total-timesteps 100000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --env.hover-bonus 1.0 --env.hover-bonus-pos-tol 0.15 --env.hover-bonus-angle-tol 12.0 --env.success-bonus 5.0 --env.action-smoothing 0.2 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176886483344/model_drone_hover_curriculum_000391.pt`
-- Eval: `experiments/drone_hover_curriculum_eval_assist100k.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -43.396
-- Mean hover time: 0.124 s
-
-### Curriculum + Assist Bonus + Action Smoothing (Multiprocessing, 4 envs, 500k steps)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --train.total-timesteps 500000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --env.hover-bonus 1.0 --env.hover-bonus-pos-tol 0.15 --env.hover-bonus-angle-tol 12.0 --env.success-bonus 5.0 --env.action-smoothing 0.2 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176886520488/model_drone_hover_curriculum_001954.pt`
-- Eval: `experiments/drone_hover_curriculum_eval_assist500k.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -43.524
-- Mean hover time: 0.120 s
-
-### Squashed Policy + Hover Curriculum + Assist Bonus (Multiprocessing, 4 envs, 100k steps)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --train.total-timesteps 100000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --env.hover-bonus 1.0 --env.hover-bonus-pos-tol 0.15 --env.hover-bonus-angle-tol 12.0 --env.success-bonus 5.0 --env.action-smoothing 0.2 --env.hover-curriculum True --env.hover-curriculum-min-seconds 2.0 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176886593433/model_drone_hover_curriculum_000391.pt`
-- Eval: `experiments/drone_hover_curriculum_eval_squash100k.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -35.905
-- Mean hover time: 0.159 s
-
-### Squashed Policy + Hover Curriculum + Assist Bonus (500k attempt, crashed)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --train.total-timesteps 500000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --env.hover-bonus 2.0 --env.hover-bonus-pos-tol 0.1 --env.hover-bonus-angle-tol 8.0 --env.success-bonus 10.0 --env.action-smoothing 0.2 --env.hover-curriculum True --env.hover-curriculum-min-seconds 2.0 --csv-log-dir experiments`
-- Result: crashed with NaNs in squashed policy mean; added NaN guards in `SquashedPolicy` and retried with 100k steps.
-
-### Squashed Policy + Hover Curriculum + Assist Bonus (bonus=2.0, 100k steps)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --train.total-timesteps 100000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --env.hover-bonus 2.0 --env.hover-bonus-pos-tol 0.1 --env.hover-bonus-angle-tol 8.0 --env.success-bonus 10.0 --env.action-smoothing 0.2 --env.hover-curriculum True --env.hover-curriculum-min-seconds 2.0 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176886616974/model_drone_hover_curriculum_000391.pt`
-- Eval: `experiments/drone_hover_curriculum_eval_squash100k_bonus2.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -44.601
-- Mean hover time: 0.021 s
-
-### Squashed Policy + Hover Curriculum + Assist Bonus (bonus=1.0, 300k steps)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --train.total-timesteps 300000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --env.hover-bonus 1.0 --env.hover-bonus-pos-tol 0.15 --env.hover-bonus-angle-tol 12.0 --env.success-bonus 5.0 --env.action-smoothing 0.2 --env.hover-curriculum True --env.hover-curriculum-min-seconds 2.0 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176886625499/model_drone_hover_curriculum_001172.pt`
-- Eval: `experiments/drone_hover_curriculum_eval_squash300k_bonus1.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -101.822
-- Mean hover time: 0.106 s
-
-### No-Randomization + Low LR (0.003) + Assist Bonus (100k steps)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --train.total-timesteps 100000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --train.learning-rate 0.003 --env.randomize False --env.curriculum False --env.hover-curriculum True --env.hover-curriculum-min-seconds 2.0 --env.hover-bonus 1.0 --env.hover-bonus-pos-tol 0.15 --env.hover-bonus-angle-tol 12.0 --env.success-bonus 5.0 --env.action-smoothing 0.2 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176886669151/model_drone_hover_curriculum_000391.pt`
-- Eval: `experiments/drone_hover_curriculum_eval_norand_lr003.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -17.038
-- Mean hover time: 0.190 s
-
-### No-Randomization + Low LR (0.003) + Assist Bonus (bonus=2.0, 200k steps)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --train.total-timesteps 200000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --train.learning-rate 0.003 --env.randomize False --env.curriculum False --env.hover-curriculum True --env.hover-curriculum-min-seconds 2.0 --env.hover-bonus 2.0 --env.hover-bonus-pos-tol 0.1 --env.hover-bonus-angle-tol 8.0 --env.success-bonus 10.0 --env.action-smoothing 0.2 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176886675029/model_drone_hover_curriculum_000782.pt`
-- Eval: `experiments/drone_hover_curriculum_eval_norand_lr003_bonus2_200k.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -34.416
-- Mean hover time: 0.059 s
-
-### No-Randomization + Low LR (0.003) + Assist Bonus (bonus=1.0, 1M steps)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --train.total-timesteps 1000000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --train.learning-rate 0.003 --env.randomize False --env.curriculum False --env.hover-curriculum True --env.hover-curriculum-min-seconds 2.0 --env.hover-bonus 1.0 --env.hover-bonus-pos-tol 0.15 --env.hover-bonus-angle-tol 12.0 --env.success-bonus 5.0 --env.action-smoothing 0.2 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176886736566/model_drone_hover_curriculum_003907.pt`
-- Eval: `experiments/drone_hover_curriculum_eval_norand_lr003_bonus1_1m.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -179.461
-- Mean hover time: 0.105 s
-
-### No-Randomization + Low LR (0.003) + Assist Bonus (bonus=3.0, 500k steps)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --train.total-timesteps 500000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --train.learning-rate 0.003 --env.randomize False --env.curriculum False --env.hover-curriculum True --env.hover-curriculum-min-seconds 2.0 --env.hover-curriculum-episodes 4000 --env.hover-bonus 3.0 --env.hover-bonus-pos-tol 0.15 --env.hover-bonus-angle-tol 12.0 --env.success-bonus 20.0 --env.action-smoothing 0.3 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176886761793.pt`
-- Eval: `experiments/drone_hover_curriculum_eval_norand_lr003_bonus3_hcur2_500k.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -27.062
-- Mean hover time: 0.135 s
-
-### No-Randomization + Action-Centered Control (bonus=1.0, 300k steps)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --train.total-timesteps 300000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --train.learning-rate 0.003 --env.randomize False --env.curriculum False --env.hover-curriculum True --env.hover-curriculum-min-seconds 2.0 --env.hover-curriculum-episodes 4000 --env.hover-bonus 1.0 --env.hover-bonus-pos-tol 0.15 --env.hover-bonus-angle-tol 12.0 --env.success-bonus 5.0 --env.action-smoothing 0.3 --env.action-centered True --env.action-centered-scale 0.3 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176886782867.pt`
-- Eval: `experiments/drone_hover_curriculum_eval_centered_lr003_bonus1_300k.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -31.273
-- Mean hover time: 0.108 s
-
-### Action-Centered + Easy Init + Higher Damping (bonus=1.0, 300k steps)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --train.total-timesteps 300000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --train.learning-rate 0.003 --env.randomize False --env.curriculum False --env.hover-curriculum True --env.hover-curriculum-min-seconds 2.0 --env.hover-curriculum-episodes 4000 --env.hover-bonus 1.0 --env.hover-bonus-pos-tol 0.1 --env.hover-bonus-angle-tol 8.0 --env.success-bonus 10.0 --env.action-smoothing 0.4 --env.action-centered True --env.action-centered-scale 0.2 --env.init-pos-range 0.0 --env.init-vel-range 0.0 --env.init-angle-deg 0.0 --env.init-ang-vel 0.0 --env.linear-damping 0.1 --env.angular-damping 0.05 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176886802297.pt`
-- Eval: `experiments/drone_hover_curriculum_eval_centered_easyinit_lr003_300k.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -43.842
-- Mean hover time: 0.106 s
-
-### PD-Assist Residual Controller (bonus=1.0, 200k steps)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --train.total-timesteps 200000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --train.learning-rate 0.003 --env.randomize False --env.curriculum False --env.hover-curriculum True --env.hover-curriculum-min-seconds 2.0 --env.hover-curriculum-episodes 4000 --env.hover-bonus 1.0 --env.hover-bonus-pos-tol 0.15 --env.hover-bonus-angle-tol 12.0 --env.success-bonus 5.0 --env.action-smoothing 0.2 --env.pd-assist True --env.pd-assist-scale 0.3 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176886862436.pt`
-- Eval: `experiments/drone_hover_curriculum_eval_pdassist_lr003_200k.csv` (run with `--env-kwargs` to match PD assist settings)
-- Success rate: 0% (0/20)
-- Mean reward: -30.129
-- Mean hover time: 0.683 s
-
-### PD Baseline (No Learning, pd_assist_scale=0.0)
-- Diagnostic script (20 episodes, no randomization, full 30s hold): `python - <<'PY' ... PY` (see session log)
-- Initial best gains: `pd_kp_xy=0.6`, `pd_kd_xy=0.4`, `pd_kp_ang=8.0`, `pd_kd_ang=2.0`, `pd_kp_z=4.0`, `pd_kd_z=2.0`
-- Success rate: 65% (13/20) with fixed seeds 0..19
-- Mean hover time: 29.139 s (min 27.32, max 30.0)
-
-### PD Baseline (No Learning, tuned vertical gains)
-- Diagnostic script (20 episodes, fixed seeds 0..19): `python - <<'PY' ... PY` (see session log)
-- Gains: `pd_kp_xy=0.6`, `pd_kd_xy=0.4`, `pd_kp_ang=8.0`, `pd_kd_ang=2.0`, `pd_kp_z=5.0`, `pd_kd_z=2.5`
-- Success rate: 80% (16/20)
-- Mean hover time: 29.529 s (min 27.46, max 30.0)
-
-### PD Baseline (Grid Search on eval seeds 42..61)
-- Diagnostic script: grid search over `pd_kp_xy∈{0.5,0.6,0.7}`, `pd_kd_xy∈{0.3,0.4,0.5}`, `pd_kp_z∈{4,5,6}`, `pd_kd_z∈{2,2.5,3}`.
-- Best gains: `pd_kp_xy=0.7`, `pd_kd_xy=0.5`, `pd_kp_z=5.0`, `pd_kd_z=3.0`
-- Success rate: 85% (17/20) on seeds 42..61
-- Eval CSV: `experiments/drone_hover_pdonly_eval_bestgains.csv`
-
-### Behavior Cloning (PD Teacher, 50k samples)
-- Command: `python scripts/train_drone_hover_bc.py --steps 50000 --epochs 8 --batch-size 512 --lr 0.001`
-- Model: `experiments/drone_hover_bc_1768869362.pt`
-- Eval (deterministic): `experiments/drone_hover_bc_eval_fullhold_deterministic.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -9102.020
-- Mean hover time: 0.505 s
-
-### DAgger (PD Teacher, 3 iters)
-- Command: `python scripts/train_drone_hover_dagger.py --bootstrap-steps 50000 --rollout-steps 20000 --iters 3 --epochs 5 --batch-size 512 --lr 0.001 --deterministic`
-- Model: `experiments/drone_hover_dagger_1768870581.pt`
-- Eval (deterministic): `experiments/drone_hover_dagger_eval_fullhold_deterministic.csv`
-- Success rate: 30% (6/20)
-- Mean reward: -103.758
-- Mean hover time: 26.261 s
-
-### DAgger (PD Teacher, 5 iters, 350k dataset)
-- Command: `python scripts/train_drone_hover_dagger.py --bootstrap-steps 100000 --rollout-steps 50000 --iters 5 --epochs 5 --batch-size 512 --lr 0.001 --deterministic`
-- Model: `experiments/drone_hover_dagger_1768870670.pt`
-- Eval (deterministic): `experiments/drone_hover_dagger_eval_fullhold_deterministic_350k.csv`
-- Success rate: 70% (14/20)
-- Mean reward: -135.203
-- Mean hover time: 29.235 s
-
-### DAgger (PD Teacher, 7 iters, 450k dataset)
-- Command: `python scripts/train_drone_hover_dagger.py --bootstrap-steps 100000 --rollout-steps 50000 --iters 7 --epochs 5 --batch-size 512 --lr 0.001 --deterministic`
-- Model: `experiments/drone_hover_dagger_1768870775.pt`
-- Eval (deterministic): `experiments/drone_hover_dagger_eval_fullhold_deterministic_450k.csv`
-- Success rate: 65% (13/20)
-- Mean reward: -138.840
-- Mean hover time: 29.120 s
-
-### DAgger (PD Teacher, 10 iters, 600k dataset)
-- Command: `python scripts/train_drone_hover_dagger.py --bootstrap-steps 100000 --rollout-steps 50000 --iters 10 --epochs 5 --batch-size 512 --lr 0.001 --deterministic`
-- Model: `experiments/drone_hover_dagger_1768871155.pt`
-- Eval (deterministic): `experiments/drone_hover_dagger_eval_fullhold_deterministic_600k.csv`
-- Success rate: 60% (12/20)
-- Mean reward: -150.324
-- Mean hover time: 28.949 s
-
-### DAgger (PD Teacher, hidden_size=512)
-- Command: `python scripts/train_drone_hover_dagger.py --bootstrap-steps 100000 --rollout-steps 50000 --iters 5 --epochs 5 --batch-size 512 --lr 0.001 --deterministic --hidden-size 512`
-- Model: `experiments/drone_hover_dagger_1768870990.pt`
-- Eval (deterministic): `experiments/drone_hover_dagger_eval_fullhold_deterministic_h512.csv`
-- Success rate: 70% (14/20)
-- Mean reward: -107.803
-- Mean hover time: 29.351 s
-
-### DAgger (logit-loss, failed)
-- Command: `python scripts/train_drone_hover_dagger.py --bootstrap-steps 100000 --rollout-steps 50000 --iters 5 --epochs 5 --batch-size 512 --lr 0.001 --deterministic --loss logit`
-- Model: `experiments/drone_hover_dagger_1768870859.pt`
-- Eval (deterministic): `experiments/drone_hover_dagger_eval_fullhold_deterministic_logitloss.csv`
-- Success rate: 0% (0/20)
-- Mean hover time: 0.0 s
-
-### PPO Finetune from DAgger (200k)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --load-model-path experiments/drone_hover_dagger_1768870670.pt --train.total-timesteps 200000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --train.learning-rate 0.0005 --train.ent-coef 0.0 --env.randomize False --env.curriculum False --env.hover-curriculum False --env.action-smoothing 0.0 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176887163081.pt`
-- Eval (deterministic): `experiments/drone_hover_curriculum_eval_finetune_dagger200k.csv`
-- Success rate: 0% (0/20)
-
-### Residual PPO (PD Assist scale=0.1, 200k)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --load-model-path experiments/drone_hover_dagger_1768871576.pt --train.total-timesteps 200000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --train.learning-rate 0.0005 --train.ent-coef 0.0 --env.randomize False --env.curriculum False --env.hover-curriculum False --env.pd-assist True --env.pd-assist-scale 0.1 --env.action-smoothing 0.0 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176887425937.pt`
-- Eval (deterministic, pd_assist scale=0.1): `experiments/drone_hover_curriculum_eval_residual_scale01_200k.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -67.885
-- Mean hover time: 0.315 s
-
-### Residual PPO (PD Assist scale=0.02 + residual penalty, 200k)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --load-model-path experiments/drone_hover_dagger_1768871576.pt --train.total-timesteps 200000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --train.learning-rate 0.0003 --train.ent-coef 0.0 --env.randomize False --env.curriculum False --env.hover-curriculum False --env.pd-assist True --env.pd-assist-scale 0.02 --env.residual-penalty 0.5 --env.action-smoothing 0.0 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176887468242.pt`
-- Eval (deterministic, pd_assist scale=0.02, residual_penalty=0.5): `experiments/drone_hover_curriculum_eval_residual_scale002_200k.csv`
-- Success rate: 95% (19/20)
-- Mean reward: -122.603
-- Mean hover time: 29.884 s
-
-### Residual PPO (Randomized eval)
-- Model: `experiments/drone_hover_curriculum_176887468242.pt`
-- Eval (deterministic, randomize=True, pd_assist scale=0.02, residual_penalty=0.5): `experiments/drone_hover_curriculum_eval_residual_scale002_200k_randomized.csv`
-- Success rate: 10% (2/20)
-- Mean reward: -606.481
-- Mean hover time: 7.350 s
-
-### Residual PPO (Randomized fine-tune, wind_std=0.1, 200k)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --load-model-path experiments/drone_hover_curriculum_176887468242.pt --train.total-timesteps 200000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --train.learning-rate 0.0003 --train.ent-coef 0.0 --env.randomize True --env.curriculum True --env.curriculum-episodes 1000 --env.hover-curriculum False --env.pd-assist True --env.pd-assist-scale 0.02 --env.residual-penalty 0.5 --env.action-smoothing 0.0 --env.wind-std 0.1 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176887858631.pt`
-- Eval (deterministic, randomize=True, curriculum=False, wind_std=0.1, pd_assist scale=0.02, residual_penalty=0.5): `experiments/drone_hover_curriculum_eval_residual_scale002_200k_randwind01.csv`
-- Success rate: 20% (4/20)
-- Mean reward: -255.479
-- Mean hover time: 20.290 s
-
-### Residual PPO (Randomized fine-tune, pd_assist scale=0.05, 100k)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --load-model-path experiments/drone_hover_curriculum_176887858631.pt --train.total-timesteps 100000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --train.learning-rate 0.0003 --train.ent-coef 0.0 --env.randomize True --env.curriculum True --env.curriculum-episodes 1000 --env.hover-curriculum False --env.pd-assist True --env.pd-assist-scale 0.05 --env.residual-penalty 0.5 --env.action-smoothing 0.0 --env.wind-std 0.1 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176887872673.pt`
-- Eval (deterministic, randomize=True, curriculum=False, wind_std=0.1, pd_assist scale=0.05, residual_penalty=0.5): `experiments/drone_hover_curriculum_eval_residual_scale005_100k_randwind01.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -675.182
-- Mean hover time: 0.683 s
-
-### Residual PPO (Randomized fine-tune, action_smoothing=0.2, 100k)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --load-model-path experiments/drone_hover_curriculum_176887858631.pt --train.total-timesteps 100000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --train.learning-rate 0.0003 --train.ent-coef 0.0 --env.randomize True --env.curriculum True --env.curriculum-episodes 1000 --env.hover-curriculum False --env.pd-assist True --env.pd-assist-scale 0.02 --env.residual-penalty 0.5 --env.action-smoothing 0.2 --env.wind-std 0.1 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176887881631.pt`
-- Eval (deterministic, randomize=True, curriculum=False, wind_std=0.1, pd_assist scale=0.02, residual_penalty=0.5, action_smoothing=0.2): `experiments/drone_hover_curriculum_eval_residual_scale002_100k_randwind01_smooth02.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -263.367
-- Mean hover time: 8.993 s
-
-### Residual PPO (Randomized fine-tune, wind_std=0.1, 200k v2)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --load-model-path experiments/drone_hover_curriculum_176887858631.pt --train.total-timesteps 200000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --train.learning-rate 0.0003 --train.ent-coef 0.0 --env.randomize True --env.curriculum True --env.curriculum-episodes 1000 --env.hover-curriculum False --env.pd-assist True --env.pd-assist-scale 0.02 --env.residual-penalty 0.5 --env.action-smoothing 0.0 --env.wind-std 0.1 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176887891268.pt`
-- Eval (deterministic, randomize=True, curriculum=False, wind_std=0.1, pd_assist scale=0.02, residual_penalty=0.5): `experiments/drone_hover_curriculum_eval_residual_scale002_200k_randwind01_v2.csv`
-- Success rate: 25% (5/20)
-- Mean reward: -251.100
-- Mean hover time: 20.667 s
-
-### Residual PPO (Randomized fine-tune, residual_penalty=1.0, 100k)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --load-model-path experiments/drone_hover_curriculum_176887891268.pt --train.total-timesteps 100000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --train.learning-rate 0.0003 --train.ent-coef 0.0 --env.randomize True --env.curriculum True --env.curriculum-episodes 1000 --env.hover-curriculum False --env.pd-assist True --env.pd-assist-scale 0.02 --env.residual-penalty 1.0 --env.action-smoothing 0.0 --env.wind-std 0.1 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176887902203.pt`
-- Eval (deterministic, randomize=True, curriculum=False, wind_std=0.1, pd_assist scale=0.02, residual_penalty=1.0): `experiments/drone_hover_curriculum_eval_residual_penalty1_100k_randwind01.csv`
-- Success rate: 25% (5/20)
-- Mean reward: -254.489
-- Mean hover time: 20.306 s
-
-### PD Baseline (Randomized eval, wind_std=0.1)
-- Model: `experiments/drone_hover_curriculum_176887891268.pt` (policy ignored; pd_assist_scale=0.0)
-- Eval (deterministic, randomize=True, curriculum=False, wind_std=0.1, pd_assist scale=0.0): `experiments/drone_hover_pd_baseline_randwind01.csv`
-- Success rate: 20% (4/20)
-- Mean reward: -282.029
-- Mean hover time: 17.770 s
-
-### PD Baseline (Randomized eval, higher XY gains)
-- Eval (kp_xy=1.0, kd_xy=0.7): `experiments/drone_hover_pd_baseline_randwind01_kp10_kd07.csv`
-- Success rate: 45% (9/20)
-- Mean reward: -226.686
-- Mean hover time: 23.687 s
-- Eval (kp_xy=1.2, kd_xy=0.9): `experiments/drone_hover_pd_baseline_randwind01_kp12_kd09.csv`
-- Success rate: 65% (13/20)
-- Mean reward: -209.848
-- Mean hover time: 27.574 s
-- Eval (kp_xy=1.4, kd_xy=1.1): `experiments/drone_hover_pd_baseline_randwind01_kp14_kd11.csv`
-- Success rate: 70% (14/20)
-- Mean reward: -199.837
-- Mean hover time: 29.144 s
-- Eval (kp_xy=1.6, kd_xy=1.3): `experiments/drone_hover_pd_baseline_randwind01_kp16_kd13.csv`
-- Success rate: 90% (18/20)
-- Mean reward: -193.369
-- Mean hover time: 29.767 s
-
-### PD Baseline (Randomized eval, wind_std=0.2 sweep)
-- Eval (kp_xy=1.6, kd_xy=1.3): `experiments/drone_hover_pd_baseline_randwind02_kp16_kd13.csv`
-- Success rate: 55% (11/20)
-- Mean reward: -250.283
-- Mean hover time: 22.231 s
-- Eval (kp_xy=1.8, kd_xy=1.5): `experiments/drone_hover_pd_baseline_randwind02_kp18_kd15.csv`
-- Success rate: 65% (13/20)
-- Mean reward: -233.862
-- Mean hover time: 22.631 s
-- Eval (kp_xy=2.0, kd_xy=1.7): `experiments/drone_hover_pd_baseline_randwind02_kp20_kd17.csv`
-- Success rate: 70% (14/20)
-- Mean reward: -222.129
-- Mean hover time: 25.241 s
-
-### PD Baseline (Randomized eval, wind_std=0.3 sweep)
-- Eval (kp_xy=2.0, kd_xy=1.7): `experiments/drone_hover_pd_baseline_randwind03_kp20_kd17.csv`
-- Success rate: 40% (8/20)
-- Mean reward: -282.770
-- Mean hover time: 17.963 s
-- Eval (kp_xy=2.2, kd_xy=1.9): `experiments/drone_hover_pd_baseline_randwind03_kp22_kd19.csv`
-- Success rate: 55% (11/20)
-- Mean reward: -263.622
-- Mean hover time: 20.938 s
-- Eval (kp_xy=2.4, kd_xy=2.1): `experiments/drone_hover_pd_baseline_randwind03_kp24_kd21.csv`
-- Success rate: 70% (14/20)
-- Mean reward: -249.042
-- Mean hover time: 22.671 s
-- Eval (kp_xy=2.6, kd_xy=2.3): `experiments/drone_hover_pd_baseline_randwind03_kp26_kd23.csv`
-- Success rate: 70% (14/20)
-- Mean reward: -237.457
-- Mean hover time: 22.705 s
-- Eval (kp_xy=2.8, kd_xy=2.5): `experiments/drone_hover_pd_baseline_randwind03_kp28_kd25.csv`
-- Success rate: 75% (15/20)
-- Mean reward: -228.482
-- Mean hover time: 22.799 s
-- Eval (kp_xy=3.0, kd_xy=2.7): `experiments/drone_hover_pd_baseline_randwind03_kp30_kd27.csv`
-- Success rate: 75% (15/20)
-- Mean reward: -221.210
-- Mean hover time: 26.717 s
-- Eval (kp_xy=3.2, kd_xy=2.9): `experiments/drone_hover_pd_baseline_randwind03_kp32_kd29.csv`
-- Success rate: 90% (18/20)
-- Mean reward: -215.233
-- Mean hover time: 28.472 s
-- Eval (kp_xy=3.4, kd_xy=3.1): `experiments/drone_hover_pd_baseline_randwind03_kp34_kd31.csv`
-- Success rate: 95% (19/20)
-- Mean reward: -210.255
-- Mean hover time: 28.557 s
-
-### Residual PPO (Randomized eval, updated PD gains)
-- Model: `experiments/drone_hover_curriculum_176887891268.pt`
-- Eval (deterministic, randomize=True, curriculum=False, wind_std=0.1, pd_assist scale=0.02, residual_penalty=0.5, kp_xy=1.6, kd_xy=1.3): `experiments/drone_hover_curriculum_eval_residual_scale002_randwind01_kp16_kd13.csv`
-- Success rate: 100% (20/20)
-- Mean reward: -145.514
-- Mean hover time: 30.000 s
-- 100-episode eval (same settings): `experiments/drone_hover_curriculum_eval_residual_scale002_randwind01_kp16_kd13_100ep.csv`
-- Success rate: 99% (99/100)
-- Mean reward: -150.278
-- Mean hover time: 29.977 s
-
-### Residual PPO (Randomized eval, wind_std=0.2)
-- Model: `experiments/drone_hover_curriculum_176887891268.pt`
-- Eval (deterministic, randomize=True, curriculum=False, wind_std=0.2, pd_assist scale=0.02, residual_penalty=0.5, kp_xy=1.6, kd_xy=1.3): `experiments/drone_hover_curriculum_eval_residual_scale002_randwind02_kp16_kd13.csv`
-- Success rate: 50% (10/20)
-- Mean reward: -214.893
-- Mean hover time: 25.932 s
-
-### Residual PPO (Fine-tune, wind_std=0.2, kp_xy=2.0, kd_xy=1.7)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --load-model-path experiments/drone_hover_curriculum_176887891268.pt --train.total-timesteps 200000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --train.learning-rate 0.0003 --train.ent-coef 0.0 --env.randomize True --env.curriculum True --env.curriculum-episodes 2000 --env.hover-curriculum False --env.pd-assist True --env.pd-assist-scale 0.02 --env.residual-penalty 0.5 --env.wind-std 0.2 --env.mass-range 0.05 --env.inertia-range 0.05 --env.sensor-noise-std 0.01 --env.pd-kp-xy 2.0 --env.pd-kd-xy 1.7 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176920990752.pt`
-- Eval (deterministic, randomize=True, curriculum=False, wind_std=0.2, pd_assist scale=0.02, residual_penalty=0.5, kp_xy=2.0, kd_xy=1.7): `experiments/drone_hover_curriculum_eval_residual_scale002_randwind02_kp20_kd17.csv`
-- Success rate: 90% (18/20)
-- Mean reward: -183.557
-- Mean hover time: 28.437 s
-- 100-episode eval (same settings): `experiments/drone_hover_curriculum_eval_residual_scale002_randwind02_kp20_kd17_100ep.csv`
-- Success rate: 83% (83/100)
-- Mean reward: -188.888
-- Mean hover time: 27.722 s
-- Eval (wind_std=0.3, same gains): `experiments/drone_hover_curriculum_eval_residual_scale002_randwind03_kp20_kd17.csv`
-- Success rate: 45% (9/20)
-- Mean reward: -258.093
-- Mean hover time: 19.484 s
-
-### Residual PPO (Fine-tune, wind_std=0.3, kp_xy=2.4, kd_xy=2.1)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --load-model-path experiments/drone_hover_curriculum_176920990752.pt --train.total-timesteps 200000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --train.learning-rate 0.0003 --train.ent-coef 0.0 --env.randomize True --env.curriculum True --env.curriculum-episodes 3000 --env.hover-curriculum False --env.pd-assist True --env.pd-assist-scale 0.02 --env.residual-penalty 0.5 --env.wind-std 0.3 --env.mass-range 0.05 --env.inertia-range 0.05 --env.sensor-noise-std 0.01 --env.pd-kp-xy 2.4 --env.pd-kd-xy 2.1 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176921132431.pt`
-- Eval (deterministic, randomize=True, curriculum=False, wind_std=0.3, pd_assist scale=0.02, residual_penalty=0.5, kp_xy=2.4, kd_xy=2.1): `experiments/drone_hover_curriculum_eval_residual_scale002_randwind03_kp24_kd21.csv`
-- Success rate: 70% (14/20)
-- Mean reward: -216.296
-- Mean hover time: 26.612 s
-
-### Residual PPO (Fine-tune, wind_std=0.3, kp_xy=3.0, kd_xy=2.7)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --load-model-path experiments/drone_hover_curriculum_176921132431.pt --train.total-timesteps 200000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --train.learning-rate 0.0003 --train.ent-coef 0.0 --env.randomize True --env.curriculum True --env.curriculum-episodes 3000 --env.hover-curriculum False --env.pd-assist True --env.pd-assist-scale 0.02 --env.residual-penalty 0.5 --env.wind-std 0.3 --env.mass-range 0.05 --env.inertia-range 0.05 --env.sensor-noise-std 0.01 --env.pd-kp-xy 3.0 --env.pd-kd-xy 2.7 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176921182705.pt`
-- Eval (kp_xy=3.0, kd_xy=2.7): `experiments/drone_hover_curriculum_eval_residual_scale002_randwind03_kp30_kd27.csv`
-- Success rate: 90% (18/20)
-- Mean reward: -182.223
-- Mean hover time: 29.794 s
-- Eval (kp_xy=3.4, kd_xy=3.1): `experiments/drone_hover_curriculum_eval_residual_scale002_randwind03_kp34_kd31.csv`
-- Success rate: 100% (20/20)
-- Mean reward: -168.892
-- Mean hover time: 30.000 s
-- 100-episode eval (kp_xy=3.4, kd_xy=3.1): `experiments/drone_hover_curriculum_eval_residual_scale002_randwind03_kp34_kd31_100ep.csv`
-- Success rate: 95% (95/100)
-- Mean reward: -174.264
-- Mean hover time: 29.106 s
-
-### Residual PPO (Fine-tune, wind_std=0.3, kp_xy=3.4, kd_xy=3.1)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --load-model-path experiments/drone_hover_curriculum_176921182705.pt --train.total-timesteps 200000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --train.learning-rate 0.0003 --train.ent-coef 0.0 --env.randomize True --env.curriculum True --env.curriculum-episodes 3000 --env.hover-curriculum False --env.pd-assist True --env.pd-assist-scale 0.02 --env.residual-penalty 0.5 --env.wind-std 0.3 --env.mass-range 0.05 --env.inertia-range 0.05 --env.sensor-noise-std 0.01 --env.pd-kp-xy 3.4 --env.pd-kd-xy 3.1 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176921203303.pt`
-- Eval (deterministic, randomize=True, curriculum=False, wind_std=0.3, pd_assist scale=0.02, residual_penalty=0.5, kp_xy=3.4, kd_xy=3.1): `experiments/drone_hover_curriculum_eval_residual_scale002_randwind03_kp34_kd31_finetune.csv`
-- Success rate: 100% (20/20)
-- Mean reward: -168.601
-- Mean hover time: 30.000 s
-- 100-episode eval (same settings): `experiments/drone_hover_curriculum_eval_residual_scale002_randwind03_kp34_kd31_finetune_100ep.csv`
-- Success rate: 95% (95/100)
-- Mean reward: -174.437
-- Mean hover time: 29.106 s
-- Eval (pd_assist_scale=0.03, kp_xy=3.4, kd_xy=3.1): `experiments/drone_hover_curriculum_eval_residual_scale003_randwind03_kp34_kd31.csv`
-- Success rate: 95% (19/20)
-- Mean reward: -184.931
-- Mean hover time: 29.918 s
-- Eval (kp_xy=3.6, kd_xy=3.3): `experiments/drone_hover_curriculum_eval_residual_scale002_randwind03_kp36_kd33.csv`
-- Success rate: 100% (20/20)
-- Mean reward: -163.557
-- Mean hover time: 30.000 s
-- 100-episode eval (kp_xy=3.6, kd_xy=3.3): `experiments/drone_hover_curriculum_eval_residual_scale002_randwind03_kp36_kd33_100ep.csv`
-- Success rate: 99% (99/100)
-- Mean reward: -169.056
-- Mean hover time: 29.711 s
-- Eval (kp_xy=3.8, kd_xy=3.5): `experiments/drone_hover_curriculum_eval_residual_scale002_randwind03_kp38_kd35.csv`
-- Success rate: 100% (20/20)
-- Mean reward: -159.283
-- Mean hover time: 30.000 s
-- 100-episode eval (kp_xy=3.8, kd_xy=3.5): `experiments/drone_hover_curriculum_eval_residual_scale002_randwind03_kp38_kd35_100ep.csv`
-- Success rate: 100% (100/100)
-- Mean reward: -164.621
-- Mean hover time: 30.000 s
-
-### Residual PPO (Randomized eval, no PD assist)
-- Model: `experiments/drone_hover_curriculum_176887891268.pt`
-- Eval (deterministic, randomize=True, curriculum=False, wind_std=0.1, pd_assist=False): `experiments/drone_hover_curriculum_eval_no_pd_randwind01.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -29.743
-- Mean hover time: 0.346 s
-
-### BC Distillation (teacher=PD+residual, no-PD eval)
-- Command: `python scripts/train_drone_hover_bc.py --steps 100000 --epochs 10 --batch-size 512 --lr 0.001 --deterministic --teacher-model experiments/drone_hover_curriculum_176887891268.pt --teacher-pd-assist --teacher-pd-assist-scale 0.02 --label-mode applied --randomize --wind-std 0.1 --mass-range 0.05 --inertia-range 0.05 --sensor-noise-std 0.01 --pd-kp-xy 1.6 --pd-kd-xy 1.3 --pd-kp-z 5.0 --pd-kd-z 3.0 --pd-kp-ang 8.0 --pd-kd-ang 2.0`
-- Model: `experiments/drone_hover_bc_1769048563.pt`
-- Eval (deterministic, randomize=True, curriculum=False, wind_std=0.1, pd_assist=False): `experiments/drone_hover_bc_eval_no_pd_randwind01.csv`
-- Success rate: 0% (0/20)
-
-### BC Distillation (teacher=PD+residual, 300k steps, no-PD eval)
-- Command: `python scripts/train_drone_hover_bc.py --steps 300000 --epochs 10 --batch-size 512 --lr 0.001 --deterministic --teacher-model experiments/drone_hover_curriculum_176887891268.pt --teacher-pd-assist --teacher-pd-assist-scale 0.02 --label-mode applied --randomize --wind-std 0.1 --mass-range 0.05 --inertia-range 0.05 --sensor-noise-std 0.01 --pd-kp-xy 1.6 --pd-kd-xy 1.3 --pd-kp-z 5.0 --pd-kd-z 3.0 --pd-kp-ang 8.0 --pd-kd-ang 2.0`
-- Model: `experiments/drone_hover_bc_1769049029.pt`
-- Eval (deterministic, randomize=True, curriculum=False, wind_std=0.1, pd_assist=False): `experiments/drone_hover_bc_eval_no_pd_randwind01_300k.csv`
-- Success rate: 0% (0/20)
-
-### PPO Fine-tune (no-PD, from BC, action_smoothing=0.1)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --load-model-path experiments/drone_hover_bc_1769049029.pt --train.total-timesteps 200000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --train.learning-rate 0.0003 --train.ent-coef 0.0 --env.randomize True --env.curriculum True --env.curriculum-episodes 1000 --env.hover-curriculum False --env.pd-assist False --env.action-smoothing 0.1 --env.w-act-delta 0.2 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176904917147.pt`
-- Eval (deterministic, randomize=True, curriculum=False, wind_std=0.1, pd_assist=False, action_smoothing=0.1): `experiments/drone_hover_ppo_nopd_finetune_eval_randwind01.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -27.838
-- Mean hover time: 0.353 s
-
-### Residual PPO (PD Assist anneal 0.02 → 0.0, 300k)
-- Command: `python -m pufferlib.pufferl train drone_hover_curriculum --load-model-path experiments/drone_hover_curriculum_176887468242.pt --train.total-timesteps 300000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 256 --train.minibatch-size 256 --train.device cpu --train.optimizer adam --train.learning-rate 0.0003 --train.ent-coef 0.0 --env.randomize False --env.curriculum False --env.hover-curriculum False --env.pd-assist True --env.pd-assist-scale 0.02 --env.pd-assist-scale-final 0.0 --env.pd-assist-anneal-episodes 50 --env.residual-penalty 0.5 --env.action-smoothing 0.0 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_curriculum_176887496875.pt`
-- Eval (deterministic, pd_assist off): `experiments/drone_hover_curriculum_eval_residual_anneal_300k.csv`
-- Success rate: 0% (0/20)
-- Mean reward: -36.166
-- Mean hover time: 0.390 s
-
-### Multi-Checkpoint Summary
-- Command: `python scripts/eval_drone_hover.py --model-glob "experiments/drone_hover_curriculum_*.pt" --csv-path experiments/drone_hover_curriculum_eval_summary.csv`
-- Summary CSV: `experiments/drone_hover_curriculum_eval_summary.csv`
-
-### C/CUDA Extension Build Attempt
-- Command: `python setup.py build_ext --inplace`
-- Result: build failed during C++ compile (torch extension build). Using Python advantage fallback.
-
-### Notes
-- Runs executed on CPU with Python advantage fallback (no C/CUDA extension).
-- Short 5k-step runs are smoke tests; expect longer training to improve hover stability.
-- Added action-centered control option to bias actions around hover thrust.
-- Added PD-assist residual controller; training logs showed hover_time spikes (~15s) but eval still 0% success.
-- PD assist now uses thrust-vector mapping and hover_time uses step counts; this removes float drift and enables exact 30.0s holds.
-- PD baseline meets the 80% success target on fixed seeds without learning; learned policy still below target.
-- DAgger closes part of the gap (best 70% success), but is still below the 80% target.
-- PD grid search achieves 85% success on eval seeds; this satisfies the 30s hover requirement in nominal conditions.
-- Residual PPO with PD assist (scale=0.1) degraded performance; smaller scale + residual penalty succeeds at 95% success.
-- Annealing PD assist to 0 over 300k lost performance when evaluated with assist off.
-- Randomized eval shows large performance drop; robustness remains unsolved.
-- Randomized fine-tune with reduced wind (0.1) improved success to 20%, still far from 80% target.
-- Increasing pd_assist scale to 0.05 under randomization collapsed performance (0% success).
-- Adding action_smoothing=0.2 under randomization also collapsed performance (0% success).
-- Extending the wind_std=0.1 fine-tune to 200k improved success to 25%, still below target.
-- Increasing residual_penalty to 1.0 did not improve success vs 0.5 (still 25%).
-- PD baseline under randomization (wind_std=0.1) is 20% success, suggesting robustness remains the bottleneck.
-- Increasing PD XY gains improves randomized success; kp_xy=1.6/kd_xy=1.3 hits 90% for PD-only.
-- With updated PD gains (kp_xy=1.6, kd_xy=1.3) and residual policy, randomized eval reaches 100% success and 30s hover.
-- Residual policy without PD assist collapses under randomization (0% success); keep PD assist enabled for this model.
-- Updated config defaults to pd_kp_xy=1.6 and pd_kd_xy=1.3 for drone_hover and drone_hover_curriculum.
-- Updated `scripts/train_drone_hover_bc.py` to support teacher-model distillation and applied-action labels.
-- Higher wind (wind_std=0.2) drops success to 50% with kp_xy=1.6/kd_xy=1.3; increasing to kp_xy=2.0/kd_xy=1.7 and fine-tuning recovers to 90%.
-- At wind_std=0.3, raising PD gains (kp_xy=3.8/kd_xy=3.5) yields 100% success over 100 episodes with residual policy.
-- Best current robust setting: wind_std=0.3, kp_xy=3.8, kd_xy=3.5, pd_assist_scale=0.02, residual_penalty=0.5 (100/100).
-
-## Risks / Notes
-- Low-level thrust control is harder to learn and may need stronger reward
-  shaping and curriculum (e.g., start with low noise, narrow start pose).
-
-## GPU Plan (when available)
-- Goal: long randomized PPO run with tuned PD gains to harden robustness.
-- Starting checkpoint: `experiments/drone_hover_curriculum_176887891268.pt`
-- Settings: `pd_kp_xy=1.6`, `pd_kd_xy=1.3`, `pd_assist_scale=0.02`, `residual_penalty=0.5`
-- Proposed training command (1–2M steps on GPU):
-  `python -m pufferlib.pufferl train drone_hover_curriculum --load-model-path experiments/drone_hover_curriculum_176887891268.pt --train.total-timesteps 1000000 --vec.backend Multiprocessing --vec.num-envs 8 --vec.num-workers 8 --train.env-batch-size 8 --train.num-envs 8 --train.batch-size 1024 --train.minibatch-size 1024 --train.device cuda --train.optimizer adam --train.learning-rate 0.0003 --train.ent-coef 0.0 --env.randomize True --env.curriculum True --env.curriculum-episodes 5000 --env.hover-curriculum False --env.pd-assist True --env.pd-assist-scale 0.02 --env.residual-penalty 0.5 --env.wind-std 0.2 --env.mass-range 0.05 --env.inertia-range 0.05 --env.sensor-noise-std 0.01 --csv-log-dir experiments`
-- Proposed eval (100–200 eps): use `scripts/eval_drone_hover.py` with wind_std=0.1 and 0.2.
-
-## Robust Preset
-- Added `pufferlib/config/drone_hover_robust.ini` with wind_std=0.3 and tuned PD gains (kp_xy=3.8, kd_xy=3.5) for the 100%/100 robustness result.
-- Example training: `python -m pufferlib.pufferl train drone_hover_robust --csv-log-dir experiments`
-- Example eval: `PYTHONPATH=. python scripts/eval_drone_hover.py --model-path experiments/drone_hover_curriculum_176921203303.pt --episodes 100 --seed 42 --deterministic --csv-path experiments/drone_hover_curriculum_eval_residual_scale002_randwind03_kp38_kd35_100ep.csv --env-kwargs '{"randomize": true, "curriculum": false, "hover_curriculum": false, "pd_assist": true, "pd_assist_scale": 0.02, "residual_penalty": 0.5, "wind_std": 0.3, "mass_range": 0.05, "inertia_range": 0.05, "sensor_noise_std": 0.01, "pd_kp_xy": 3.8, "pd_kd_xy": 3.5, "pd_kp_z": 5.0, "pd_kd_z": 3.0, "pd_kp_ang": 8.0, "pd_kd_ang": 2.0}'`
-
-### Robust PPO (CPU, 200k, continue from best checkpoint)
-- Command: `python -m pufferlib.pufferl train drone_hover_robust --load-model-path experiments/drone_hover_curriculum_176921203303.pt --train.total-timesteps 200000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 512 --train.minibatch-size 512 --train.device cpu --train.optimizer adam --train.learning-rate 0.0003 --train.ent-coef 0.0 --csv-log-dir experiments`
-- Model: `experiments/drone_hover_robust_176940098863.pt`
-- Eval (deterministic, randomized wind): `PYTHONPATH=. python scripts/eval_drone_hover.py --model-path experiments/drone_hover_robust_176940098863.pt --episodes 100 --seed 42 --deterministic --csv-path experiments/drone_hover_robust_eval_176940098863_wind03_kp38_kd35_100ep.csv --env-kwargs '{"randomize": true, "curriculum": false, "hover_curriculum": false, "pd_assist": true, "pd_assist_scale": 0.02, "residual_penalty": 0.5, "wind_std": 0.3, "mass_range": 0.05, "inertia_range": 0.05, "sensor_noise_std": 0.01, "pd_kp_xy": 3.8, "pd_kd_xy": 3.5, "pd_kp_z": 5.0, "pd_kd_z": 3.0, "pd_kp_ang": 8.0, "pd_kd_ang": 2.0}'`
-- Eval CSV: `experiments/drone_hover_robust_eval_176940098863_wind03_kp38_kd35_100ep.csv`
-- Success rate: 100% (100/100)
-- Mean reward: -165.187
-- Mean hover time: 30.000 s
-
-### Wind 0.4 Robustness Checks (same model)
-- Eval (kp_xy=3.8, kd_xy=3.5): `experiments/drone_hover_robust_eval_176940098863_wind04_kp38_kd35_100ep.csv`
-- Success rate: 90% (90/100)
-- Mean reward: -197.250
-- Mean hover time: 27.379 s
-- Eval (kp_xy=4.2, kd_xy=3.9): `experiments/drone_hover_robust_eval_176940098863_wind04_kp42_kd39_100ep.csv`
-- Success rate: 94% (94/100)
-- Mean reward: -184.383
-- Mean hover time: 28.298 s
-
-### Robust PPO (CPU, 100k, post-curriculum-fix validation)
-- Context: fixed curriculum counters to persist across resets (`episode_count`, `hover_episode_count`) in `pufferlib/environments/drone_hover/environment.py`.
-- Command: `python -m pufferlib.pufferl train drone_hover_robust --load-model-path experiments/drone_hover_robust_176940098863.pt --train.total-timesteps 100000 --vec.backend Multiprocessing --vec.num-envs 4 --vec.num-workers 4 --train.env-batch-size 4 --train.num-envs 4 --train.batch-size 512 --train.minibatch-size 512 --train.device cpu --train.optimizer adam --train.learning-rate 0.0003 --train.ent-coef 0.0 --csv-log-dir experiments`
-- Train log: `experiments/drone_hover_robust_curriculumfix_train_100k.log`
-- Model: `experiments/drone_hover_robust_177049920214.pt`
-- Eval (wind_std=0.3, kp_xy=3.8, kd_xy=3.5): `experiments/drone_hover_robust_eval_177049920214_wind03_kp38_kd35_100ep.csv`
-- Success rate: 100% (100/100)
-- Mean reward: -165.126
-- Mean hover time: 30.000 s
-- Eval (wind_std=0.4, kp_xy=3.8, kd_xy=3.5): `experiments/drone_hover_robust_eval_177049920214_wind04_kp38_kd35_100ep.csv`
-- Success rate: 90% (90/100)
-- Mean reward: -197.172
-- Mean hover time: 27.380 s
-- Eval (wind_std=0.4, kp_xy=4.2, kd_xy=3.9): `experiments/drone_hover_robust_eval_177049920214_wind04_kp42_kd39_100ep.csv`
-- Success rate: 94% (94/100)
-- Mean reward: -184.144
-- Mean hover time: 28.299 s
-- Outcome: no regression versus prior robust baseline on matched seeds/settings.
-
-## Sim2Real Direction (Setpoint Policy)
-- Preferred control stack for sim2real: PD-assisted residual controller over pure motor-thrust RL.
-- New policy interface target: output a distance/setpoint vector (e.g., `dx, dy, dz`) instead of direct 4-motor thrusts.
-- Command interpretation:
-  - Convert policy command to a bounded local target: `target = current_position + clip([dx, dy, dz])`.
-  - Keep PD as the low-level stabilizer to track this target and produce motor actions.
-  - Optionally keep a small residual head to correct PD output under disturbances.
-- Rationale:
-  - Better transfer to real flight stacks where low-level attitude/rate control already exists.
-  - Lower risk than end-to-end raw-thrust control.
-- Proposed implementation task:
-  - Add an env action mode (e.g., `command_mode = distance_vector`) in `drone_hover` and corresponding config options for command bounds and update rate.
-
-## Sim2Real Acceptance Checklist
-- Objective: deploy policy safely by keeping low-level stability on hardware and limiting learned policy authority initially.
-
-### Controller Interface Freeze
-- [ ] Policy output is a high-level command (distance/setpoint or residual), not raw per-motor thrust for first hardware flights.
-- [ ] Runtime command law is fixed and documented (example: `u = clamp(u_pd + alpha * u_residual)`).
-- [ ] Initial residual gain `alpha` is bounded low (start `<= 0.05`) with a runtime knob for controlled ramp-up.
-
-### Sim Fidelity Gates (must pass before hardware)
-- [ ] Add latency randomization (sensor + actuator delay).
-- [ ] Add motor lag / actuator dynamics mismatch.
-- [ ] Add sensor bias + noise + occasional dropout.
-- [ ] Add disturbance profiles beyond Gaussian noise (gusts/impulses).
-- [ ] Re-run deterministic + randomized eval at fixed seeds and compare against current robust baseline.
-
-### Quantitative Go/No-Go Gates
-- [ ] Wind 0.3 randomized eval: success >=95% over 100 episodes.
-- [ ] Wind 0.4 randomized eval: success >=90% over 100 episodes.
-- [ ] No regression against `experiments/drone_hover_robust_177049920214.pt` on matched eval settings.
-- [ ] No NaN/infs in policy outputs, rewards, or logged state during long-run eval.
-
-### Hardware Safety Gates
-- [ ] Independent kill switch tested (manual + software path).
-- [ ] Automatic fallback to pure PD if state exits envelope or policy output invalid.
-- [ ] Hard geofence/altitude/tilt bounds enforced onboard.
-- [ ] Telemetry logging confirms loop-rate and delay are within expected limits.
-
-### Flight Progression Plan
-- [ ] Bench test (props-off telemetry and command sanity).
-- [ ] Tethered hover with pure PD (`alpha=0`).
-- [ ] Tethered hover with tiny residual gain (`alpha<=0.05`).
-- [ ] Safety-cage free hover, then mild disturbance tests.
-- [ ] Expand envelope only after repeated passes with no safety fallbacks triggered.
+# PRD: Drone Gate Navigation Challenge (Source of Truth)
+
+Last updated: 2026-02-20
+Owner: `PufferLib/drone_race`
+
+## Source of Truth Policy
+- This file is the active product and execution PRD for the race program.
+- Legacy hover-era and historical experiment logs are archived at:
+  - `docs/prd_archive_legacy_2026-02-20.md`
+- If conflicts exist between this file and archived material, this file wins.
+
+## Challenge Goal
+Build a fully autonomous drone stack that passes all gates in strict order and minimizes valid completion time in virtual competition environments.
+
+## Competition-Aligned Requirements
+- Gate recognition from provided sensor/visual streams.
+- Precision drone control (thrust/orientation/rates) with reliability-first safety behavior.
+- Efficient planning/navigation under realistic vehicle limits.
+- No manual control and no hardware advantages.
+
+## Program-Level Success Metrics
+- `valid_run_rate`: percentage of runs that complete all gates in order.
+- `median_valid_time`: median completion time over valid runs.
+- `ordered_gate_pass_rate`: percentage of accepted in-sequence gate crossings.
+- `crash_rate`: fraction of runs that terminate via crash/unsafe state.
+
+## Architecture Decision (Active)
+Use a modular race stack:
+1. Perception adapters (`privileged_state`, camera/sensor adapters).
+2. Planner producing bounded setpoints and fallback behavior.
+3. Controller path (target: dedicated module with saturation/fallback).
+4. PPO training and deterministic fixed-seed evaluation in PufferLib.
+
+## Scope Boundaries
+In scope:
+- `pufferlib/environments/drone_race/*`
+- `pufferlib/config/drone_race*.ini`
+- `scripts/eval_drone_race*.py`
+- `tests/test_drone_race*.py`
+
+Out of scope for active race implementation:
+- Expanding `drone_hover` features unless needed for shared-core bug fixes.
+- Hardware flight implementation.
+
+## Training Backbone and Governance Model
+Decision:
+- Keep tier configs as the training backbone.
+- Add L1-L9 as promotion governance gates over evaluation outputs.
+
+### Tier Backbone
+- Tier 1: `drone_race_curriculum_tier1`
+- Tier 2: `drone_race_curriculum_tier2`
+- Tier 3: `drone_race_curriculum_tier3`
+
+### L1-L9 Governance
+- L-levels do not replace tier configs.
+- L-levels decide promotion, remediation, and checkpoint acceptance.
+- Remediation policy: max 3 attempts per level, targeted remediation between attempts.
+
+## L1-L9 Definitions (Operational)
+| Level | Intent | Primary Metric | Gate |
+|---|---|---|---|
+| L1 | Stable launch/hold behavior | `valid_run_rate` (easy setup) | >= 0.90 |
+| L2 | Reach first gate reliably | `first_gate_pass_rate` | >= 0.90 |
+| L3 | Pass one gate reliably | `first_gate_pass_rate` | >= 0.95 |
+| L4 | Two-gate sequencing reliability | `two_gate_pass_rate` | >= 0.90 |
+| L5 | Sequence robustness (turning pressure) | `success_rate` (tier2) | >= 0.80 |
+| L6 | Full lap reliability | `success_rate` (tier3) | >= 0.60 |
+| L7 | Speed optimization after reliability | `median_completion_time_valid` | <= target time |
+| L8 | Consistency | `max_consecutive_successes` | >= 10 |
+| L9 | Generalization | `success_rate` on strict suite | >= 0.50 |
+
+Notes:
+- L7 target time remains configurable per track and evaluation suite.
+- L9 generalization currently uses strict fixed-seed suite until multi-track interfaces land.
+
+## Execution Strategy
+1. Reliability first on Tier 1 -> Tier 2 -> Tier 3.
+2. Promote only if current L-gate passes.
+3. On failure, run targeted remediation and retry.
+4. Optimize speed only after sustained valid completion.
+
+## Strong and Reusable Patterns (Adopted)
+From cross-project analysis, we adopt these patterns:
+- Strict level gating with explicit thresholds and budgets.
+- Gate-geometry helper as a single tested source for crossing validity.
+- Deterministic submission-style local harness behavior.
+- Domain-randomization/noise profiles as progressive robustness knobs.
+
+## Extended Implementation Plan
+
+### Phase A: Governance Layer
+- [ ] Add level spec config: `pufferlib/config/drone_race_levels.ini`.
+- [ ] Add level evaluator script: `scripts/eval_drone_race_levels.py`.
+- [ ] Emit level report artifacts (JSON + CSV) per checkpoint.
+
+### Phase B: Gate Geometry Hardening
+- [ ] Add shared helper: `pufferlib/environments/drone_race/gate_progress.py`.
+- [ ] Route env crossing checks through helper.
+- [ ] Add dedicated gate-progress tests.
+
+### Phase C: Remediation Loop
+- [ ] Add iterative trainer script that enforces L-gates and retry policy.
+- [ ] Implement targeted remediation hooks (seed subsets + teacher/scripted warmup).
+
+### Phase D: Deterministic Submission Harness
+- [ ] Add `submission/entrypoint.py` for deterministic inference path.
+- [ ] Add `submission/local_eval.py` for local controlled evaluation.
+
+### Phase E: Robustness Profiles
+- [ ] Add clean/mild/medium/harsh race noise presets in config.
+- [ ] Wire profile progression to level policy.
+
+## Immediate Sprint (Current)
+- [ ] Refactor PRD to source-of-truth structure (this update).
+- [ ] Implement Phase A and Phase B with focused tests.
+- [ ] Keep tier configs as training backbone and L-levels as governance.
+
+## Promotion and Remediation Policy
+- Promotion requires passing all required metrics for the current level.
+- If failed:
+  1. Run diagnostics over fixed-seed suite.
+  2. Apply targeted remediation.
+  3. Retry.
+- Max attempts per level: 3.
+
+## Experiment Logging Requirements
+For each training/eval block, record:
+- Checkpoint path and config used.
+- Suites evaluated and seed ranges.
+- L-level pass/fail outcomes and blocking metric.
+- Commands run and status.
+
+## Risks and Controls
+- Risk: speed tuning before reliability leads to invalid-run collapse.
+  - Control: enforce L6/L8 gates before aggressive speed optimization.
+- Risk: interface drift in gate-crossing logic.
+  - Control: shared helper + dedicated tests.
+- Risk: overfitting to privileged-state perception.
+  - Control: staged camera/noise profile adoption and fallback diagnostics.
+
+## Current Program Status
+- Race env/planner/perception-adapter baseline implemented.
+- Tier configs in place and updated for MP/GPU + recurrent track.
+- Next required implementation: L-gate evaluator and shared gate-progress helper.

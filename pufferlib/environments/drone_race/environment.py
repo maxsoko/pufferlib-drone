@@ -7,6 +7,7 @@ import pufferlib
 import pufferlib.emulation
 from .adapters import make_perception_adapter
 from .planner import make_planner
+from .gate_progress import is_valid_gate_crossing
 
 
 def env_creator(name='drone_race'):
@@ -330,27 +331,15 @@ class DroneRaceEnv(gymnasium.Env):
         return np.clip(obs, -1.0, 1.0).astype(np.float32)
 
     def _segment_crosses_gate(self, gate_index, prev_pos, curr_pos):
-        center = self.gate_centers[gate_index]
-        normal = self.gate_normals[gate_index]
-        move = curr_pos - prev_pos
-        move_dir = move / max(float(np.linalg.norm(move)), 1e-8)
-
-        d_prev = float(np.dot(prev_pos - center, normal))
-        d_curr = float(np.dot(curr_pos - center, normal))
-        crossing = d_prev <= -self.plane_cross_tolerance and d_curr >= self.plane_cross_tolerance
-        if not crossing:
-            return False
-
-        denom = d_prev - d_curr
-        if abs(denom) < 1e-8:
-            return False
-        t = float(np.clip(d_prev / denom, 0.0, 1.0))
-        hit = prev_pos + t * (curr_pos - prev_pos)
-        radial = hit - center
-        radial -= float(np.dot(radial, normal)) * normal
-        radial_dist = float(np.linalg.norm(radial))
-        directed = float(np.dot(move_dir, normal)) > self.direction_min
-        return radial_dist <= self.gate_radius and directed
+        return is_valid_gate_crossing(
+            prev_position=prev_pos,
+            position=curr_pos,
+            gate_center=self.gate_centers[gate_index],
+            gate_normal=self.gate_normals[gate_index],
+            gate_radius=self.gate_radius,
+            plane_cross_tolerance=self.plane_cross_tolerance,
+            direction_min=self.direction_min,
+        )
 
     def _update_gate_state(self, prev_pos, curr_pos):
         gate_passed = False
