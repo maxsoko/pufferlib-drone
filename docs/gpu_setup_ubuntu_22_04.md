@@ -101,7 +101,7 @@ bash build.sh drone
 python -m pufferlib.pufferl train drone
 ```
 
-Then train race through the staged bridge curriculum. Use the best hover `.bin` checkpoint from the previous step:
+Then train race through the staged bridge curriculum. Use the best hover `.bin` checkpoint from the previous step. The script promotes through one, two, three, then four gates and stops if a stage misses its success/crash thresholds:
 
 ```bash
 HOVER_WEIGHTS=checkpoints/drone/<run_id>/<checkpoint>.bin \

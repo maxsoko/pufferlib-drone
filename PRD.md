@@ -191,6 +191,7 @@ From cross-project analysis, we adopt these patterns:
 - [x] Add native gate-crossing parity/regression tests.
 - [x] Run native CUDA/NCCL validation on Linux GPU hardware.
 - [x] Add staged `drone_race` curriculum after full race collapsed at `crash=1.000`.
+- [x] Add promotion checks and an explicit 3-gate bridge to the race curriculum runner.
 
 ## Promotion and Remediation Policy
 - Promotion requires passing all required metrics for the current level.
@@ -206,6 +207,44 @@ For each training/eval block, record:
 - Suites evaluated and seed ranges.
 - L-level pass/fail outcomes and blocking metric.
 - Commands run and status.
+
+## Current Vast GPU Run Log
+- Vast workspace path: `/root/pufferlib-drone`.
+- Active branch/commit used for these runs: `native-v4-drone-port` at `9ec46207` (`add drone race curriculum warm start`).
+- Before shutting down an ephemeral Vast instance, copy at least `checkpoints/`, `logs/`, and any changed source/docs to persistent storage or the local workstation. Do not rely on the instance root disk surviving destroy/relaunch.
+- Local backup mirror created on 2026-04-25: `/Users/anon/code/rl/puffer_ai/vast_backup_20260425` (`checkpoints/` and `logs/`, about `44M`).
+- Minimum backup from local machine:
+  ```bash
+  mkdir -p vast_backup
+  rsync -av -e "ssh -i ~/.ssh/id_ed25519 -p 26520" \
+    root@ssh1.vast.ai:/root/pufferlib-drone/checkpoints/ vast_backup/checkpoints/
+  rsync -av -e "ssh -i ~/.ssh/id_ed25519 -p 26520" \
+    root@ssh1.vast.ai:/root/pufferlib-drone/logs/ vast_backup/logs/
+  ```
+- If using a mounted persistent volume on the Vast box, mirror in-place before shutdown:
+  ```bash
+  rsync -av checkpoints/ /persistent/checkpoints/
+  rsync -av logs/ /persistent/logs/
+  ```
+
+### Native Race Curriculum Checkpoints
+- Native hover/control prior:
+  - `checkpoints/drone/1777138104363/0000000039976960.bin`
+- Solved H1 one-gate race bridge:
+  - `checkpoints/drone_race/1777139155996/0000000049938432.bin`
+  - Metrics: `success_rate=0.9995`, `crash=0.0005`, `gates_passed=0.9995`.
+- Strong R1 two-gate bridge; use this as the canonical restart point for 3-gate experiments:
+  - `checkpoints/drone_race/1777139257574/0000000052494336.bin`
+  - Metrics: `success_rate=0.9823`, `crash=0.0177`, `gates_passed=1.9812`.
+- Best current 3-gate stabilization checkpoint:
+  - `checkpoints/drone_race/1777139626939/0000000052494336.bin`
+  - Metrics: `success_rate=0.7990`, `crash=0.2006`, `gates_passed=2.6586`.
+  - Not promotion-ready; continue 3-gate stability work before returning to 4 gates.
+- `scripts/train_drone_race_curriculum.sh` now includes H1, R1, R3, and R4 stages with promotion thresholds. If a stage misses its success/crash threshold, the script exits instead of automatically continuing from a regressed checkpoint.
+- Do not continue from these regressed runs unless explicitly investigating failure modes:
+  - `checkpoints/drone_race/1777139303583/0000000078708736.bin`: 4 gates, `success_rate=0.5402`, `crash=0.4566`.
+  - `checkpoints/drone_race/1777139353818/0000000099942400.bin`: 4 gates, `success_rate=0.4035`, `crash=0.5898`.
+  - `checkpoints/drone_race/1777139537143/0000000099942400.bin`: 3 gates, `success_rate=0.4637`, `crash=0.5363`.
 
 ## Risks and Controls
 - Risk: speed tuning before reliability leads to invalid-run collapse.

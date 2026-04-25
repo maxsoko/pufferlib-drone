@@ -78,7 +78,7 @@ bash build.sh drone
 python -m pufferlib.pufferl train drone
 ```
 
-Then train race through the bridge curriculum. Pass the latest hover checkpoint if you have one:
+Then train race through the bridge curriculum. Pass the latest hover checkpoint if you have one. The runner now promotes through one, two, three, then four gates and stops if a stage misses its success/crash thresholds:
 
 ```bash
 HOVER_WEIGHTS=checkpoints/drone/<run_id>/<checkpoint>.bin \
