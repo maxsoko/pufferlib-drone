@@ -101,11 +101,11 @@ bash build.sh drone
 python -m pufferlib.pufferl train drone
 ```
 
-Then train race:
+Then train race through the staged bridge curriculum. Use the best hover `.bin` checkpoint from the previous step:
 
 ```bash
-bash build.sh drone_race
-python -m pufferlib.pufferl train drone_race
+HOVER_WEIGHTS=checkpoints/drone/<run_id>/<checkpoint>.bin \
+  bash scripts/train_drone_race_curriculum.sh
 ```
 
 ## Checkpoints
@@ -137,7 +137,7 @@ WEIGHTS=checkpoints/drone/<run_id>/<checkpoint>.bin \
   bash scripts/eval_drone_hover_edge.sh
 ```
 
-For race checkpoints, use `--input-dim 25` when exporting.
+Race and hover checkpoints both use `--input-dim 23`, so hover weights can warm-start the race curriculum.
 
 ## Acceptance Rule
 

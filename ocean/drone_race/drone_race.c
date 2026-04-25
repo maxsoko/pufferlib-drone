@@ -6,10 +6,6 @@ static inline float race_dist3(Vec3 a, Vec3 b) {
     return norm3(sub3(a, b));
 }
 
-static inline float race_progress(DroneRace* env, DroneRaceAgent* agent) {
-    return ((float)agent->current_gate + agent->progress) / fmaxf((float)env->num_gates, 1.0f);
-}
-
 static void build_course(DroneRace* env) {
     if (env->num_gates < 1) env->num_gates = 1;
     if (env->num_gates > DRONE_RACE_MAX_GATES) env->num_gates = DRONE_RACE_MAX_GATES;
@@ -130,8 +126,6 @@ static void compute_one_observation(DroneRace* env, int i) {
     DroneRaceAgent* agent = &env->agents[i];
     float* obs = &env->observations[i * DRONE_RACE_OBS_SIZE];
     compute_drone_observations(&agent->drone, obs);
-    obs[23] = clampf(race_progress(env, agent), 0.0f, 1.0f);
-    obs[24] = clampf(agent->elapsed_time / fmaxf(env->time_limit_seconds, 1.0f), 0.0f, 1.0f);
     for (int j = 0; j < DRONE_RACE_OBS_SIZE; j++) {
         obs[j] = clampf(obs[j], -1.0f, 1.0f);
     }

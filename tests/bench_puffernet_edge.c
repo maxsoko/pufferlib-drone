@@ -68,7 +68,7 @@ static double now_seconds(void) {
 
 int main(int argc, char** argv) {
     int batch = argc > 1 ? atoi(argv[1]) : 64;
-    int input_dim = argc > 2 ? atoi(argv[2]) : 25;
+    int input_dim = argc > 2 ? atoi(argv[2]) : 23;
     int hidden_dim = argc > 3 ? atoi(argv[3]) : 128;
     int num_layers = argc > 4 ? atoi(argv[4]) : 3;
     int iters = argc > 5 ? atoi(argv[5]) : 1000;

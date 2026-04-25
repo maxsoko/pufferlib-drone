@@ -78,11 +78,11 @@ bash build.sh drone
 python -m pufferlib.pufferl train drone
 ```
 
-Then train race:
+Then train race through the bridge curriculum. Pass the latest hover checkpoint if you have one:
 
 ```bash
-bash build.sh drone_race
-python -m pufferlib.pufferl train drone_race
+HOVER_WEIGHTS=checkpoints/drone/<run_id>/<checkpoint>.bin \
+  bash scripts/train_drone_race_curriculum.sh
 ```
 
 ## Edge Inference
@@ -107,7 +107,7 @@ After a native `.bin` checkpoint exists, export Q8 weights:
 python scripts/export_puffernet_q8.py \
   checkpoints/drone_race/<run_id>/<checkpoint>.bin \
   checkpoints/drone_race/<run_id>/<checkpoint>_q8.npz \
-  --input-dim 25
+  --input-dim 23
 ```
 
 ## Current Status

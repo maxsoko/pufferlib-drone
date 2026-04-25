@@ -59,7 +59,7 @@ Decision:
 - Treat quantization as a closed-loop control problem, not just action-MSE compression.
 
 Initial target:
-- Observations are normalized/clamped in native envs (`25` race features, `23` hover features), making them suitable for fixed-point encoding.
+- Observations are normalized/clamped in native envs (`23` race features, `23` hover features), making them suitable for fixed-point encoding and hover-to-race checkpoint warm starts.
 - Use Q8 weights with per-output-channel scales for linear layers.
 - Use `int32` accumulators for low-bit MACs.
 - Keep recurrent state and nonlinear gate math mixed precision initially, then tighten to Q15/Q8 only after closed-loop parity is measured.
@@ -152,6 +152,7 @@ From cross-project analysis, we adopt these patterns:
 - [x] Align native `drone_race` config with `120 Hz` physics target and `480s` max run.
 - [x] Add dedicated native gate-crossing regression tests or standalone C/Python parity harness.
 - [x] Replace race kinematic shortcut with representative quadrotor motor/RK4 dynamics.
+- [x] Add hover-compatible race observation contract and staged first-gate to full-race curriculum runner.
 - [ ] Emit native eval report artifacts (JSON + CSV) per checkpoint.
 
 ### Phase C: MAVLink/SITL Adapter
@@ -188,7 +189,8 @@ From cross-project analysis, we adopt these patterns:
 - [x] Add Q8 PufferNet edge benchmark and runtime scaffold.
 - [x] Implement MAVLink/SITL adapter scaffold.
 - [x] Add native gate-crossing parity/regression tests.
-- [ ] Run native CUDA/NCCL validation on Linux GPU hardware.
+- [x] Run native CUDA/NCCL validation on Linux GPU hardware.
+- [x] Add staged `drone_race` curriculum after full race collapsed at `crash=1.000`.
 
 ## Promotion and Remediation Policy
 - Promotion requires passing all required metrics for the current level.
@@ -247,8 +249,10 @@ For each training/eval block, record:
 - Native `drone` hover CPU build and native eval smoke pass locally.
 - Native `drone_race` now uses representative quadrotor motor/RK4 dynamics instead of direct velocity/yaw-rate actions.
 - Native `drone_race` CPU build, eval smoke, and gate-crossing/physics/timing regressions pass locally.
-- Q8 PufferNet benchmark and closed-loop hover comparison harness compile locally; real checkpoint comparison is pending a native `.bin` checkpoint.
+- Native CUDA/NCCL validation passes on Vast.ai, and native hover training produced usable `.bin` checkpoints.
+- Full native `drone_race` from scratch collapsed at `crash=1.000`; the current path is staged hover-warm-started race curriculum.
+- Q8 PufferNet benchmark and closed-loop hover comparison harness compile locally; initial trained-hover Q8 comparison shows useful score retention but action drift remains too high for promotion.
 - MAVLink/SITL scaffold dry-run passes locally.
 - `--slowly`/PyTorch backend runs are considered debug-only and are not part of the accepted training path.
-- Native CUDA build is blocked locally by missing Linux CUDA/NVCC; run `scripts/validate_native_drone_gpu.sh` on Linux GPU hardware.
-- Next required implementation: native CUDA/NCCL training validation, telemetry parsing in the SITL adapter, and fake quantization during RL fine-tuning.
+- Native CUDA build remains unavailable on local macOS; use Linux GPU hardware for accepted throughput/training validation.
+- Next required implementation: run the staged race curriculum on GPU, add telemetry parsing in the SITL adapter, and add fake quantization during RL fine-tuning.

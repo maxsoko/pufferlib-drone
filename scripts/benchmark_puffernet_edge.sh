@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT="${OUT:-$ROOT/build/bench_puffernet_edge}"
 BATCH="${BATCH:-64}"
-INPUT_DIM="${INPUT_DIM:-25}"
+INPUT_DIM="${INPUT_DIM:-23}"
 HIDDEN_DIM="${HIDDEN_DIM:-128}"
 LAYERS="${LAYERS:-3}"
 ITERS="${ITERS:-1000}"

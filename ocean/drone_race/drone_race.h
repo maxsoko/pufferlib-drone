@@ -9,7 +9,7 @@
 #include "../drone/dronelib.h"
 #undef Log
 
-#define DRONE_RACE_OBS_SIZE 25
+#define DRONE_RACE_OBS_SIZE 23
 #define DRONE_RACE_NUM_ATNS 4
 #define DRONE_RACE_MAX_GATES 16
 
