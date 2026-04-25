@@ -7,7 +7,11 @@ from functools import partial
 
 import gymnasium as gym
 from gymnasium.spaces import Box, Discrete, Dict, Tuple
-from pettingzoo.utils.env import ParallelEnv
+try:
+    from pettingzoo.utils.env import ParallelEnv
+except ImportError:  # Optional dependency for tests
+    class ParallelEnv:  # pragma: no cover
+        pass
 
 import pufferlib
 import pufferlib.emulation

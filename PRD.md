@@ -1,6 +1,6 @@
 # PRD: Drone Gate Navigation Challenge (Source of Truth)
 
-Last updated: 2026-02-20
+Last updated: 2026-04-23
 Owner: `PufferLib/drone_race`
 
 ## Source of Truth Policy
@@ -138,6 +138,27 @@ For each training/eval block, record:
   - Control: shared helper + dedicated tests.
 - Risk: overfitting to privileged-state perception.
   - Control: staged camera/noise profile adoption and fallback diagnostics.
+
+## Hover Legacy Snapshot (Reference Only)
+- Role in active program:
+  - `drone_hover` remains a regression/safety baseline and optional warmstart source.
+  - Active optimization surface remains `drone_race`.
+- Canonical historical record:
+  - `docs/prd_archive_legacy_2026-02-20.md` (full hover R&D timeline and run log).
+- Best robust checkpoint lineage (historical):
+  - `experiments/drone_hover_robust_176940098863.pt`
+  - `experiments/drone_hover_robust_177049920214.pt` (post curriculum-counter persistence fix).
+- Recorded robust evaluation outcomes (fixed seeds, deterministic):
+  - Wind `0.3`, gains `kp_xy=3.8`, `kd_xy=3.5`: `100/100` success, mean hover `30.000s`.
+  - Wind `0.4`, gains `kp_xy=3.8`, `kd_xy=3.5`: `90/100` success, mean hover `27.380s`.
+  - Wind `0.4`, gains `kp_xy=4.2`, `kd_xy=3.9`: `94/100` success, mean hover `28.299s`.
+- Operational caveat:
+  - Best historical performance depends on PD-assisted residual control (`pd_assist=True`, `pd_assist_scale=0.02`, `residual_penalty=0.5`).
+  - No-assist hover policies under randomized settings underperformed.
+- Current workspace note:
+  - Hover CSV/log artifacts are present under `experiments/`, but historical `.pt` checkpoints may be absent locally and may need regeneration.
+- Race handoff usage:
+  - If a hover checkpoint is regenerated/restored, use `--warmstart-model-path` with `--warmstart-prefixes encoder` for hover -> race transfer.
 
 ## Current Program Status
 - Race env/planner/perception-adapter baseline implemented.

@@ -21,6 +21,9 @@ MAX_ITERATIONS="${MAX_ITERATIONS:-20}"
 SLEEP_SECONDS="${SLEEP_SECONDS:-2}"
 MODEL="${MODEL:-}"
 EXTRA_INSTRUCTIONS="${EXTRA_INSTRUCTIONS:-}"
+JSON_OUTPUT="${JSON_OUTPUT:-1}"
+SAVE_LAST_MESSAGE="${SAVE_LAST_MESSAGE:-1}"
+LOG_DIR="${LOG_DIR:-logs/ralph-loop}"
 
 if [[ ! -f "$PRD_FILE" ]]; then
   echo "Missing PRD file: $PRD_FILE" >&2
@@ -45,6 +48,9 @@ echo "PRD: $PRD_FILE"
 echo "Progress: $PROGRESS_FILE"
 echo "Iterations: $MAX_ITERATIONS"
 echo "Stop early: touch $STOP_FILE"
+echo "Logs: $LOG_DIR"
+
+mkdir -p "$LOG_DIR"
 
 for ((i=1; i<=MAX_ITERATIONS; i++)); do
   if [[ -f "$STOP_FILE" ]]; then
@@ -53,7 +59,11 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
   fi
 
   timestamp="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+  timestamp_compact="$(date -u +"%Y%m%dT%H%M%SZ")"
+  iter_log="$LOG_DIR/iter_${i}_${timestamp_compact}.log"
+  iter_last_msg="$LOG_DIR/iter_${i}_${timestamp_compact}.last.txt"
   echo "[$timestamp] Iteration $i/$MAX_ITERATIONS"
+  echo "Log file: $iter_log"
 
   prompt_file="$(mktemp)"
   {
@@ -89,11 +99,17 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
   if [[ -n "$MODEL" ]]; then
     codex_args+=(-m "$MODEL")
   fi
+  if [[ "$JSON_OUTPUT" == "1" ]]; then
+    codex_args+=(--json)
+  fi
+  if [[ "$SAVE_LAST_MESSAGE" == "1" ]]; then
+    codex_args+=(--output-last-message "$iter_last_msg")
+  fi
   if [[ "${RALPH_UNSAFE:-0}" == "1" ]]; then
     codex_args+=(--dangerously-bypass-approvals-and-sandbox)
   fi
 
-  if ! codex "${codex_args[@]}" - < "$prompt_file"; then
+  if ! codex "${codex_args[@]}" - < "$prompt_file" 2>&1 | tee "$iter_log"; then
     echo "Iteration $i failed. See output above."
     rm -f "$prompt_file"
     exit 1
