@@ -55,6 +55,23 @@ Q8 edge benchmark:
 bash scripts/benchmark_puffernet_edge.sh
 ```
 
+Checkpoint eval report:
+
+```bash
+python scripts/eval_drone_race_checkpoint.py \
+  checkpoints/drone_race/<run_id>/<checkpoint>.bin \
+  --label r3_candidate \
+  --json-path logs/drone_race_r3_candidate_eval.json \
+  --csv-path logs/drone_race_r3_candidate_eval.csv \
+  --env.num-gates 3 \
+  --env.gate-radius 1.9 \
+  --env.gate-spacing 4.5 \
+  --env.gate-lateral-amplitude 1.0 \
+  --env.start-offset 1.75 \
+  --env.crash-height -1.0 \
+  --env.strict-missed-gate 0
+```
+
 ## Linux GPU Training
 
 Use Ubuntu 22.04 with CUDA/NVCC. A single RTX 4090 24GB is the default practical target.
