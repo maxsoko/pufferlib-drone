@@ -43,6 +43,11 @@ Blocking work breakdown:
   - Current state: best reproducible default-native R3 eval is `success_rate=0.8629`, `crash=0.1371`, `gates_passed=2.6843`.
   - Next action: run targeted R3 remediation from the strong R1 checkpoint and/or best reproducible R3 checkpoint, changing one curriculum variable at a time.
   - Candidate knobs: crash-height shaping, control penalty, continuation length, and fixed-seed eval coverage. Recent probes improved success but crash remains the blocker.
+  - Immediate next probes:
+    - Start from `checkpoints/drone_race/1777415131824/0000000039387136.bin`.
+    - Test slightly more forgiving `crash_height` first; goal is to separate low-altitude clipping from genuine navigation failure.
+    - If crash drops without losing success, tighten `crash_height` back toward the current course setting.
+    - If crash remains high, inspect terminal-state distributions before further reward tuning.
   - Acceptance signal: deterministic JSON/CSV eval reaches the R3 promotion threshold with `success_rate >= 0.85` and `crash <= 0.10`.
 
 - R4/full-course promotion:
