@@ -1,6 +1,6 @@
 # PRD: Drone Gate Navigation Challenge (Source of Truth)
 
-Last updated: 2026-04-25
+Last updated: 2026-04-28
 Owner: `PufferLib/native-v4-drone-port`
 
 ## Source of Truth Policy
@@ -12,6 +12,68 @@ Owner: `PufferLib/native-v4-drone-port`
 ## Challenge Goal
 
 Build a fully autonomous drone stack that passes all gates in strict order and minimizes valid completion time in virtual competition environments.
+
+## Current Completion Snapshot
+
+Completed:
+
+- `native-v4-drone-port` is now the GitHub default branch and active source of truth.
+- Native v4 baseline exists for `drone` and `drone_race`, including C bindings, CPU smoke/eval paths, local regression checks, and Linux CUDA/NCCL validation on Vast.ai.
+- `drone_race` uses representative quadrotor motor/RK4 dynamics instead of direct velocity/yaw-rate kinematics.
+- Race and hover observations are aligned at `23` features, enabling hover-to-race native checkpoint warm starts.
+- Staged native race curriculum exists for H1, R1, R3, and R4, with promotion checks that stop on failed thresholds.
+- Reproducible checkpoint eval artifacts are supported via `scripts/eval_drone_race_checkpoint.py` with paired JSON/CSV outputs.
+- Useful native checkpoints exist through H1 and R1; R3 has a reproducible partial-success checkpoint but is not promotion-ready.
+- Q8/mixed-precision PufferNet inference scaffolding, export, latency/drift benchmarking, and closed-loop hover comparison harnesses exist.
+- MAVLink/SITL adapter scaffold and local dry-run path exist.
+
+Not complete / blocking:
+
+- R3 three-gate stability is still below promotion thresholds; latest reproducible R3 eval is about `success_rate=0.7521`, `crash=0.2479`, `gates_passed=2.5122`.
+- R4/full-course race promotion is blocked until R3 reliability improves.
+- Current native policies still train on privileged native state; qualifier-facing policy/control must move toward official telemetry plus camera observations.
+- MAVLink telemetry parsing and the final model/controller output contract are not implemented.
+- Local SITL evaluation with fixed course/start conditions is not implemented.
+- Vision ingestion is not implemented and is waiting on the detailed camera stream spec.
+- Q8/fake-quant training is not promoted; closed-loop race parity and action drift remain unresolved.
+
+Blocking work breakdown:
+
+- R3 native race reliability:
+  - Current state: best reproducible default-native R3 eval is `success_rate=0.7521`, `crash=0.2479`, `gates_passed=2.5122`.
+  - Next action: run targeted R3 remediation from the strong R1 checkpoint and/or best reproducible R3 checkpoint, changing one curriculum variable at a time.
+  - Candidate knobs: gate radius, crash height, lateral amplitude, learning rate, entropy coefficient, control penalty, invalid-run penalty, and total continuation length.
+  - Acceptance signal: deterministic JSON/CSV eval reaches the R3 promotion threshold with `success_rate >= 0.85` and `crash <= 0.10`.
+
+- R4/full-course promotion:
+  - Current state: blocked; direct 4-gate and weak 3-gate continuations have regressed.
+  - Next action: do not run R4 as a promotion attempt until R3 passes deterministic eval. Use R4 only for diagnostic probes if explicitly labeled as non-promotable.
+  - Acceptance signal: R4 resumes only from a promoted R3 checkpoint, with checkpoint lineage and eval artifacts recorded.
+
+- Privileged native-state dependency:
+  - Current state: native `drone_race` is still a training environment, not a qualifier-equivalent interface.
+  - Next action: define a telemetry-shaped observation contract that maps native state into the fields available through MAVLink/SITL telemetry, then train/evaluate telemetry-only variants before adding camera inputs.
+  - Acceptance signal: telemetry-only native/SITL policy path runs without privileged absolute state dependencies.
+
+- MAVLink telemetry and controller contract:
+  - Current state: heartbeat and setpoint scaffolding exist, but inbound telemetry parsing and final action mapping are incomplete.
+  - Next action: parse attitude/orientation, local velocity, status flags, and simulator navigation reference data; define whether the model outputs local position/velocity/yaw setpoints, attitude targets, or a controller-facing intermediate action.
+  - Acceptance signal: SITL bridge can log telemetry, emit accepted commands at `50-120 Hz`, and produce a deterministic run report with command-rate/dropout metrics.
+
+- Local SITL eval runner:
+  - Current state: dry-run scaffolding exists, but no fixed-course evaluator gates promotion.
+  - Next action: add a local entrypoint that starts or connects to the simulator, applies fixed course/start conditions, runs a policy/controller, and writes JSON/CSV results.
+  - Acceptance signal: one-command SITL smoke/eval produces success, ordered gate passes, completion time, crash/invalid-run status, command rates, and telemetry dropout fields.
+
+- Vision ingestion:
+  - Current state: waiting on the detailed camera stream spec.
+  - Next action: keep the native/state-vector policy path moving while reserving a perception boundary for forward-camera frames. Avoid coupling core control training to guessed camera parameters.
+  - Acceptance signal: once stream details are available, add a camera adapter and separate telemetry-only vs telemetry+vision eval tracks.
+
+- Q8/fake-quant promotion:
+  - Current state: Q8 export/runtime and benchmarks exist, but action drift and closed-loop race parity are not promotion-ready.
+  - Next action: defer fake-quant RL until FP32 R3/R4 behavior is reliable; then add QAT or post-training calibration against closed-loop hover/race metrics.
+  - Acceptance signal: Q8 policy matches FP32 closed-loop success/crash metrics within agreed tolerance and meets worst-case latency requirements.
 
 ## Competition-Aligned Requirements
 
@@ -188,11 +250,10 @@ Notes:
 Current priority order:
 
 1. Improve 3-gate native race stability before any 4-gate/full-course promotion.
-2. Add deterministic native eval report artifacts per checkpoint so promotion is based on saved JSON/CSV, not dashboard snapshots.
-3. Implement SITL telemetry parsing and define the model/controller output contract to `SET_POSITION_TARGET_LOCAL_NED` and/or `SET_ATTITUDE_TARGET`.
-4. Add a local SITL eval runner with fixed course/start conditions.
-5. Add vision ingestion when the official camera stream spec is available.
-6. Continue Q8/fake-quant work only after FP32 closed-loop behavior is reliable.
+2. Implement SITL telemetry parsing and define the model/controller output contract to `SET_POSITION_TARGET_LOCAL_NED` and/or `SET_ATTITUDE_TARGET`.
+3. Add a local SITL eval runner with fixed course/start conditions.
+4. Add vision ingestion when the official camera stream spec is available.
+5. Continue Q8/fake-quant work only after FP32 closed-loop behavior is reliable.
 
 ## Strong and Reusable Patterns (Adopted)
 
@@ -221,12 +282,14 @@ From cross-project analysis, we adopt these patterns:
 - Replace race kinematic shortcut with representative quadrotor motor/RK4 dynamics.
 - Add hover-compatible race observation contract and staged first-gate to full-race curriculum runner.
 - Emit native eval report artifacts (JSON + CSV) per checkpoint.
+- Improve 3-gate race reliability to promotion threshold.
+- Promote to 4-gate/full-course curriculum only after R3 passes deterministic eval.
 
 ### Phase C: MAVLink/SITL Adapter
 
 - Add MAVLink client scaffold for UDP MAVLink v2.
-- Maintain heartbeat at `>=2 Hz`.
-- Send `SET_POSITION_TARGET_LOCAL_NED` and/or `SET_ATTITUDE_TARGET` at `50-120 Hz`.
+- Maintain heartbeat at `>=2 Hz` in scaffold/dry-run.
+- Send `SET_POSITION_TARGET_LOCAL_NED` and/or `SET_ATTITUDE_TARGET` at `50-120 Hz` in scaffold/dry-run.
 - Parse attitude, orientation, velocity, status, and simulator navigation reference telemetry.
 - Define a model/controller output contract that maps to MAVLink setpoints.
 
@@ -256,6 +319,7 @@ From cross-project analysis, we adopt these patterns:
 
 - Preserve v3 hover/race checkpoint on `3.0`.
 - Create native v4 port branch.
+- Make `native-v4-drone-port` the GitHub default branch.
 - Add native race and hover smoke/eval path.
 - Align native race timing to official qualifier constraints.
 - Add Q8 PufferNet edge benchmark and runtime scaffold.
@@ -264,6 +328,11 @@ From cross-project analysis, we adopt these patterns:
 - Run native CUDA/NCCL validation on Linux GPU hardware.
 - Add staged `drone_race` curriculum after full race collapsed at `crash=1.000`.
 - Add promotion checks and an explicit 3-gate bridge to the race curriculum runner.
+- Add deterministic native checkpoint eval reports.
+- Stabilize R3 to promotion threshold.
+- Resume R4 only after R3 passes deterministic eval.
+- Implement SITL telemetry parsing and controller output contract.
+- Add local SITL eval runner.
 
 ## Promotion and Remediation Policy
 
