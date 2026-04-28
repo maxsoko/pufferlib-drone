@@ -36,11 +36,14 @@ void my_init(Env* env, Dict* kwargs) {
     env->strict_missed_gate = get_int(kwargs, "strict_missed_gate", 1);
     env->max_steps = get_int(kwargs, "max_steps", 1500);
     env->time_limit_seconds = get_float(kwargs, "time_limit_seconds", 30.0f);
+    env->safety_altitude = get_float(kwargs, "safety_altitude", 0.0f);
     env->w_progress = get_float(kwargs, "w_progress", 20.0f);
     env->w_gate = get_float(kwargs, "w_gate", 3.0f);
     env->w_finish = get_float(kwargs, "w_finish", 30.0f);
     env->w_time = get_float(kwargs, "w_time", 1.0f);
     env->w_ctrl = get_float(kwargs, "w_ctrl", 0.01f);
+    env->w_altitude_floor = get_float(kwargs, "w_altitude_floor", 0.0f);
+    env->w_descent_floor = get_float(kwargs, "w_descent_floor", 0.0f);
     env->invalid_penalty = get_float(kwargs, "invalid_penalty", 40.0f);
     init(env);
 }
@@ -55,6 +58,11 @@ void my_log(Log* log, Dict* out) {
     dict_set(out, "gates_passed", log->gates_passed);
     dict_set(out, "completion_time", log->completion_time);
     dict_set(out, "crash", log->crash);
+    dict_set(out, "crash_low", log->crash_low);
+    dict_set(out, "crash_high", log->crash_high);
+    dict_set(out, "crash_xy", log->crash_xy);
+    dict_set(out, "crash_low_z", log->crash_low_z);
+    dict_set(out, "crash_low_vz", log->crash_low_vz);
     dict_set(out, "out_of_order", log->out_of_order);
     dict_set(out, "missed_gate", log->missed_gate);
     dict_set(out, "timeout", log->timeout);

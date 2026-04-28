@@ -24,6 +24,11 @@ struct Log {
     float gates_passed;
     float completion_time;
     float crash;
+    float crash_low;
+    float crash_high;
+    float crash_xy;
+    float crash_low_z;
+    float crash_low_vz;
     float out_of_order;
     float missed_gate;
     float timeout;
@@ -48,6 +53,9 @@ typedef struct {
     int out_of_order;
     int missed_gate;
     int crash;
+    int crash_low;
+    int crash_high;
+    int crash_xy;
     int timeout;
 } DroneRaceAgent;
 
@@ -76,11 +84,14 @@ typedef struct {
     int strict_missed_gate;
     int max_steps;
     float time_limit_seconds;
+    float safety_altitude;
     float w_progress;
     float w_gate;
     float w_finish;
     float w_time;
     float w_ctrl;
+    float w_altitude_floor;
+    float w_descent_floor;
     float invalid_penalty;
 
     Target gates[DRONE_RACE_MAX_GATES];

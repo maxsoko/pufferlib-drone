@@ -116,6 +116,11 @@ static void add_log(DroneRace* env, DroneRaceAgent* agent, bool success) {
     env->log.gates_passed += (float)agent->current_gate;
     env->log.completion_time += success ? agent->elapsed_time : 0.0f;
     env->log.crash += agent->crash ? 1.0f : 0.0f;
+    env->log.crash_low += agent->crash_low ? 1.0f : 0.0f;
+    env->log.crash_high += agent->crash_high ? 1.0f : 0.0f;
+    env->log.crash_xy += agent->crash_xy ? 1.0f : 0.0f;
+    env->log.crash_low_z += agent->crash_low ? agent->drone.state.pos.z : 0.0f;
+    env->log.crash_low_vz += agent->crash_low ? agent->drone.state.vel.z : 0.0f;
     env->log.out_of_order += agent->out_of_order ? 1.0f : 0.0f;
     env->log.missed_gate += agent->missed_gate ? 1.0f : 0.0f;
     env->log.timeout += agent->timeout ? 1.0f : 0.0f;
@@ -208,10 +213,14 @@ void c_step(DroneRace* env) {
         agent->progress = clampf(1.0f - current_remaining / initial_remaining, 0.0f, 1.0f);
 
         Vec3 pos = agent->drone.state.pos;
-        bool oob = fabsf(pos.x) > env->pos_bound || fabsf(pos.y) > env->pos_bound ||
-            pos.z < env->crash_height || pos.z > env->pos_bound;
-        if (oob) {
+        bool crash_xy = fabsf(pos.x) > env->pos_bound || fabsf(pos.y) > env->pos_bound;
+        bool crash_low = pos.z < env->crash_height;
+        bool crash_high = pos.z > env->pos_bound;
+        if (crash_xy || crash_low || crash_high) {
             agent->crash = 1;
+            agent->crash_xy = crash_xy ? 1 : 0;
+            agent->crash_low = crash_low ? 1 : 0;
+            agent->crash_high = crash_high ? 1 : 0;
             agent->valid_run = 0;
         }
         if (agent->step_count >= env->max_steps || agent->elapsed_time >= env->time_limit_seconds) {
@@ -221,6 +230,13 @@ void c_step(DroneRace* env) {
         float ctrl = 0.0f;
         for (int k = 0; k < DRONE_RACE_NUM_ATNS; k++) ctrl += action[k] * action[k];
         float reward = env->w_progress * progress_delta - env->w_time * env->dt - env->w_ctrl * ctrl;
+        float altitude_deficit = fmaxf(env->safety_altitude - pos.z, 0.0f);
+        if (env->w_altitude_floor > 0.0f && altitude_deficit > 0.0f) {
+            reward -= env->w_altitude_floor * altitude_deficit * altitude_deficit;
+        }
+        if (env->w_descent_floor > 0.0f && altitude_deficit > 0.0f && agent->drone.state.vel.z < 0.0f) {
+            reward -= env->w_descent_floor * -agent->drone.state.vel.z;
+        }
         if (agent->current_gate > 0 && progress_delta > 0.0f) reward += env->w_gate * progress_delta;
         if (success) reward += env->w_finish;
         if (!agent->valid_run) reward -= env->invalid_penalty;
@@ -267,11 +283,14 @@ int main(void) {
     env.strict_missed_gate = 1;
     env.max_steps = 57600;
     env.time_limit_seconds = 480.0f;
+    env.safety_altitude = 0.0f;
     env.w_progress = 20.0f;
     env.w_gate = 3.0f;
     env.w_finish = 30.0f;
     env.w_time = 1.0f;
     env.w_ctrl = 0.01f;
+    env.w_altitude_floor = 0.0f;
+    env.w_descent_floor = 0.0f;
     env.invalid_penalty = 40.0f;
     env.observations = (float*)calloc(DRONE_RACE_OBS_SIZE, sizeof(float));
     env.actions = (float*)calloc(DRONE_RACE_NUM_ATNS, sizeof(float));

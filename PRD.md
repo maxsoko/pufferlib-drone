@@ -29,7 +29,7 @@ Completed:
 
 Not complete / blocking:
 
-- R3 three-gate stability is still below promotion thresholds; latest best reproducible R3 eval is `success_rate=0.8629`, `crash=0.1371`, `gates_passed=2.6843`.
+- R3 three-gate stability is still below promotion thresholds; latest best R3 candidate reached `success_rate=0.8629`, `crash=0.1371`, `gates_passed=2.6843` on a 1k deterministic scan, but a 2k re-eval was lower and still failed crash threshold.
 - R4/full-course race promotion is blocked until R3 reliability improves.
 - Current native policies still train on privileged native state; qualifier-facing policy/control must move toward official telemetry plus camera observations.
 - MAVLink telemetry parsing and the final model/controller output contract are not implemented.
@@ -40,14 +40,11 @@ Not complete / blocking:
 Blocking work breakdown:
 
 - R3 native race reliability:
-  - Current state: best reproducible default-native R3 eval is `success_rate=0.8629`, `crash=0.1371`, `gates_passed=2.6843`.
-  - Next action: run targeted R3 remediation from the strong R1 checkpoint and/or best reproducible R3 checkpoint, changing one curriculum variable at a time.
-  - Candidate knobs: crash-height shaping, control penalty, continuation length, and fixed-seed eval coverage. Recent probes improved success but crash remains the blocker.
-  - Immediate next probes:
-    - Start from `checkpoints/drone_race/1777415131824/0000000039387136.bin`.
-    - Test slightly more forgiving `crash_height` first; goal is to separate low-altitude clipping from genuine navigation failure.
-    - If crash drops without losing success, tighten `crash_height` back toward the current course setting.
-    - If crash remains high, inspect terminal-state distributions before further reward tuning.
+  - Current state: best R3 candidate is `checkpoints/drone_race/1777415131824/0000000039387136.bin`, but larger evals still fail the crash threshold.
+  - Diagnostic result: crashes are low-altitude dives, not high-altitude or horizontal out-of-bounds (`crash_low` accounts for essentially all crashes).
+  - Terminal detail: low crashes cross the floor just below `z=-1.0` but with high downward velocity (`avg_low_crash_vz` around `-3.5` to `-4.5`), so simply lowering `crash_height` does not solve the failure.
+  - Recent shaping result: strong and mild altitude-floor/descent penalties caused later checkpoints to collapse; early checkpoints can be useful, but the shaping did not produce a robust promotion checkpoint.
+  - Next action: stop tuning `crash_height` alone. Inspect trajectory/terminal-state patterns or add a better altitude/vertical-velocity control objective before the policy enters the dive.
   - Acceptance signal: deterministic JSON/CSV eval reaches the R3 promotion threshold with `success_rate >= 0.85` and `crash <= 0.10`.
 
 - R4/full-course promotion:
@@ -408,6 +405,11 @@ For each training/eval block, record:
   - Eval artifact: `logs/drone_race/scan_r3_ctrl12_0000000039387136_1000.json`.
   - Metrics: `success_rate=0.8629`, `crash=0.1371`, `gates_passed=2.6843`.
   - Not promotion-ready because crash remains above the `<= 0.10` threshold, but this is the current best R3 lineage candidate.
+- R3 low-crash diagnostics added after the above candidate:
+  - Metrics now include `crash_low`, `crash_high`, `crash_xy`, `crash_low_z`, and `crash_low_vz`.
+  - Re-eval artifact: `logs/drone_race/eval_r3_best_low_crash_detail_2000.json`.
+  - Finding: R3 failures are low-altitude dives (`crash_low` accounts for essentially all crashes), averaging just below the floor with high downward velocity.
+  - Mild altitude-floor shaping produced one promising 1k checkpoint, `checkpoints/drone_race/1777416809505/0000000026279936.bin` (`success_rate=0.8782`, `crash=0.1218`), but its 2k re-eval regressed to `success_rate=0.8458`, `crash=0.1542`; do not promote it.
 - Latest attempted continuation regressed and should not be used for warm start:
   - `checkpoints/drone_race/1777161616339/0000000078708736.bin`: 3 gates, `success_rate=0.3055`, `crash=0.6944`, `gates_passed=1.6427`.
 - `scripts/train_drone_race_curriculum.sh` now includes H1, R1, R3, and R4 stages with promotion thresholds. If a stage misses its success/crash threshold, the script exits instead of automatically continuing from a regressed checkpoint.
@@ -421,6 +423,8 @@ For each training/eval block, record:
   - `checkpoints/drone_race/1777414869351/0000000069992448.bin`: increased `invalid_penalty=55` collapsed to `success_rate=0.0117`, `crash=0.9883`.
   - `checkpoints/drone_race/1777414942471/0000000069992448.bin`: lower `learning_rate=0.00002` final run regressed, though its early checkpoint became an intermediate improvement.
   - `checkpoints/drone_race/1777415036469/0000000069992448.bin`: zero-entropy continuation final run regressed, though its early checkpoint improved R3 before the control-penalty probe.
+  - `checkpoints/drone_race/1777416711275/0000000069992448.bin`: strong altitude-floor/descent shaping collapsed to `success_rate=0.0`, `crash=1.0`.
+  - `checkpoints/drone_race/1777416809505/0000000069992448.bin`: mild altitude-floor/descent shaping also collapsed late, despite one promising early checkpoint.
 
 ## Risks and Controls
 
