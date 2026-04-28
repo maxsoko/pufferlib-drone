@@ -29,7 +29,7 @@ Completed:
 
 Not complete / blocking:
 
-- R3 three-gate stability is still below promotion thresholds; latest reproducible R3 eval is about `success_rate=0.7521`, `crash=0.2479`, `gates_passed=2.5122`.
+- R3 three-gate stability is still below promotion thresholds; latest best reproducible R3 eval is `success_rate=0.8629`, `crash=0.1371`, `gates_passed=2.6843`.
 - R4/full-course race promotion is blocked until R3 reliability improves.
 - Current native policies still train on privileged native state; qualifier-facing policy/control must move toward official telemetry plus camera observations.
 - MAVLink telemetry parsing and the final model/controller output contract are not implemented.
@@ -40,9 +40,9 @@ Not complete / blocking:
 Blocking work breakdown:
 
 - R3 native race reliability:
-  - Current state: best reproducible default-native R3 eval is `success_rate=0.7521`, `crash=0.2479`, `gates_passed=2.5122`.
+  - Current state: best reproducible default-native R3 eval is `success_rate=0.8629`, `crash=0.1371`, `gates_passed=2.6843`.
   - Next action: run targeted R3 remediation from the strong R1 checkpoint and/or best reproducible R3 checkpoint, changing one curriculum variable at a time.
-  - Candidate knobs: gate radius, crash height, lateral amplitude, learning rate, entropy coefficient, control penalty, invalid-run penalty, and total continuation length.
+  - Candidate knobs: crash-height shaping, control penalty, continuation length, and fixed-seed eval coverage. Recent probes improved success but crash remains the blocker.
   - Acceptance signal: deterministic JSON/CSV eval reaches the R3 promotion threshold with `success_rate >= 0.85` and `crash <= 0.10`.
 
 - R4/full-course promotion:
@@ -398,6 +398,11 @@ For each training/eval block, record:
   - Eval artifact: `logs/drone_race/scan_r3_0000000039387136_1000.json`.
   - Metrics: `success_rate=0.7521`, `crash=0.2479`, `gates_passed=2.5122`.
   - The old dashboard-final R3 metrics remain useful context, but deterministic JSON/CSV eval should govern future promotion.
+- Best current R3 checkpoint after 2026-04-28 remediation probes:
+  - `checkpoints/drone_race/1777415131824/0000000039387136.bin`
+  - Eval artifact: `logs/drone_race/scan_r3_ctrl12_0000000039387136_1000.json`.
+  - Metrics: `success_rate=0.8629`, `crash=0.1371`, `gates_passed=2.6843`.
+  - Not promotion-ready because crash remains above the `<= 0.10` threshold, but this is the current best R3 lineage candidate.
 - Latest attempted continuation regressed and should not be used for warm start:
   - `checkpoints/drone_race/1777161616339/0000000078708736.bin`: 3 gates, `success_rate=0.3055`, `crash=0.6944`, `gates_passed=1.6427`.
 - `scripts/train_drone_race_curriculum.sh` now includes H1, R1, R3, and R4 stages with promotion thresholds. If a stage misses its success/crash threshold, the script exits instead of automatically continuing from a regressed checkpoint.
@@ -408,6 +413,9 @@ For each training/eval block, record:
   - `checkpoints/drone_race/1777411909778/0000000049938432.bin`: invalid 2026-04-28 continuation made from a `--float` `_C` build; ignore for lineage.
   - `checkpoints/drone_race/1777413297251/0000000099942400.bin`: default-native R3 continuation regressed to `success_rate=0.2017`, `crash=0.7976`.
   - `checkpoints/drone_race/1777413469422/0000000104923136.bin`: relaxed R3 retry regressed to `success_rate=0.4377`, `crash=0.5623`.
+  - `checkpoints/drone_race/1777414869351/0000000069992448.bin`: increased `invalid_penalty=55` collapsed to `success_rate=0.0117`, `crash=0.9883`.
+  - `checkpoints/drone_race/1777414942471/0000000069992448.bin`: lower `learning_rate=0.00002` final run regressed, though its early checkpoint became an intermediate improvement.
+  - `checkpoints/drone_race/1777415036469/0000000069992448.bin`: zero-entropy continuation final run regressed, though its early checkpoint improved R3 before the control-penalty probe.
 
 ## Risks and Controls
 
