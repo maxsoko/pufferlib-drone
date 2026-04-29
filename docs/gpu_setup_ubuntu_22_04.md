@@ -5,6 +5,7 @@ This project should train through the native PufferLib v4 `_C` backend. Do not u
 ## GPU Choice
 
 Default rental target:
+
 - RTX 4090 24GB on RunPod or Vast.ai.
 - Ubuntu 22.04.
 - CUDA 12.x with `nvcc` available.
@@ -26,6 +27,7 @@ python --version
 ```
 
 Expected:
+
 - `nvidia-smi` sees the GPU.
 - `nvcc` is on `PATH`.
 - Python is `3.10+`.
@@ -87,6 +89,7 @@ TIMESTEPS=65536 bash scripts/validate_native_drone_gpu.sh
 ```
 
 This builds native CUDA `_C` backends for:
+
 - `drone`
 - `drone_race`
 
@@ -142,6 +145,7 @@ Race and hover checkpoints both use `--input-dim 23`, so hover weights can warm-
 ## Acceptance Rule
 
 Accepted validation means:
+
 - Native `_C` build succeeds.
 - Native training runs without `--slowly`.
 - Native eval metrics are recorded.

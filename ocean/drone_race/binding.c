@@ -63,6 +63,12 @@ void my_log(Log* log, Dict* out) {
     dict_set(out, "crash_xy", log->crash_xy);
     dict_set(out, "crash_low_z", log->crash_low_z);
     dict_set(out, "crash_low_vz", log->crash_low_vz);
+    dict_set(out, "crash_low_progress", log->crash_low_progress);
+    dict_set(out, "crash_low_time", log->crash_low_time);
+    dict_set(out, "crash_low_next_gate0", log->crash_low_next_gate0);
+    dict_set(out, "crash_low_next_gate1", log->crash_low_next_gate1);
+    dict_set(out, "crash_low_next_gate2", log->crash_low_next_gate2);
+    dict_set(out, "crash_low_next_gate3plus", log->crash_low_next_gate3plus);
     dict_set(out, "out_of_order", log->out_of_order);
     dict_set(out, "missed_gate", log->missed_gate);
     dict_set(out, "timeout", log->timeout);

@@ -121,6 +121,19 @@ static void add_log(DroneRace* env, DroneRaceAgent* agent, bool success) {
     env->log.crash_xy += agent->crash_xy ? 1.0f : 0.0f;
     env->log.crash_low_z += agent->crash_low ? agent->drone.state.pos.z : 0.0f;
     env->log.crash_low_vz += agent->crash_low ? agent->drone.state.vel.z : 0.0f;
+    env->log.crash_low_progress += agent->crash_low ? agent->progress : 0.0f;
+    env->log.crash_low_time += agent->crash_low ? agent->elapsed_time : 0.0f;
+    if (agent->crash_low) {
+        if (agent->current_gate <= 0) {
+            env->log.crash_low_next_gate0 += 1.0f;
+        } else if (agent->current_gate == 1) {
+            env->log.crash_low_next_gate1 += 1.0f;
+        } else if (agent->current_gate == 2) {
+            env->log.crash_low_next_gate2 += 1.0f;
+        } else {
+            env->log.crash_low_next_gate3plus += 1.0f;
+        }
+    }
     env->log.out_of_order += agent->out_of_order ? 1.0f : 0.0f;
     env->log.missed_gate += agent->missed_gate ? 1.0f : 0.0f;
     env->log.timeout += agent->timeout ? 1.0f : 0.0f;

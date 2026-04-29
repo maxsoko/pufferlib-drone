@@ -143,3 +143,4 @@ python scripts/export_puffernet_q8.py \
 3. Train native `drone_race` only after hover/control metrics are stable.
 4. Add telemetry parsing and model-output contracts to the SITL adapter.
 5. Add fake quantization during native RL fine-tuning.
+

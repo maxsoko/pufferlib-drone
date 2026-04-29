@@ -29,6 +29,12 @@ struct Log {
     float crash_xy;
     float crash_low_z;
     float crash_low_vz;
+    float crash_low_progress;
+    float crash_low_time;
+    float crash_low_next_gate0;
+    float crash_low_next_gate1;
+    float crash_low_next_gate2;
+    float crash_low_next_gate3plus;
     float out_of_order;
     float missed_gate;
     float timeout;
