@@ -30,7 +30,7 @@ def main():
         "--action",
         type=float,
         default=0.0,
-        help="Constant motor action. In representative race physics, 0.0 is centered hover thrust.",
+        help="Constant value for the first action dimension. Legacy mode treats this as motor action; competition mode treats it as forward velocity command.",
     )
     args = parser.parse_args()
 

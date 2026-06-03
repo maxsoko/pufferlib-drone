@@ -12,7 +12,7 @@
     } \
 } while (0)
 
-static DroneRace make_test_env(void) {
+static DroneRace make_test_env_with_interface(int interface_mode) {
     DroneRace env = {0};
     env.num_agents = 1;
     env.rng = 1;
@@ -37,6 +37,7 @@ static DroneRace make_test_env(void) {
     env.w_time = 1.0f;
     env.w_ctrl = 0.01f;
     env.invalid_penalty = 40.0f;
+    env.interface_mode = interface_mode;
     env.observations = (float*)calloc(DRONE_RACE_OBS_SIZE, sizeof(float));
     env.actions = (float*)calloc(DRONE_RACE_NUM_ATNS, sizeof(float));
     env.rewards = (float*)calloc(1, sizeof(float));
@@ -44,6 +45,10 @@ static DroneRace make_test_env(void) {
     init(&env);
     c_reset(&env);
     return env;
+}
+
+static DroneRace make_test_env(void) {
+    return make_test_env_with_interface(DRONE_RACE_INTERFACE_NATIVE_MOTOR);
 }
 
 static void free_test_env(DroneRace* env) {
@@ -140,11 +145,100 @@ static int test_observation_bounds(void) {
     return 0;
 }
 
+static int test_ts002_observation_contract(void) {
+    DroneRace env = make_test_env_with_interface(DRONE_RACE_INTERFACE_TS002_VELOCITY_YAW);
+    float* obs = env.observations;
+
+    CHECK(env.interface_mode == DRONE_RACE_INTERFACE_TS002_VELOCITY_YAW,
+        "TS-002 interface mode should survive init defaults");
+    CHECK(DRONE_RACE_OBS_SIZE == 23, "TS-002 contract should keep the 23-float policy input size");
+    CHECK(obs[10] == 1.0f, "first gate should be visible from reset in the synthetic camera contract");
+    CHECK(obs[11] > 0.15f && obs[11] < 0.25f,
+        "visible gate forward pose should encode the reset standoff, not raw world position");
+    CHECK(fabsf(obs[12]) < 0.2f, "visible gate lateral pose should be near centered at reset");
+    CHECK(obs[16] > 0.5f && obs[16] <= 1.0f,
+        "visible gate apparent size should be normalized and positive");
+    CHECK(obs[18] == 0.0f, "elapsed-time observation should start at zero");
+    for (int k = 0; k < DRONE_RACE_NUM_ATNS; k++) {
+        CHECK(obs[19 + k] == 0.0f, "last-action observation should reset to zero");
+    }
+
+    env.actions[0] = 0.25f;
+    env.actions[1] = -0.50f;
+    env.actions[2] = 0.75f;
+    env.actions[3] = -1.0f;
+    c_step(&env);
+    obs = env.observations;
+    CHECK(obs[18] > 0.0f, "elapsed-time observation should advance after a TS-002 step");
+    CHECK(fabsf(obs[19] - 0.25f) < 1e-5f, "last forward command should be observable as controller state");
+    CHECK(fabsf(obs[20] + 0.50f) < 1e-5f, "last lateral command should be observable as controller state");
+    CHECK(fabsf(obs[21] - 0.75f) < 1e-5f, "last vertical command should be observable as controller state");
+    CHECK(fabsf(obs[22] + 1.0f) < 1e-5f, "last yaw-rate command should be observable as controller state");
+
+    free_test_env(&env);
+    return 0;
+}
+
+static int test_ts002_velocity_yaw_action_contract(void) {
+    DroneRace env = make_test_env_with_interface(DRONE_RACE_INTERFACE_TS002_VELOCITY_YAW);
+    DroneRaceAgent* agent = &env.agents[0];
+    float hover_action[DRONE_RACE_NUM_ATNS] = {0};
+    float forward_action[DRONE_RACE_NUM_ATNS] = {1.0f, 0.0f, 0.0f, 0.0f};
+    float hover_motor[DRONE_RACE_NUM_ATNS] = {0};
+    float forward_motor[DRONE_RACE_NUM_ATNS] = {0};
+
+    policy_to_motor_actions(&env, agent, hover_action, hover_motor);
+    policy_to_motor_actions(&env, agent, forward_action, forward_motor);
+
+    for (int k = 0; k < DRONE_RACE_NUM_ATNS; k++) {
+        CHECK(fabsf(hover_motor[k]) < 1e-5f,
+            "zero TS-002 velocity/yaw command should map to centered hover motor action");
+        CHECK(forward_motor[k] >= -1.0f && forward_motor[k] <= 1.0f,
+            "TS-002 velocity/yaw controller should clamp mapped motor actions");
+    }
+    CHECK(fabsf(forward_motor[0] - forward_motor[1]) > 1e-5f
+            || fabsf(forward_motor[2] - forward_motor[3]) > 1e-5f
+            || fabsf(forward_motor[0] - forward_motor[2]) > 1e-5f,
+        "forward velocity setpoint should map to a motor mix, not a raw motor command passthrough");
+
+    free_test_env(&env);
+    return 0;
+}
+
+static int test_floor_risk_diagnostics(void) {
+    DroneRace env = make_test_env();
+    env.crash_height = 0.0f;
+    DroneRaceAgent* agent = &env.agents[0];
+    agent->drone.state.pos.z = 0.001f;
+    agent->drone.state.vel.z = -4.0f;
+
+    c_step(&env);
+
+    CHECK(env.log.n == 1.0f, "floor crash should log one episode");
+    CHECK(env.log.crash_low == 1.0f, "floor crash should increment low-crash counter");
+    CHECK(env.log.crash_low_floor_margin_pre > 0.0f,
+        "low-crash diagnostic should preserve pre-step floor margin");
+    CHECK(env.log.crash_low_ttf_pre > 0.0f && env.log.crash_low_ttf_pre < 0.01f,
+        "low-crash diagnostic should report short pre-step time to floor");
+    CHECK(env.log.crash_low_stop_margin_pre < 0.0f,
+        "low-crash diagnostic should report negative stopping margin");
+    CHECK(env.log.floor_impact_risk == 1.0f,
+        "episode should be flagged as a floor impact risk");
+    CHECK(env.log.floor_stop_violation == 1.0f,
+        "episode should be flagged as a stopping-distance violation");
+
+    free_test_env(&env);
+    return 0;
+}
+
 int main(void) {
     if (test_gate_crossing_geometry()) return 1;
     if (test_motor_control_semantics()) return 1;
     if (test_timeout_matches_qualifier_timing()) return 1;
     if (test_observation_bounds()) return 1;
+    if (test_ts002_observation_contract()) return 1;
+    if (test_ts002_velocity_yaw_action_contract()) return 1;
+    if (test_floor_risk_diagnostics()) return 1;
     printf("drone_race native regressions ok\n");
     return 0;
 }

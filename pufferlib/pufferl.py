@@ -168,8 +168,9 @@ def validate_config(args):
 
 def _resolve_backend(args):
     compiled_env = getattr(_C, 'env_name', None)
-    assert compiled_env is None or compiled_env == args['env_name'], \
-        f'build.sh was run for {compiled_env}, not {args["env_name"]}'
+    backend_env_name = args.get('backend_env_name', args['env_name'])
+    assert compiled_env is None or compiled_env == backend_env_name, \
+        f'build.sh was run for {compiled_env}, not {backend_env_name}'
     if args.get('slowly'):
         from pufferlib.torch_pufferl import PuffeRL
         return PuffeRL

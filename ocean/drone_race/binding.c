@@ -45,6 +45,18 @@ void my_init(Env* env, Dict* kwargs) {
     env->w_altitude_floor = get_float(kwargs, "w_altitude_floor", 0.0f);
     env->w_descent_floor = get_float(kwargs, "w_descent_floor", 0.0f);
     env->invalid_penalty = get_float(kwargs, "invalid_penalty", 40.0f);
+    env->interface_mode = get_int(kwargs, "interface_mode", DRONE_RACE_INTERFACE_NATIVE_MOTOR);
+    env->max_cmd_forward = get_float(kwargs, "max_cmd_forward", 2.0f);
+    env->max_cmd_lateral = get_float(kwargs, "max_cmd_lateral", 1.0f);
+    env->max_cmd_vertical = get_float(kwargs, "max_cmd_vertical", 0.8f);
+    env->max_cmd_yaw_rate = get_float(kwargs, "max_cmd_yaw_rate", 1.0f);
+    env->setpoint_vel_kp = get_float(kwargs, "setpoint_vel_kp", 0.20f);
+    env->setpoint_att_kp = get_float(kwargs, "setpoint_att_kp", 0.20f);
+    env->setpoint_rate_kd = get_float(kwargs, "setpoint_rate_kd", 0.04f);
+    env->setpoint_yaw_rate_kp = get_float(kwargs, "setpoint_yaw_rate_kp", 0.08f);
+    env->setpoint_thrust_vel_kp = get_float(kwargs, "setpoint_thrust_vel_kp", 0.20f);
+    env->setpoint_max_tilt = get_float(kwargs, "setpoint_max_tilt", 0.35f);
+    env->setpoint_max_motor_delta = get_float(kwargs, "setpoint_max_motor_delta", 0.35f);
     init(env);
 }
 
@@ -69,6 +81,17 @@ void my_log(Log* log, Dict* out) {
     dict_set(out, "crash_low_next_gate1", log->crash_low_next_gate1);
     dict_set(out, "crash_low_next_gate2", log->crash_low_next_gate2);
     dict_set(out, "crash_low_next_gate3plus", log->crash_low_next_gate3plus);
+    dict_set(out, "crash_low_floor_margin_pre", log->crash_low_floor_margin_pre);
+    dict_set(out, "crash_low_ttf_pre", log->crash_low_ttf_pre);
+    dict_set(out, "crash_low_stop_margin_pre", log->crash_low_stop_margin_pre);
+    dict_set(out, "crash_low_max_up_accel_pre", log->crash_low_max_up_accel_pre);
+    dict_set(out, "floor_impact_risk", log->floor_impact_risk);
+    dict_set(out, "floor_stop_violation", log->floor_stop_violation);
+    dict_set(out, "floor_risk_steps", log->floor_risk_steps);
+    dict_set(out, "floor_stop_violation_steps", log->floor_stop_violation_steps);
+    dict_set(out, "floor_risk_sampled", log->floor_risk_sampled);
+    dict_set(out, "min_floor_ttf", log->min_floor_ttf);
+    dict_set(out, "min_floor_stop_margin", log->min_floor_stop_margin);
     dict_set(out, "out_of_order", log->out_of_order);
     dict_set(out, "missed_gate", log->missed_gate);
     dict_set(out, "timeout", log->timeout);
