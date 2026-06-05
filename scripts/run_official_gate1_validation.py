@@ -17,6 +17,7 @@ from dataclasses import asdict, dataclass
 from types import SimpleNamespace
 
 import drone_sitl_competition_smoke as smoke
+from drone_sitl_adapter import MavlinkSitlAdapter
 import sitl_stream_probe as probe
 
 
@@ -26,6 +27,7 @@ class ValidationSummary:
     finished_unix_s: float
     elapsed_s: float
     status: str
+    reset_sent: bool
     probe: dict
     smoke: dict | None
     next_commands: list[str]
@@ -60,12 +62,14 @@ def _build_smoke_args(args) -> SimpleNamespace:
         camera_host=args.camera_host,
         camera_port=args.camera_port,
         camera_timeout_s=args.camera_timeout_s,
+        camera_max_packets_per_loop=getattr(args, "camera_max_packets_per_loop", 512),
         no_camera=False,
         max_detection_age_s=args.max_detection_age_s,
         detector_min_area_px=args.detector_min_area_px,
         detector_max_aspect_error=args.detector_max_aspect_error,
         detector_min_fill_ratio=args.detector_min_fill_ratio,
         target_gate_count=args.target_gate_count,
+        require_official_race_progress=args.require_official_race_progress,
         gate_confidence_arm_min=None,
         gate_confidence_pass_min=None,
         gate_pass_arm_range_m=None,
@@ -86,6 +90,21 @@ def _build_smoke_args(args) -> SimpleNamespace:
     )
 
 
+def _maybe_send_sim_reset(args) -> bool:
+    if not getattr(args, "send_sim_reset", False):
+        return False
+    adapter = MavlinkSitlAdapter(args.endpoint, dropout_after_s=args.telemetry_dropout_s)
+    try:
+        adapter.send_heartbeat()
+        adapter.send_sim_reset_command()
+    finally:
+        adapter.close()
+    post_reset_sleep_s = float(getattr(args, "post_reset_sleep_s", 2.0))
+    if post_reset_sleep_s > 0.0:
+        time.sleep(post_reset_sleep_s)
+    return True
+
+
 def _default_next_commands(args) -> list[str]:
     return [
         (
@@ -104,14 +123,20 @@ def _default_next_commands(args) -> list[str]:
             f"--control-mode {args.control_mode} "
             + (f"--policy-callable {args.policy_callable} " if args.policy_callable else "")
             + f"--duration {args.smoke_duration} "
-            f"--json-path {args.smoke_json_path} "
-            f"--csv-path {args.smoke_csv_path}"
+            + f"--camera-host {args.camera_host} "
+            + f"--camera-port {args.camera_port} "
+            + f"--camera-max-packets-per-loop {getattr(args, 'camera_max_packets_per_loop', 512)} "
+            + f"--target-gate-count {args.target_gate_count} "
+            + ("--require-official-race-progress " if args.require_official_race_progress else "")
+            + f"--json-path {args.smoke_json_path} "
+            + f"--csv-path {args.smoke_csv_path}"
         ),
     ]
 
 
 def run_validation(args) -> ValidationSummary:
     started = time.time()
+    reset_sent = _maybe_send_sim_reset(args)
     probe_report = probe.run_probe(
         host=args.host,
         mavlink_port=args.mavlink_port,
@@ -145,6 +170,7 @@ def run_validation(args) -> ValidationSummary:
         finished_unix_s=finished,
         elapsed_s=round(finished - started, 6),
         status=status,
+        reset_sent=reset_sent,
         probe=probe_payload,
         smoke=smoke_payload,
         next_commands=_default_next_commands(args),
@@ -158,6 +184,8 @@ def main() -> None:
     parser.add_argument("--camera-port", type=int, default=5600)
     parser.add_argument("--probe-duration", type=float, default=5.0)
     parser.add_argument("--probe-json-path", default="logs/sitl/stream_probe_official.json")
+    parser.add_argument("--send-sim-reset", action="store_true")
+    parser.add_argument("--post-reset-sleep-s", type=float, default=2.0)
 
     parser.add_argument("--acceptance-config", default=os.path.join("config", "sitl_competition_acceptance.json"))
     parser.add_argument("--endpoint", default="udpin:0.0.0.0:14540")
@@ -172,11 +200,13 @@ def main() -> None:
     parser.add_argument("--idle-sleep-s", type=float, default=0.001)
     parser.add_argument("--camera-host", default="0.0.0.0")
     parser.add_argument("--camera-timeout-s", type=float, default=0.0)
+    parser.add_argument("--camera-max-packets-per-loop", type=int, default=512)
     parser.add_argument("--max-detection-age-s", type=float, default=0.25)
     parser.add_argument("--detector-min-area-px", type=float, default=1200.0)
     parser.add_argument("--detector-max-aspect-error", type=float, default=0.5)
     parser.add_argument("--detector-min-fill-ratio", type=float, default=0.15)
     parser.add_argument("--target-gate-count", type=int, default=1)
+    parser.add_argument("--require-official-race-progress", action="store_true")
     parser.add_argument("--smoke-json-path", default="logs/sitl/competition_smoke_gate1_official.json")
     parser.add_argument("--smoke-csv-path", default="logs/sitl/competition_smoke_gate1_official.csv")
 

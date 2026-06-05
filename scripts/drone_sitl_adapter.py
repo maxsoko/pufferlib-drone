@@ -4,7 +4,13 @@ import dataclasses
 import json
 import math
 import os
+import struct
 import time
+
+
+MAVLINK_CMD_SIM_RESET = 31000
+ENCAPSULATED_RACE_STATUS_MSG_ID = 1
+ENCAPSULATED_TRACK_INFO_MSG_ID = 2
 
 
 @dataclasses.dataclass
@@ -25,6 +31,29 @@ class AttitudeSetpoint:
     pitch: float = 0.0
     yaw: float = 0.0
     thrust: float = 0.5
+
+
+@dataclasses.dataclass(frozen=True)
+class RaceStatus:
+    sim_boot_time_ms: int
+    race_start_boot_time_ms: int
+    race_finish_time_ns: int
+    active_gate_index: int
+    last_gate_race_time: int
+
+
+@dataclasses.dataclass(frozen=True)
+class TrackGateInfo:
+    gate_id: int
+    position_ned_x: float
+    position_ned_y: float
+    position_ned_z: float
+    orientation_ned_w: float
+    orientation_ned_x: float
+    orientation_ned_y: float
+    orientation_ned_z: float
+    width_m: float
+    height_m: float
 
 
 @dataclasses.dataclass
@@ -62,6 +91,17 @@ class TelemetryState:
     timesync_tc1: int | None = None
     timesync_ts1: int | None = None
     linear_velocity_m_s: tuple[float, float, float] | None = None
+    local_position_ned_m: tuple[float, float, float] | None = None
+    local_velocity_ned_m_s: tuple[float, float, float] | None = None
+    odometry_position_ned_m: tuple[float, float, float] | None = None
+    odometry_quaternion_wxyz: tuple[float, float, float, float] | None = None
+    odometry_velocity_ned_m_s: tuple[float, float, float] | None = None
+    actuator_outputs: tuple[float, ...] | None = None
+    collision_id: int | None = None
+    collision_threat_level: int | None = None
+    collision_impact: float | None = None
+    race_status: RaceStatus | None = None
+    track_gates: tuple[TrackGateInfo, ...] = ()
 
 
 @dataclasses.dataclass
@@ -73,6 +113,14 @@ class TelemetryMetrics:
     attitudes: int = 0
     highres_imus: int = 0
     timesyncs: int = 0
+    local_positions: int = 0
+    odometries: int = 0
+    actuator_outputs: int = 0
+    collisions: int = 0
+    race_statuses: int = 0
+    track_infos: int = 0
+    data_handshakes: int = 0
+    encapsulated_data: int = 0
     receive_timeouts: int = 0
     telemetry_dropouts: int = 0
     last_message_age_s: float | None = None
@@ -102,7 +150,18 @@ class SitlRunReport:
 class MavlinkTelemetryParser:
     """Track the TS-002 telemetry subset without depending on pymavlink internals."""
 
-    SUPPORTED_TYPES = {"HEARTBEAT", "ATTITUDE", "HIGHRES_IMU", "TIMESYNC"}
+    SUPPORTED_TYPES = {
+        "HEARTBEAT",
+        "ATTITUDE",
+        "HIGHRES_IMU",
+        "TIMESYNC",
+        "LOCAL_POSITION_NED",
+        "ODOMETRY",
+        "ACTUATOR_OUTPUT_STATUS",
+        "COLLISION",
+        "DATA_TRANSMISSION_HANDSHAKE",
+        "ENCAPSULATED_DATA",
+    }
 
     def __init__(self, *, dropout_after_s=1.0):
         if dropout_after_s <= 0.0:
@@ -111,6 +170,8 @@ class MavlinkTelemetryParser:
         self.state = TelemetryState()
         self.metrics = TelemetryMetrics()
         self._dropout_open = False
+        self._track_chunks: dict[int, dict[int, bytes]] = {}
+        self._expected_track_chunks: dict[int, int] = {}
 
     def ingest(self, message, *, now_s=None):
         now = time.monotonic() if now_s is None else now_s
@@ -162,11 +223,153 @@ class MavlinkTelemetryParser:
             self.state.last_timesync_monotonic_s = now
             self.state.timesync_tc1 = get_message_attr(message, "tc1")
             self.state.timesync_ts1 = get_message_attr(message, "ts1")
+        elif msg_type == "LOCAL_POSITION_NED":
+            self.metrics.local_positions += 1
+            self.state.local_position_ned_m = (
+                get_message_attr(message, "x"),
+                get_message_attr(message, "y"),
+                get_message_attr(message, "z"),
+            )
+            self.state.local_velocity_ned_m_s = (
+                get_message_attr(message, "vx"),
+                get_message_attr(message, "vy"),
+                get_message_attr(message, "vz"),
+            )
+            self.state.linear_velocity_m_s = self.state.local_velocity_ned_m_s
+        elif msg_type == "ODOMETRY":
+            self.metrics.odometries += 1
+            q = get_message_attr(message, "q", None)
+            self.state.odometry_position_ned_m = (
+                get_message_attr(message, "x"),
+                get_message_attr(message, "y"),
+                get_message_attr(message, "z"),
+            )
+            if q is not None and len(q) >= 4:
+                self.state.odometry_quaternion_wxyz = (q[0], q[1], q[2], q[3])
+            self.state.odometry_velocity_ned_m_s = (
+                get_message_attr(message, "vx"),
+                get_message_attr(message, "vy"),
+                get_message_attr(message, "vz"),
+            )
+            self.state.linear_velocity_m_s = self.state.odometry_velocity_ned_m_s
+        elif msg_type == "ACTUATOR_OUTPUT_STATUS":
+            self.metrics.actuator_outputs += 1
+            actuator = get_message_attr(message, "actuator", None)
+            if actuator is not None:
+                self.state.actuator_outputs = tuple(float(value) for value in actuator)
+        elif msg_type == "COLLISION":
+            self.metrics.collisions += 1
+            self.state.collision_id = get_message_attr(message, "id")
+            self.state.collision_threat_level = get_message_attr(message, "threat_level")
+            self.state.collision_impact = get_message_attr(message, "horizontal_minimum_delta")
+        elif msg_type == "DATA_TRANSMISSION_HANDSHAKE":
+            self.metrics.data_handshakes += 1
+            transfer_id = get_message_attr(message, "width")
+            packets = get_message_attr(message, "packets")
+            if transfer_id is not None and packets is not None:
+                self._track_chunks[int(transfer_id)] = {}
+                self._expected_track_chunks[int(transfer_id)] = int(packets)
+        elif msg_type == "ENCAPSULATED_DATA":
+            self.metrics.encapsulated_data += 1
+            self._ingest_encapsulated_data(message)
         else:
             self.metrics.unknown_messages += 1
 
         self.update_ages(now_s=now)
         return msg_type
+
+    def _ingest_encapsulated_data(self, message) -> None:
+        raw_payload = bytes(get_message_attr(message, "data", b""))
+        if not raw_payload:
+            return
+
+        data_type = int(raw_payload[0])
+        if data_type == ENCAPSULATED_RACE_STATUS_MSG_ID:
+            self._ingest_race_status(raw_payload)
+        elif data_type == ENCAPSULATED_TRACK_INFO_MSG_ID:
+            self._ingest_track_data_packet(message, raw_payload)
+
+    def _ingest_race_status(self, raw_payload: bytes) -> None:
+        fmt = "<BQqqIq"
+        if len(raw_payload) < struct.calcsize(fmt):
+            self.metrics.malformed_messages += 1
+            return
+        (
+            _data_type,
+            sim_boot_time_ms,
+            race_start_boot_time_ms,
+            race_finish_time_ns,
+            active_gate_index,
+            last_gate_race_time,
+        ) = struct.unpack_from(fmt, raw_payload)
+        self.metrics.race_statuses += 1
+        self.state.race_status = RaceStatus(
+            sim_boot_time_ms=int(sim_boot_time_ms),
+            race_start_boot_time_ms=int(race_start_boot_time_ms),
+            race_finish_time_ns=int(race_finish_time_ns),
+            active_gate_index=int(active_gate_index),
+            last_gate_race_time=int(last_gate_race_time),
+        )
+
+    def _ingest_track_data_packet(self, message, raw_payload: bytes) -> None:
+        header_fmt = "<BH"
+        if len(raw_payload) < struct.calcsize(header_fmt):
+            self.metrics.malformed_messages += 1
+            return
+        _data_type, transfer_id = struct.unpack_from(header_fmt, raw_payload)
+        transfer_id = int(transfer_id)
+        if transfer_id not in self._expected_track_chunks:
+            return
+        seqnr = get_message_attr(message, "seqnr")
+        if seqnr is None:
+            self.metrics.malformed_messages += 1
+            return
+        self._track_chunks[transfer_id][int(seqnr)] = raw_payload[struct.calcsize(header_fmt):]
+        expected = self._expected_track_chunks[transfer_id]
+        if len(self._track_chunks[transfer_id]) != expected:
+            return
+
+        if any(i not in self._track_chunks[transfer_id] for i in range(expected)):
+            self.metrics.malformed_messages += 1
+            return
+        payload = b"".join(self._track_chunks[transfer_id][i] for i in range(expected))
+        del self._track_chunks[transfer_id]
+        del self._expected_track_chunks[transfer_id]
+        self._ingest_track_data(payload)
+
+    def _ingest_track_data(self, payload: bytes) -> None:
+        count_fmt = "<H"
+        gate_fmt = "<Hfffffffff"
+        count_size = struct.calcsize(count_fmt)
+        gate_size = struct.calcsize(gate_fmt)
+        if len(payload) < count_size:
+            self.metrics.malformed_messages += 1
+            return
+        num_gates, = struct.unpack_from(count_fmt, payload)
+        offset = count_size
+        gates = []
+        for _idx in range(int(num_gates)):
+            if len(payload) < offset + gate_size:
+                self.metrics.malformed_messages += 1
+                return
+            values = struct.unpack_from(gate_fmt, payload, offset)
+            offset += gate_size
+            gates.append(
+                TrackGateInfo(
+                    gate_id=int(values[0]),
+                    position_ned_x=float(values[1]),
+                    position_ned_y=float(values[2]),
+                    position_ned_z=float(values[3]),
+                    orientation_ned_w=float(values[4]),
+                    orientation_ned_x=float(values[5]),
+                    orientation_ned_y=float(values[6]),
+                    orientation_ned_z=float(values[7]),
+                    width_m=float(values[8]),
+                    height_m=float(values[9]),
+                )
+            )
+        self.metrics.track_infos += 1
+        self.state.track_gates = tuple(gates)
 
     def note_receive_timeout(self, *, now_s=None):
         self.metrics.receive_timeouts += 1
@@ -215,6 +418,44 @@ class MavlinkSitlAdapter:
             0,
             self.mavutil.mavlink.MAV_STATE_ACTIVE,
         )
+
+    def send_arm_command(self):
+        self.master.mav.command_long_send(
+            self.master.target_system or 1,
+            self.master.target_component or 1,
+            self.mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
+
+    def send_sim_reset_command(self):
+        self.master.mav.command_long_send(
+            self.master.target_system or 1,
+            self.master.target_component or 1,
+            MAVLINK_CMD_SIM_RESET,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
+
+    def send_timesync_request(self):
+        self.master.mav.timesync_send(time.time_ns(), 0)
+
+    def close(self):
+        close_fn = getattr(self.master, "close", None)
+        if close_fn is not None:
+            close_fn()
 
     def send_local_ned_setpoint(self, target):
         # Ignore position/acceleration for the first scaffold and send bounded velocity + yaw.

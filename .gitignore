@@ -125,6 +125,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.venv-win/
 env/
 venv/
 ENV/
@@ -171,4 +172,3 @@ pufferlib/ocean/impulse_wars/benchmark/
 # Data
 resources/drive/data/*
 resources/drive/binaries/*
-

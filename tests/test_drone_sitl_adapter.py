@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import struct
 import sys
 from pathlib import Path
 
@@ -73,6 +74,110 @@ def test_telemetry_parser_tracks_ts002_messages():
     assert parser.state.roll == 0.1
     assert parser.state.zacc == 3.0
     assert parser.state.timesync_tc1 == 111
+
+
+def test_telemetry_parser_tracks_example_extended_messages():
+    parser = sitl.MavlinkTelemetryParser(dropout_after_s=1.0)
+
+    assert parser.ingest(
+        FakeMavlinkMessage(
+            "LOCAL_POSITION_NED",
+            x=1.0,
+            y=2.0,
+            z=-3.0,
+            vx=0.4,
+            vy=0.5,
+            vz=-0.6,
+        ),
+        now_s=20.0,
+    ) == "LOCAL_POSITION_NED"
+    assert parser.state.local_position_ned_m == (1.0, 2.0, -3.0)
+    assert parser.state.linear_velocity_m_s == (0.4, 0.5, -0.6)
+
+    assert parser.ingest(
+        FakeMavlinkMessage(
+            "ODOMETRY",
+            x=4.0,
+            y=5.0,
+            z=-6.0,
+            q=[1.0, 0.0, 0.1, 0.2],
+            vx=0.7,
+            vy=0.8,
+            vz=-0.9,
+        ),
+        now_s=20.1,
+    ) == "ODOMETRY"
+    assert parser.state.odometry_position_ned_m == (4.0, 5.0, -6.0)
+    assert parser.state.odometry_quaternion_wxyz == (1.0, 0.0, 0.1, 0.2)
+
+    assert parser.ingest(
+        FakeMavlinkMessage("ACTUATOR_OUTPUT_STATUS", actuator=[1, 2, 3, 4]),
+        now_s=20.2,
+    ) == "ACTUATOR_OUTPUT_STATUS"
+    assert parser.state.actuator_outputs == (1.0, 2.0, 3.0, 4.0)
+
+    assert parser.ingest(
+        FakeMavlinkMessage(
+            "COLLISION",
+            id=1001,
+            threat_level=2,
+            horizontal_minimum_delta=12.5,
+        ),
+        now_s=20.3,
+    ) == "COLLISION"
+    assert parser.state.collision_id == 1001
+    assert parser.metrics.collisions == 1
+
+
+def test_telemetry_parser_decodes_example_race_status_and_track_data():
+    parser = sitl.MavlinkTelemetryParser(dropout_after_s=1.0)
+
+    race_payload = struct.pack(
+        "<BQqqIq",
+        sitl.ENCAPSULATED_RACE_STATUS_MSG_ID,
+        1234,
+        1000,
+        -1,
+        2,
+        987654321,
+    )
+    race_payload = race_payload + bytes(253 - len(race_payload))
+    parser.ingest(FakeMavlinkMessage("ENCAPSULATED_DATA", data=race_payload), now_s=30.0)
+    assert parser.metrics.encapsulated_data == 1
+    assert parser.metrics.race_statuses == 1
+    assert parser.state.race_status.active_gate_index == 2
+    assert parser.state.race_status.last_gate_race_time == 987654321
+
+    track_payload = struct.pack(
+        "<H",
+        1,
+    ) + struct.pack(
+        "<Hfffffffff",
+        7,
+        1.0,
+        2.0,
+        -3.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.5,
+        1.5,
+    )
+    parser.ingest(
+        FakeMavlinkMessage("DATA_TRANSMISSION_HANDSHAKE", width=42, packets=1),
+        now_s=30.1,
+    )
+    packet = struct.pack("<BH", sitl.ENCAPSULATED_TRACK_INFO_MSG_ID, 42) + track_payload
+    parser.ingest(FakeMavlinkMessage("ENCAPSULATED_DATA", seqnr=0, data=packet), now_s=30.2)
+
+    assert parser.metrics.data_handshakes == 1
+    assert parser.metrics.track_infos == 1
+    assert len(parser.state.track_gates) == 1
+    gate = parser.state.track_gates[0]
+    assert gate.gate_id == 7
+    assert gate.position_ned_z == -3.0
+    assert gate.width_m == 1.5
 
 
 def test_telemetry_parser_counts_unknown_malformed_and_dropouts():

@@ -316,6 +316,20 @@ class UdpCameraReceiver:
             return None
         return self.reassembler.ingest_packet(packet)
 
+    def poll_frames(self, *, max_packets: int) -> list[CameraFrame]:
+        """Drain up to max_packets UDP packets and return completed frames."""
+        if max_packets <= 0:
+            raise ValueError("max_packets must be positive")
+        frames = []
+        for _ in range(max_packets):
+            packet = self._poll_packet()
+            if packet is None:
+                break
+            frame = self.reassembler.ingest_packet(packet)
+            if frame is not None:
+                frames.append(frame)
+        return frames
+
     def frames(self, *, max_packets: int | None = None) -> Iterator[CameraFrame]:
         packets = 0
         while max_packets is None or packets < max_packets:

@@ -150,7 +150,7 @@ PolicyCallable = Callable[[tuple[float, ...]], Sequence[float]]
 
 
 def load_policy_callable(spec: str) -> PolicyCallable:
-    path_str, sep, function_name = spec.partition(":")
+    path_str, sep, function_name = spec.rpartition(":")
     if not sep or not function_name:
         raise ValueError("--policy-callable must be in '<path.py>:<function>' format")
     path = Path(path_str).expanduser().resolve()
@@ -347,6 +347,9 @@ class CompetitionSmokeReport:
     completion_time_s: float | None = None
     ordered_gate_passes: int = 0
     ordered_gate_sequence_valid: bool | None = None
+    official_active_gate_index: int | None = None
+    official_last_gate_race_time: int | None = None
+    official_race_finish_time_ns: int | None = None
     gate_pass_summary: dict = dataclasses.field(default_factory=dict)
     acceptance_passed: bool = False
     acceptance_blockers: list[str] = dataclasses.field(default_factory=list)
@@ -395,6 +398,9 @@ def maybe_write_csv(path: str, report: CompetitionSmokeReport) -> None:
         "vision_max_timesync_error_ns": report.vision.max_timesync_error_ns,
         "ordered_gate_passes": report.ordered_gate_passes,
         "ordered_gate_sequence_valid": report.ordered_gate_sequence_valid,
+        "official_active_gate_index": report.official_active_gate_index,
+        "official_last_gate_race_time": report.official_last_gate_race_time,
+        "official_race_finish_time_ns": report.official_race_finish_time_ns,
         "completion_time_s": report.completion_time_s,
         "target_gate_count": report.gate_pass_summary.get("target_gate_count"),
         "crash_detected": report.crash_detected,
@@ -507,7 +513,10 @@ def run_smoke(args) -> CompetitionSmokeReport:
     max_telemetry_dropouts = int(
         args.max_telemetry_dropouts
         if args.max_telemetry_dropouts is not None
-        else resolve_config_value(acceptance_config, "health_thresholds", "max_telemetry_dropouts", 2)
+            else resolve_config_value(acceptance_config, "health_thresholds", "max_telemetry_dropouts", 2)
+    )
+    require_official_race_progress = bool(args.require_official_race_progress) or bool(
+        resolve_config_value(acceptance_config, "smoke_defaults", "require_official_race_progress", False)
     )
 
     policy_source = "visual_servo"
@@ -564,8 +573,9 @@ def run_smoke(args) -> CompetitionSmokeReport:
                 next_heartbeat_s = now_s + heartbeat_period_s
 
             if receiver is not None and detector is not None:
-                frame = receiver.poll_frame()
-                if frame is not None:
+                frames = receiver.poll_frames(max_packets=args.camera_max_packets_per_loop)
+                if frames:
+                    frame = frames[-1]
                     vision_metrics.frames_seen += 1
                     detection = detector.detect_jpeg(frame.jpeg)
                     gate_detection = detection
@@ -664,7 +674,8 @@ def run_smoke(args) -> CompetitionSmokeReport:
         latest_telemetry=adapter.telemetry.state,
     )
     pass_summary = pass_tracker.to_summary(started_s=started_s)
-    ordered_gate_sequence_valid = pass_tracker.pass_count <= args.target_gate_count
+    ordered_gate_sequence_valid = pass_tracker.pass_count >= args.target_gate_count
+    race_status = sitl_report.latest_telemetry.race_status
     smoke_report = CompetitionSmokeReport(
         sitl=sitl_report,
         control_mode=args.control_mode,
@@ -676,6 +687,9 @@ def run_smoke(args) -> CompetitionSmokeReport:
         completion_time_s=pass_summary["completion_time_s"],
         ordered_gate_passes=pass_tracker.pass_count,
         ordered_gate_sequence_valid=ordered_gate_sequence_valid,
+        official_active_gate_index=(None if race_status is None else race_status.active_gate_index),
+        official_last_gate_race_time=(None if race_status is None else race_status.last_gate_race_time),
+        official_race_finish_time_ns=(None if race_status is None else race_status.race_finish_time_ns),
         gate_pass_summary=pass_summary,
         acceptance_inputs={
             "require_telemetry": require_telemetry,
@@ -685,6 +699,7 @@ def run_smoke(args) -> CompetitionSmokeReport:
             "min_telemetry_messages": min_telemetry_messages,
             "min_camera_frames": min_camera_frames,
             "max_telemetry_dropouts": max_telemetry_dropouts,
+            "require_official_race_progress": require_official_race_progress,
         },
         acceptance_config_path=os.path.abspath(args.acceptance_config),
         vision=vision_metrics,
@@ -703,6 +718,7 @@ def run_smoke(args) -> CompetitionSmokeReport:
         min_telemetry_messages=min_telemetry_messages,
         min_camera_frames=min_camera_frames,
         max_telemetry_dropouts=max_telemetry_dropouts,
+        require_official_race_progress=require_official_race_progress,
     )
     return smoke_report
 
@@ -717,6 +733,7 @@ def evaluate_acceptance(
     min_telemetry_messages: int,
     min_camera_frames: int,
     max_telemetry_dropouts: int,
+    require_official_race_progress: bool = False,
 ) -> tuple[bool, list[str]]:
     blockers: list[str] = []
     if report.sitl.command_rate_violations > max_command_rate_violations:
@@ -733,6 +750,15 @@ def evaluate_acceptance(
         blockers.append(
             f"insufficient_gate_passes:{report.ordered_gate_passes}<{min_gate_passes}"
         )
+    if require_official_race_progress:
+        if report.sitl.telemetry.race_statuses <= 0:
+            blockers.append("no_official_race_status")
+        elif report.official_active_gate_index is None:
+            blockers.append("missing_official_active_gate_index")
+        elif int(report.official_active_gate_index) < min_gate_passes:
+            blockers.append(
+                f"insufficient_official_gate_progress:{report.official_active_gate_index}<{min_gate_passes}"
+            )
     if bool(report.crash_detected):
         blockers.append("crash_detected")
     if bool(report.invalid_run):
@@ -768,12 +794,14 @@ def main() -> None:
     parser.add_argument("--camera-host", default="0.0.0.0")
     parser.add_argument("--camera-port", type=int, default=DEFAULT_CAMERA_UDP_PORT)
     parser.add_argument("--camera-timeout-s", type=float, default=0.0)
+    parser.add_argument("--camera-max-packets-per-loop", type=int, default=512)
     parser.add_argument("--no-camera", action="store_true")
     parser.add_argument("--max-detection-age-s", type=float, default=0.25)
     parser.add_argument("--detector-min-area-px", type=float, default=1200.0)
     parser.add_argument("--detector-max-aspect-error", type=float, default=0.5)
     parser.add_argument("--detector-min-fill-ratio", type=float, default=0.15)
     parser.add_argument("--target-gate-count", type=int, default=1)
+    parser.add_argument("--require-official-race-progress", action="store_true")
     parser.add_argument("--gate-confidence-arm-min", type=float, default=None)
     parser.add_argument("--gate-confidence-pass-min", type=float, default=None)
     parser.add_argument("--gate-pass-arm-range-m", type=float, default=None)

@@ -47,6 +47,8 @@ def _build_validation_args(args) -> SimpleNamespace:
         camera_port=args.camera_port,
         probe_duration=args.probe_duration,
         probe_json_path=args.probe_json_path,
+        send_sim_reset=args.send_sim_reset,
+        post_reset_sleep_s=args.post_reset_sleep_s,
         acceptance_config=args.acceptance_config,
         endpoint=args.endpoint,
         control_mode=args.control_mode,
@@ -60,11 +62,13 @@ def _build_validation_args(args) -> SimpleNamespace:
         idle_sleep_s=args.idle_sleep_s,
         camera_host=args.camera_host,
         camera_timeout_s=args.camera_timeout_s,
+        camera_max_packets_per_loop=args.camera_max_packets_per_loop,
         max_detection_age_s=args.max_detection_age_s,
         detector_min_area_px=args.detector_min_area_px,
         detector_max_aspect_error=args.detector_max_aspect_error,
         detector_min_fill_ratio=args.detector_min_fill_ratio,
         target_gate_count=args.target_gate_count,
+        require_official_race_progress=args.require_official_race_progress,
         smoke_json_path=args.smoke_json_path,
         smoke_csv_path=args.smoke_csv_path,
         summary_json_path=args.summary_json_path,
@@ -132,6 +136,8 @@ def main() -> None:
     parser.add_argument("--camera-port", type=int, default=5600)
     parser.add_argument("--probe-duration", type=float, default=5.0)
     parser.add_argument("--probe-json-path", default="logs/sitl/stream_probe_official.json")
+    parser.add_argument("--send-sim-reset", action="store_true")
+    parser.add_argument("--post-reset-sleep-s", type=float, default=2.0)
 
     parser.add_argument("--acceptance-config", default=os.path.join("config", "sitl_competition_acceptance.json"))
     parser.add_argument("--endpoint", default="udpin:0.0.0.0:14540")
@@ -146,11 +152,13 @@ def main() -> None:
     parser.add_argument("--idle-sleep-s", type=float, default=0.001)
     parser.add_argument("--camera-host", default="0.0.0.0")
     parser.add_argument("--camera-timeout-s", type=float, default=0.0)
+    parser.add_argument("--camera-max-packets-per-loop", type=int, default=512)
     parser.add_argument("--max-detection-age-s", type=float, default=0.25)
     parser.add_argument("--detector-min-area-px", type=float, default=1200.0)
     parser.add_argument("--detector-max-aspect-error", type=float, default=0.5)
     parser.add_argument("--detector-min-fill-ratio", type=float, default=0.15)
     parser.add_argument("--target-gate-count", type=int, default=1)
+    parser.add_argument("--require-official-race-progress", action="store_true")
     parser.add_argument("--smoke-json-path", default="logs/sitl/competition_smoke_gate1_official.json")
     parser.add_argument("--smoke-csv-path", default="logs/sitl/competition_smoke_gate1_official.csv")
     parser.add_argument("--summary-json-path", default="logs/sitl/official_gate1_validation_summary.json")

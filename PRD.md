@@ -1,6 +1,6 @@
 # PRD: Drone Gate Navigation Challenge (Source of Truth)
 
-Last updated: 2026-05-30
+Last updated: 2026-06-04
 Owner: `PufferLib/native-v4-drone-port`
 
 ## Source of Truth Policy
@@ -72,36 +72,40 @@ Completed:
 - First-pass TS-002 visual-servo geometry helper exists: detected square-gate corners can be converted into relative body/NED pose and conservative local-NED velocity/yaw commands.
 - Local competition smoke entrypoint now exists (`scripts/drone_sitl_competition_smoke.py`): it wires MAVLink telemetry, TS-002 camera ingest, first-pass square-gate detection, visual-servo or policy-contract command emission, and deterministic JSON/CSV reporting in one run loop.
 - First-pass square-gate detector now exists (`scripts/drone_gate_detector.py`) and is integrated into the camera/perception boundary used by the smoke entrypoint.
+- Windows-local official simulator runtime is now validated on the RTX 3070 workstation with a lightweight `.venv-win` Python stack (`pymavlink`, `numpy`, `opencv-python` only for SITL). The observed simulator topology is MAVLink v2 telemetry from `127.0.0.1:14560` to client port `14550`, TS-002 camera packets on client port `5600`, and simulator-owned sockets on `14560` and `5601`.
+- On 2026-06-04, Windows-local official simulator smoke runs validated telemetry+camera ingestion and controller-side visual gate-pass heuristics: `logs/sitl/competition_smoke_gate1_windows_local_drain.json` reports nonzero telemetry/camera, `command_rate_violations=0`, `telemetry_dropouts=0`, `completed_frames=5183`, and `detector_detections=2282`.
+- Live TS-002 camera ingestion required draining multiple UDP chunks per smoke-loop iteration; `scripts/drone_camera_receiver.py`, `scripts/drone_sitl_competition_smoke.py`, and `scripts/run_official_gate1_validation.py` now support bounded camera packet draining via `--camera-max-packets-per-loop` (default `512`).
+- The simulator-bundled `PyAIPilotExample` confirmed the MAVLink/camera endpoints, camera header, custom reset command `31000`, and race-status/track-info encapsulated data formats. The SITL adapter now parses official race status, local position, odometry, actuator output, and collisions.
 
 Not complete / blocking:
 
-- Integrated local smoke wiring exists, but it has not yet been validated against official simulator traffic end-to-end.
+- Official simulator traffic validation is proven, but official first-gate race progress is not yet proven. After adding simulator race-status parsing, a strict `--require-official-race-progress` run on 2026-06-04 failed with `active_gate_index=0`, `last_gate_race_time=-1`, and blockers `insufficient_gate_passes:0<1` plus `insufficient_official_gate_progress:0<1`.
 - The current winning hypothesis should shift toward a conservative visual-servo/SITL baseline, with native RL used as support rather than the submission path by itself.
 - R3 three-gate stability is still below promotion thresholds; latest best 4k deterministic eval reached `success_rate=0.8775`, `crash=0.1225`, `gates_passed=2.7847`, still above the crash threshold.
 - R4/full-course race promotion is blocked until R3 reliability improves.
 - Existing promoted/partial native checkpoints were trained through the legacy privileged native observation/action interface; the competition-shaped contract is implemented but not yet trained or validated in the simulator.
-- MAVLink telemetry parsing for `HEARTBEAT`, `ATTITUDE`, `HIGHRES_IMU`, and `TIMESYNC` is now wired into the local competition smoke loop, but official simulator field-validation is still pending.
+- MAVLink telemetry parsing for `HEARTBEAT`, `ATTITUDE`, and `HIGHRES_IMU` is validated against the official Windows simulator traffic on port `14550`; `TIMESYNC` was not observed in the 2026-06-04 runs and should remain optional/diagnostic until confirmed.
 - Local SITL evaluation with fixed course/start conditions is not implemented.
-- Historical 2026-05-22 smoke run observed zero simulator telemetry/camera traffic; this is superseded by replay-backed first-gate passing artifacts on 2026-05-30, while official simulator traffic validation remains pending.
-- Local strict acceptance now passes with a TS-002 mock stream harness (`scripts/mock_ts002_stream.py`), but official simulator traffic validation is still required before promotion.
+- Historical 2026-05-22 smoke run observed zero simulator telemetry/camera traffic; this is superseded by replay-backed first-gate passing artifacts on 2026-05-30 and Windows-local official first-gate acceptance on 2026-06-04.
+- Local strict acceptance passes with TS-002 mock/replay streams and official Windows simulator traffic for stream/controller health. Official first-gate proof now requires simulator race-status gate advancement, not only controller-side vision pass heuristics.
 - Deterministic UDP capture/replay tooling now exists for SITL regression without official traffic (`scripts/sitl_udp_capture.py`, `scripts/sitl_udp_replay.py`), and policy-mode smoke wiring can be exercised with a competition-shaped callable (`scripts/policy_callable_gate_pid.py`).
 - Local offline regression now includes replay-driven policy smoke acceptance from captured traffic artifacts, reducing dependence on live simulator availability for day-to-day controller/perception/reporting validation.
 - First-gate proof is now reproducible on deterministic replay traffic using telemetry+camera only, with canonical artifacts in `logs/sitl/competition_smoke_gate1.{json,csv}` (`ordered_gate_passes=1`, no crashes, no command-rate violations).
 - Deterministic replay reliability now meets promotion thresholds with frozen gate-pass defaults: `N=30` normal and `N=30` degraded Profile A both report `30/30` valid runs for visual-servo and checkpoint policy modes.
-- TS-002 vision ingestion now includes UDP runtime integration, frame reassembly, first-pass detector hookup, and time-sync error tracking in local smoke runs; live simulator validation and robustness tuning are still pending.
+- TS-002 vision ingestion now includes UDP runtime integration, high-rate chunk draining, frame reassembly, first-pass detector hookup, and time-sync error tracking in local smoke runs. Live simulator stream validation passes; official gate advancement remains pending.
 - Native gate geometry is still too abstract for TS-002 clearance: current circular gate radii and point-mass crossing checks do not model the `1500x1500x260 mm` inner opening, `2700x2700x260 mm` frame, or `280x280x160 mm` chassis.
 - Q8/fake-quant training is not promoted; closed-loop race parity and action drift remain unresolved.
 
 Blocking work breakdown:
 
 - Spec-compliant SITL baseline:
-  - Current state: heartbeat/setpoint scaffold and camera packet reassembler exist, but there is no autonomous end-to-end run path using official telemetry plus camera.
-  - Next action: validate inbound MAVLink parsing for `ATTITUDE`, `HIGHRES_IMU`, status, and `TIMESYNC` against the official simulator; wire TS-002 camera frames into a perception boundary; add a simple square-gate detector/pose estimator using `fx=fy=320`, `cx=320`, `cy=180`, and the `20 deg` camera uptilt; and drive the conservative controller/policy contract through bounded `SET_POSITION_TARGET_LOCAL_NED` commands.
-  - Acceptance signal: one command can connect to the simulator, maintain heartbeat, enforce `<100 Hz` command rate, consume telemetry and camera frames, emit autonomous setpoints, and write a deterministic report with command-rate, telemetry-dropout, vision-health, ordered-gate, crash, and completion-time fields.
+  - Current state: Windows-local official simulator traffic is reachable, and official race-status messages are parsed. The live topology discovered on 2026-06-04 is MAVLink telemetry on client port `14550`, TS-002 camera on `5600`, and outbound setpoints through `udpin:0.0.0.0:14550`.
+  - Next action: make the reset/start-condition procedure explicit, require simulator race-status advancement with `--require-official-race-progress`, and tune the controller until `active_gate_index` advances past `0`.
+  - Acceptance signal: first-gate acceptance is `acceptance_passed=true` from a reset official simulator state with nonzero race-status messages, `official_active_gate_index>=1`, command-rate, telemetry-dropout, vision-health, crash, and completion-time fields.
 - Visual-servo competition baseline:
-  - Current state: corner-based gate pose estimation and conservative command generation exist, but no image detector feeds live gate corners and no SITL controller loop uses the commands.
-  - Next action: implement a first-pass square-gate image detector that feeds the pose helper, then command a slow center-and-pass maneuver before trying learned planning.
-  - Acceptance signal: telemetry+camera-only baseline can approach and pass at least the first gate in a fixed SITL course without native privileged gate vectors.
+  - Current state: the first-pass square-gate detector feeds the pose helper in the live SITL loop, but its vision pass heuristic can produce pass events without the simulator race status advancing.
+  - Next action: use official race status as the validation judge; inspect camera frames/start pose and retune visual-servo approach so the simulator records gate passage.
+  - Acceptance signal: telemetry+camera-only baseline advances official `active_gate_index` at least once in a fixed SITL course without native privileged gate vectors, then graduates to ordered two-gate validation.
 - R3 native race reliability:
   - Current state: best non-promoted R3 candidate is `checkpoints/drone_race/1777433724949/0000000026279936.bin`, but larger eval still fails the crash threshold.
   - Diagnostic result: crashes are low-altitude dives, not high-altitude or horizontal out-of-bounds (`crash_low` accounts for essentially all crashes).
@@ -122,25 +126,25 @@ Blocking work breakdown:
   - Next action: continue Linux GPU checkpoint iteration while preserving replay reliability and move validation from replay traffic to official simulator traffic.
   - Acceptance signal: policy-mode official-traffic SITL runs pass first-gate acceptance with telemetry+camera only and deterministic JSON/CSV evidence.
 - MAVLink telemetry and controller contract:
-  - Current state: heartbeat, setpoint, and testable inbound telemetry parsing/reporting scaffolds exist; the selected first-pass model output is normalized body forward/right/down velocity plus yaw-rate, decoded to local-NED velocity/yaw-rate setpoints.
-  - Next action: validate parsed `HEARTBEAT`, `ATTITUDE`, `HIGHRES_IMU`, and `TIMESYNC` fields against the official simulator, then connect `scripts/drone_policy_contract.py` to the live SITL adapter. Do not assume simulator navigation-reference or `ODOMETRY` availability until organizers confirm it, because TS-002 telemetry bullets omit the TS-001 navigation-reference/ODOMETRY row.
+  - Current state: heartbeat, setpoint, and inbound telemetry parsing/reporting are validated against official simulator `HEARTBEAT`, `ATTITUDE`, and `HIGHRES_IMU` traffic. The selected first-pass model output is normalized body forward/right/down velocity plus yaw-rate, decoded to local-NED velocity/yaw-rate setpoints.
+  - Next action: keep `TIMESYNC` optional until observed/confirmed, then connect `scripts/drone_policy_contract.py` to the live SITL adapter for policy-mode official runs. Do not assume simulator navigation-reference or `ODOMETRY` availability until organizers confirm it, because TS-002 telemetry bullets omit the TS-001 navigation-reference/ODOMETRY row.
   - Acceptance signal: SITL bridge can log confirmed TS-002 telemetry, emit accepted commands with an engineering target of `>=50 Hz` while strictly enforcing `<100 Hz`, and produce a deterministic run report with command-rate/dropout metrics.
 - Local SITL eval runner:
-  - Current state: `scripts/drone_sitl_competition_smoke.py` can connect to an existing simulator endpoint, run visual-servo or policy-contract command loops, and emit deterministic JSON/CSV artifacts with telemetry/camera health metrics.
-  - Next action: validate it against the official simulator, then add fixed course/start-condition control and ordered gate-pass/completion extraction so it can gate promotion directly.
+  - Current state: `scripts/drone_sitl_competition_smoke.py` can connect to the official Windows simulator endpoint, run visual-servo or policy-contract command loops, and emit deterministic JSON/CSV artifacts with telemetry/camera health metrics.
+  - Next action: document or automate fixed course/start-condition reset control, then add ordered multi-gate/completion extraction so it can gate promotion directly.
   - Acceptance signal: one-command SITL smoke/eval produces success, ordered gate passes, completion time, crash/invalid-run status, command rates, and telemetry dropout fields.
 - Vision ingestion:
-  - Current state: TS-002 defines a `30 Hz`, `640x360` JPEG-over-UDP stream on default port `5600`, chunked as a 24-byte little-endian metadata header plus JPEG payload. Initial parser/reassembler coverage now lives in `scripts/drone_camera_receiver.py` with synthetic tests for header parsing, out-of-order chunk assembly, missing chunk eviction, reconstruction failures, FPS, jitter, and stalls.
-  - Next action: wire the UDP receiver into a SITL/vision smoke path, sync `sim_time_ns` with MAVLink `TIMESYNC`, and publish reconstructed frames at the perception boundary.
+  - Current state: TS-002 defines a `30 Hz`, `640x360` JPEG-over-UDP stream on default/client port `5600`, chunked as a 24-byte little-endian metadata header plus JPEG payload. The live simulator sends high-rate chunk traffic; the receiver now supports bounded packet draining so smoke runs can reconstruct current frames instead of falling behind stale chunks.
+  - Next action: keep packet-drain defaults tuned for live traffic, sync `sim_time_ns` with MAVLink `TIMESYNC` if/when the simulator emits it, and add regression coverage for high-rate chunk draining.
   - Acceptance signal: camera adapter publishes reconstructed frames with `sim_time_ns`, applies TS-002 pinhole intrinsics/extrinsics, and supports separate telemetry-only vs telemetry+vision eval tracks.
 - Native geometry and gate fidelity:
   - Current state: native course logic is useful for curriculum training, but it has not been audited against TS-002 chassis, gate frame, inner opening, obstacle, and boundary dimensions.
   - Next action: compare native gate crossing/collision helpers, obstacle definitions, and course geometry against the TS-002 drone chassis `280x280x160 mm`, gate outer `2700x2700x260 mm`, and gate inner `1500x1500x260 mm` dimensions. Replace point/circular gate success checks with a spec-faithful clearance model before treating native success as transferable.
   - Acceptance signal: native and SITL geometry tests cover gate opening, frame depth, drone chassis clearance, obstacle/boundary collisions, and ordered crossing validity.
 - Official simulator runtime topology:
-  - Current state: native training and Vast.ai validation are Linux-oriented, while TS-002 says the DCL simulator runs on Windows 11 with a standard PC and roughly `8GB` VRAM GPU, and Linux OS is not currently supported for the simulator.
-  - Next action: define the integration topology for Linux/native training artifacts, Python controller runtime, and a Windows 11 DCL simulator host over UDP.
-  - Acceptance signal: documented local/remote topology can run the controller against the official simulator without assuming a Linux-hosted DCL simulator.
+  - Current state: native training and Vast.ai validation remain Linux-oriented, while the official DCL simulator runs on Windows 11. The validated local topology is Windows simulator plus Windows-local Python `.venv-win` controller on the RTX 3070 workstation; earlier WSL relay attempts were blocked by firewall/VPN routing and are not the preferred path.
+  - Next action: document the Windows-local runbook (`.venv-win`, MAVLink client port `14550`, camera port `5600`, simulator reset requirement) and keep Linux/Vast only for training/checkpoint generation.
+  - Acceptance signal: documented Windows-local topology can run the controller against the official simulator without assuming a Linux-hosted DCL simulator.
 - Q8/fake-quant promotion:
   - Current state: Q8 export/runtime and benchmarks exist, but action drift and closed-loop race parity are not promotion-ready.
   - Next action: defer fake-quant RL until FP32 closed-loop behavior is reliable through the SITL/camera/telemetry path; then add QAT or post-training calibration against closed-loop hover/race metrics.
@@ -195,7 +199,7 @@ Current alignment assessment:
   - MAVLink v2/UDP bridge scaffolding exists for heartbeat and setpoint commands, but needs the TS-002 `<100 Hz` command cap enforced.
   - The program is reliability-first: speed optimization is blocked until valid-run stability improves.
 - Not yet compliant:
-  - No autonomous SITL run consumes official telemetry plus camera frames and emits controller setpoints.
+  - Official stream/controller health is validated, but simulator race-status first-gate advancement is not yet proven.
   - No camera-based gate detector or integrated visual-servo baseline is implemented; corner-based pose/command geometry exists but is not live.
   - Current policies still train on native privileged state vectors; competition-facing policies must converge to telemetry plus forward-camera observations.
   - Telemetry parsing for attitude/orientation, IMU, status, and time sync is scaffolded but not validated against official simulator traffic.
@@ -203,7 +207,7 @@ Current alignment assessment:
   - The policy/controller output contract to official MAVLink setpoints is not finalized.
   - Vision ingestion now has a tested TS-002 header parser/reassembler scaffold, but UDP runtime smoke testing, `sim_time_ns`/MAVLink time sync, and policy/perception integration are not complete.
   - Native geometry, obstacle, and gate-fidelity assumptions have not been audited against TS-002 chassis/gate dimensions.
-  - Official simulator runtime topology is unresolved because the simulator is Windows 11-only while native training is Linux/Vast-oriented.
+  - Official simulator runtime topology is resolved for the local RTX 3070 workstation: run the simulator and lightweight Python controller on Windows, while retaining Linux/Vast for training.
   - Current native race policy is not yet stable enough for full-course promotion.
 
 Qualifier acceptance boundary:
@@ -421,13 +425,12 @@ From cross-project analysis, we adopt these patterns:
 
 ## Immediate Sprint (Current)
 
-- Smoke-train and evaluate the `drone_race_competition` policy contract on Linux GPU.
-- Wire TS-002 camera receiver into a telemetry+vision SITL smoke path.
-- Implement first-pass image gate detection and connect it to the existing pose/visual-servo helper.
-- Implement a conservative visual-servo controller and deterministic first-gate SITL eval report.
-- Connect trained policy outputs through `scripts/drone_policy_contract.py` into the SITL adapter.
-- Add SITL report fields for heartbeat, command-rate cap, telemetry dropouts, time sync, camera FPS, frame jitter/stalls, JPEG reconstruction failures, chunk loss, ordered gate passes, crash/invalid-run status, and completion time.
-- Define Windows 11 DCL simulator integration topology for Linux-trained controllers.
+- Rerun `scripts/run_official_gate1_validation.py` with `--require-official-race-progress` after a known-good simulator/course reset using the discovered Windows-local ports (`--mavlink-port 14550`, `--camera-port 5600`, `--endpoint udpin:0.0.0.0:14550`).
+- Use simulator race status (`active_gate_index`, `last_gate_race_time`, `race_finish_time_ns`) as the first-gate validation judge; controller-side vision pass heuristics are diagnostic only.
+- Tune the telemetry+camera visual-servo baseline until official `active_gate_index` advances past `0`, then stabilize repeated first-gate validation before speed tuning.
+- Connect trained policy outputs through `scripts/drone_policy_contract.py` into the live Windows-local SITL adapter and compare policy mode against the visual-servo baseline.
+- Add regression coverage for high-rate TS-002 camera chunk draining and detector behavior on live/captured official frames.
+- Document the Windows-local simulator runbook for Linux-trained controllers: `.venv-win`, RTX 3070 workstation, MAVLink telemetry client port `14550`, camera client port `5600`, simulator-owned `14560/5601`, and reset-state requirement.
 - Audit native geometry/gate/obstacle fidelity against TS-002 dimensions.
 - Continue R3 native stabilization on GPU as a support track, not as the only critical path.
 
@@ -615,6 +618,9 @@ For each training/eval block, record:
 - Latest canonical replay-backed smoke run (2026-05-30) sent compliant heartbeats/commands, received telemetry/camera traffic, and passed first gate with acceptance enabled (`ordered_gate_passes=1`) in `logs/sitl/competition_smoke_gate1.{json,csv}`.
 - The smoke runner now supports strict acceptance gating (`--require-telemetry --require-camera --min-gate-passes 1`) and returns explicit blocker reasons when first-gate conditions are unmet.
 - A fast stream preflight tool now exists (`scripts/sitl_stream_probe.py`) to verify inbound MAVLink/camera packet presence before running longer smoke evaluations.
+- Windows-local official simulator validation now works on the RTX 3070 workstation. The live ports discovered on 2026-06-04 are MAVLink v2 telemetry from simulator `127.0.0.1:14560` to client port `14550`, TS-002 camera chunks on client port `5600`, and simulator-owned sockets on `14560/5601`.
+- Windows-local official simulator smoke runs on 2026-06-04 validated stream/controller health and vision detection, but official first-gate race progress remains blocked. After `PyAIPilotExample` race-status parsing was added, `logs/sitl/official_gate1_validation_summary_windows_local_auto_reset_official_progress_001.json` failed strict official progress with `active_gate_index=0` and `last_gate_race_time=-1`.
+- Live camera traffic required bounded packet draining because each frame is chunked into many UDP packets; the smoke runner now drains up to `--camera-max-packets-per-loop` packets per loop (default `512`) and processes the newest completed frame.
 - A local mock stream harness now exists (`scripts/mock_ts002_stream.py`) and was used to produce a strict passing artifact run on 2026-05-30 (`ordered_gate_passes=1`, nonzero telemetry/camera, acceptance passed) in `logs/sitl/competition_smoke_gate1_mocked_required.{json,csv}`.
 - UDP capture/replay now includes metadata sidecars (`capture_id`, SHA256, timing profile, generator params), with replay-time hash verification and deterministic impairment injection (loss/reorder/latency/jitter) for degraded-stream regression.
 - Deterministic regression runner now exists (`scripts/sitl_replay_regression.py`) to run repeated smoke acceptance and paired visual-servo vs policy comparisons on identical replay streams.
@@ -622,4 +628,4 @@ For each training/eval block, record:
 - Detector stress suite now exists (`scripts/detector_stress_suite.py`) with frozen threshold config for noise/blur/compression/occlusion/scale.
 - `--slowly`/PyTorch backend runs are considered debug-only and are not part of the accepted training path.
 - Native CUDA build remains unavailable on local macOS; use Linux GPU hardware for accepted throughput/training validation.
-- Latest implementation result (2026-05-30): Linux GPU smoke train/eval completed on Vast, checkpoint callable wired, and deterministic replay comparison passed at `N=30` for both normal and degraded Profile A. Next required implementation is strict passing behavior against official simulator telemetry/camera traffic (not only local mock/replay), while continuing R3 native stabilization and quantization as support tracks.
+- Latest implementation result (2026-06-04): Windows-local official simulator telemetry/camera traffic is validated, high-rate camera draining works, and simulator race status is parsed. Next required implementation is official first-gate advancement (`active_gate_index>=1`) through the SITL controller, while continuing R3 native stabilization and quantization as support tracks.

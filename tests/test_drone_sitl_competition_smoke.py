@@ -195,3 +195,53 @@ def test_evaluate_acceptance_passes_when_requirements_met():
     )
     assert ok is True
     assert blockers == []
+
+
+def test_evaluate_acceptance_can_require_official_race_progress():
+    sitl = smoke.SitlRunReport(
+        endpoint="udpout:127.0.0.1:14540",
+        mode="competition-smoke",
+        duration_s=1.0,
+        heartbeat_hz=2.0,
+        command_hz=50.0,
+        command_kind="local_ned_velocity",
+    )
+    sitl.telemetry.messages_seen = 10
+    sitl.telemetry.race_statuses = 1
+    report = smoke.CompetitionSmokeReport(
+        sitl=sitl,
+        control_mode="visual-servo",
+        policy_source="visual_servo",
+        ordered_gate_passes=1,
+        official_active_gate_index=0,
+        official_last_gate_race_time=-1,
+        vision=smoke.SmokeVisionMetrics(frames_seen=5),
+    )
+    ok, blockers = smoke.evaluate_acceptance(
+        report,
+        require_telemetry=True,
+        require_camera=True,
+        min_gate_passes=1,
+        max_command_rate_violations=0,
+        min_telemetry_messages=1,
+        min_camera_frames=1,
+        max_telemetry_dropouts=2,
+        require_official_race_progress=True,
+    )
+    assert ok is False
+    assert "insufficient_official_gate_progress:0<1" in blockers
+
+    report.official_active_gate_index = 1
+    ok, blockers = smoke.evaluate_acceptance(
+        report,
+        require_telemetry=True,
+        require_camera=True,
+        min_gate_passes=1,
+        max_command_rate_violations=0,
+        min_telemetry_messages=1,
+        min_camera_frames=1,
+        max_telemetry_dropouts=2,
+        require_official_race_progress=True,
+    )
+    assert ok is True
+    assert blockers == []

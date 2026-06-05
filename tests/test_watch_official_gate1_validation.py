@@ -22,6 +22,8 @@ def _args(tmp_path: Path) -> SimpleNamespace:
         camera_port=5600,
         probe_duration=0.1,
         probe_json_path=str(tmp_path / "probe.json"),
+        send_sim_reset=False,
+        post_reset_sleep_s=0.0,
         acceptance_config="config/sitl_competition_acceptance.json",
         endpoint="udpin:0.0.0.0:14540",
         control_mode="visual-servo",
@@ -35,11 +37,13 @@ def _args(tmp_path: Path) -> SimpleNamespace:
         idle_sleep_s=0.001,
         camera_host="0.0.0.0",
         camera_timeout_s=0.0,
+        camera_max_packets_per_loop=512,
         max_detection_age_s=0.25,
         detector_min_area_px=1200.0,
         detector_max_aspect_error=0.5,
         detector_min_fill_ratio=0.15,
         target_gate_count=1,
+        require_official_race_progress=False,
         smoke_json_path=str(tmp_path / "smoke.json"),
         smoke_csv_path=str(tmp_path / "smoke.csv"),
         summary_json_path=str(tmp_path / "summary.json"),
@@ -95,11 +99,13 @@ def test_watch_stops_when_smoke_passes(tmp_path):
     args.max_wait_s = 1.0
     timeline = iter([0.0, 0.0, 0.2, 0.25])
     statuses = iter(["blocked_no_traffic", "smoke_passed"])
+    validation_args_seen = []
 
     def now_fn():
         return next(timeline)
 
-    def run_once(_validation_args):
+    def run_once(validation_args):
+        validation_args_seen.append(validation_args)
         return _validation_result(next(statuses))
 
     summary = module.run_watch(
@@ -111,3 +117,4 @@ def test_watch_stops_when_smoke_passes(tmp_path):
     assert summary.final_status == "smoke_passed"
     assert summary.attempts == 2
     assert summary.attempt_statuses == ["blocked_no_traffic", "smoke_passed"]
+    assert validation_args_seen[-1].camera_max_packets_per_loop == 512
