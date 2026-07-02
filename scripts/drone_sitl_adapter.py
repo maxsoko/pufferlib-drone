@@ -457,7 +457,7 @@ class MavlinkSitlAdapter:
         if close_fn is not None:
             close_fn()
 
-    def send_local_ned_setpoint(self, target, *, frame: str = "local_ned"):
+    def send_local_ned_setpoint(self, target, *, frame: str = "local_ned", yaw_mode: str = "yaw_and_rate"):
         # Ignore position/acceleration for the first scaffold and send bounded velocity + yaw.
         if frame == "local_ned":
             mav_frame = self.mavutil.mavlink.MAV_FRAME_LOCAL_NED
@@ -465,6 +465,8 @@ class MavlinkSitlAdapter:
             mav_frame = self.mavutil.mavlink.MAV_FRAME_BODY_NED
         else:
             raise ValueError("frame must be 'local_ned' or 'body_ned'")
+        if yaw_mode not in {"yaw_and_rate", "ignore"}:
+            raise ValueError("yaw_mode must be 'yaw_and_rate' or 'ignore'")
         type_mask = (
             self.mavutil.mavlink.POSITION_TARGET_TYPEMASK_X_IGNORE
             | self.mavutil.mavlink.POSITION_TARGET_TYPEMASK_Y_IGNORE
@@ -473,6 +475,12 @@ class MavlinkSitlAdapter:
             | self.mavutil.mavlink.POSITION_TARGET_TYPEMASK_AY_IGNORE
             | self.mavutil.mavlink.POSITION_TARGET_TYPEMASK_AZ_IGNORE
         )
+        if yaw_mode == "ignore":
+            type_mask = (
+                type_mask
+                | self.mavutil.mavlink.POSITION_TARGET_TYPEMASK_YAW_IGNORE
+                | self.mavutil.mavlink.POSITION_TARGET_TYPEMASK_YAW_RATE_IGNORE
+            )
         self.master.mav.set_position_target_local_ned_send(
             int(time.monotonic() * 1000) & 0xFFFFFFFF,
             1,
@@ -651,7 +659,11 @@ def run_constant_velocity(args):
         if now >= next_command:
             if last_command_sent_s is not None and now - last_command_sent_s < 0.01:
                 command_rate_violations += 1
-            adapter.send_local_ned_setpoint(target, frame=args.command_frame)
+            adapter.send_local_ned_setpoint(
+                target,
+                frame=args.command_frame,
+                yaw_mode=args.command_yaw_mode,
+            )
             commands_sent += 1
             last_command_sent_s = now
             next_command = now + command_period
@@ -663,7 +675,7 @@ def run_constant_velocity(args):
         args,
         adapter,
         args.mode,
-        f"{args.command_frame}_velocity",
+        f"{args.command_frame}_{args.command_yaw_mode}_velocity",
         started,
         heartbeats_sent,
         commands_sent,
@@ -686,6 +698,7 @@ def main():
     parser.add_argument("--json-path", default="")
     parser.add_argument("--command-kind", choices=["local_ned_velocity"], default="local_ned_velocity")
     parser.add_argument("--command-frame", choices=["body_ned", "local_ned"], default="local_ned")
+    parser.add_argument("--command-yaw-mode", choices=["yaw_and_rate", "ignore"], default="yaw_and_rate")
     parser.add_argument("--vx", type=float, default=0.0)
     parser.add_argument("--vy", type=float, default=0.0)
     parser.add_argument("--vz", type=float, default=0.0)

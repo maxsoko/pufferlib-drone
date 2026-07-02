@@ -182,6 +182,22 @@ class SmokeVisionMetrics:
     max_timesync_error_ns: int = 0
 
 
+@dataclasses.dataclass
+class ApproachDiagnostics:
+    detections_sampled: int = 0
+    closest_range_m: float | None = None
+    closest_range_elapsed_s: float | None = None
+    closest_range_confidence: float | None = None
+    closest_range_body_vector_ned_m: tuple[float, float, float] | None = None
+    closest_range_yaw_error_rad: float | None = None
+    closest_range_command: dict = dataclasses.field(default_factory=dict)
+    highest_confidence: float | None = None
+    highest_confidence_elapsed_s: float | None = None
+    latest_pose: dict = dataclasses.field(default_factory=dict)
+    latest_command: dict = dataclasses.field(default_factory=dict)
+    samples: list[dict] = dataclasses.field(default_factory=list)
+
+
 @dataclasses.dataclass(frozen=True)
 class GatePassEvent:
     pass_index: int
@@ -356,6 +372,7 @@ class CompetitionSmokeReport:
     acceptance_inputs: dict = dataclasses.field(default_factory=dict)
     acceptance_config_path: str = ""
     vision: SmokeVisionMetrics = dataclasses.field(default_factory=SmokeVisionMetrics)
+    approach_diagnostics: ApproachDiagnostics = dataclasses.field(default_factory=ApproachDiagnostics)
     camera_stream_metrics: dict = dataclasses.field(default_factory=dict)
     detector_metrics: dict = dataclasses.field(default_factory=dict)
 
@@ -371,6 +388,103 @@ def update_timesync_metrics(metrics: SmokeVisionMetrics, *, sim_time_ns: int, ti
     n = metrics.timesync_samples
     metrics.average_timesync_error_ns += (error - metrics.average_timesync_error_ns) / n
     metrics.max_timesync_error_ns = max(metrics.max_timesync_error_ns, error)
+
+
+def round_float(value: float | None, digits: int = 6) -> float | None:
+    if value is None:
+        return None
+    return round(float(value), digits)
+
+
+def setpoint_to_dict(target: LocalNedSetpoint | None) -> dict:
+    if target is None:
+        return {}
+    return {
+        "vx": round_float(target.vx),
+        "vy": round_float(target.vy),
+        "vz": round_float(target.vz),
+        "yaw": round_float(target.yaw),
+        "yaw_rate": round_float(target.yaw_rate),
+    }
+
+
+def pose_to_dict(pose) -> dict:
+    if pose is None:
+        return {}
+    return {
+        "image_center_px": [round_float(value, 3) for value in pose.image_center_px],
+        "image_width_px": round_float(pose.image_width_px, 3),
+        "image_height_px": round_float(pose.image_height_px, 3),
+        "range_camera_m": round_float(pose.range_camera_m),
+        "body_vector_ned_m": [round_float(value) for value in pose.body_vector_ned_m],
+        "yaw_error_rad": round_float(pose.yaw_error_rad),
+        "confidence": round_float(pose.confidence),
+    }
+
+
+def update_approach_diagnostics(
+    diagnostics: ApproachDiagnostics,
+    *,
+    elapsed_s: float,
+    sim_time_ns: int,
+    gate_pose,
+    detection: GateDetection,
+    visual_servo_target: LocalNedSetpoint,
+    max_samples: int,
+) -> None:
+    confidence = float(detection.confidence)
+    range_m = float(gate_pose.range_camera_m)
+    pose_dict = pose_to_dict(gate_pose)
+    command_dict = setpoint_to_dict(visual_servo_target)
+    sample = {
+        "elapsed_s": round_float(elapsed_s),
+        "sim_time_ns": int(sim_time_ns),
+        "confidence": round_float(confidence),
+        "pose": pose_dict,
+        "visual_servo_command": command_dict,
+    }
+    diagnostics.detections_sampled += 1
+    diagnostics.latest_pose = pose_dict
+    diagnostics.latest_command = command_dict
+
+    if diagnostics.closest_range_m is None or range_m < diagnostics.closest_range_m:
+        diagnostics.closest_range_m = round_float(range_m)
+        diagnostics.closest_range_elapsed_s = round_float(elapsed_s)
+        diagnostics.closest_range_confidence = round_float(confidence)
+        diagnostics.closest_range_body_vector_ned_m = tuple(
+            round_float(value) for value in gate_pose.body_vector_ned_m
+        )
+        diagnostics.closest_range_yaw_error_rad = round_float(gate_pose.yaw_error_rad)
+        diagnostics.closest_range_command = command_dict
+
+    if diagnostics.highest_confidence is None or confidence > diagnostics.highest_confidence:
+        diagnostics.highest_confidence = round_float(confidence)
+        diagnostics.highest_confidence_elapsed_s = round_float(elapsed_s)
+
+    if max_samples <= 0:
+        return
+    if len(diagnostics.samples) < max_samples:
+        diagnostics.samples.append(sample)
+    else:
+        # Keep deterministic coverage across the run without storing every frame.
+        replace_idx = diagnostics.detections_sampled % max_samples
+        diagnostics.samples[replace_idx] = sample
+
+
+def visual_servo_command_from_args(pose, *, yaw_rad: float, args) -> object:
+    return visual_servo_command(
+        pose,
+        yaw_rad=yaw_rad,
+        desired_standoff_m=float(getattr(args, "visual_servo_desired_standoff_m", 1.0)),
+        max_forward_m_s=float(getattr(args, "visual_servo_max_forward_m_s", 1.0)),
+        max_lateral_m_s=float(getattr(args, "visual_servo_max_lateral_m_s", 0.5)),
+        max_vertical_m_s=float(getattr(args, "visual_servo_max_vertical_m_s", 0.4)),
+        max_yaw_rate_rad_s=float(getattr(args, "visual_servo_max_yaw_rate_rad_s", 0.6)),
+        k_forward=float(getattr(args, "visual_servo_k_forward", 0.45)),
+        k_lateral=float(getattr(args, "visual_servo_k_lateral", 0.7)),
+        k_vertical=float(getattr(args, "visual_servo_k_vertical", 0.7)),
+        k_yaw=float(getattr(args, "visual_servo_k_yaw", 1.2)),
+    )
 
 
 def maybe_write_csv(path: str, report: CompetitionSmokeReport) -> None:
@@ -423,6 +537,9 @@ def run_smoke(args) -> CompetitionSmokeReport:
         raise ValueError("idle_sleep_s must be non-negative")
     if args.target_gate_count <= 0:
         raise ValueError("target_gate_count must be positive")
+    max_approach_diagnostic_samples = int(getattr(args, "max_approach_diagnostic_samples", 12))
+    if max_approach_diagnostic_samples < 0:
+        raise ValueError("max_approach_diagnostic_samples must be non-negative")
 
     acceptance_config = load_acceptance_config(args.acceptance_config)
     gate_pass_config = GatePassConfig(
@@ -525,6 +642,9 @@ def run_smoke(args) -> CompetitionSmokeReport:
     command_frame = getattr(args, "command_frame", "local_ned")
     if command_frame not in {"body_ned", "local_ned"}:
         raise ValueError("command_frame must be 'body_ned' or 'local_ned'")
+    command_yaw_mode = getattr(args, "command_yaw_mode", "yaw_and_rate")
+    if command_yaw_mode not in {"yaw_and_rate", "ignore"}:
+        raise ValueError("command_yaw_mode must be 'yaw_and_rate' or 'ignore'")
     if args.control_mode == "policy":
         policy_source = "constant_action"
         normalized_action = maybe_parse_action_json(args.policy_action_json)
@@ -561,6 +681,7 @@ def run_smoke(args) -> CompetitionSmokeReport:
     gate_detection = None
     gate_pose = None
     vision_metrics = SmokeVisionMetrics()
+    approach_diagnostics = ApproachDiagnostics()
     last_cmd_norm = (0.0, 0.0, 0.0, 0.0)
     pass_tracker = VisionGatePassTracker(
         config=gate_pass_config,
@@ -591,6 +712,25 @@ def run_smoke(args) -> CompetitionSmokeReport:
                         gate_pose = tracked_pose
                         vision_metrics.last_detection_confidence = float(detection.confidence)
                         last_detection_s = now_s
+                        diagnostic_cmd = visual_servo_command_from_args(
+                            tracked_pose,
+                            yaw_rad=safe_float(adapter.telemetry.state.yaw),
+                            args=args,
+                        )
+                        update_approach_diagnostics(
+                            approach_diagnostics,
+                            elapsed_s=now_s - started_s,
+                            sim_time_ns=frame.sim_time_ns,
+                            gate_pose=tracked_pose,
+                            detection=detection,
+                            visual_servo_target=LocalNedSetpoint(
+                                vx=diagnostic_cmd.vx,
+                                vy=diagnostic_cmd.vy,
+                                vz=diagnostic_cmd.vz,
+                                yaw_rate=diagnostic_cmd.yaw_rate,
+                            ),
+                            max_samples=max_approach_diagnostic_samples,
+                        )
                     pass_tracker.observe(
                         now_s=now_s,
                         gate_pose=tracked_pose,
@@ -616,7 +756,7 @@ def run_smoke(args) -> CompetitionSmokeReport:
                     if gate_pose is not None and (
                         last_detection_s is None or now_s - last_detection_s <= args.max_detection_age_s
                     ):
-                        cmd = visual_servo_command(gate_pose, yaw_rad=yaw)
+                        cmd = visual_servo_command_from_args(gate_pose, yaw_rad=yaw, args=args)
                         target = LocalNedSetpoint(vx=cmd.vx, vy=cmd.vy, vz=cmd.vz, yaw_rate=cmd.yaw_rate)
                     else:
                         target = LocalNedSetpoint()
@@ -645,7 +785,7 @@ def run_smoke(args) -> CompetitionSmokeReport:
                     )
                     last_cmd_norm = action.normalized
 
-                adapter.send_local_ned_setpoint(target, frame=command_frame)
+                adapter.send_local_ned_setpoint(target, frame=command_frame, yaw_mode=command_yaw_mode)
                 commands_sent += 1
                 last_command_sent_s = now_s
                 next_command_s = now_s + command_period_s
@@ -669,7 +809,7 @@ def run_smoke(args) -> CompetitionSmokeReport:
         duration_s=round(time.monotonic() - started_s, 6),
         heartbeat_hz=args.heartbeat_hz,
         command_hz=args.command_hz,
-        command_kind=f"{command_frame}_velocity",
+        command_kind=f"{command_frame}_{command_yaw_mode}_velocity",
         heartbeats_sent=heartbeats_sent,
         commands_sent=commands_sent,
         command_rate_violations=command_rate_violations,
@@ -706,6 +846,7 @@ def run_smoke(args) -> CompetitionSmokeReport:
         },
         acceptance_config_path=os.path.abspath(args.acceptance_config),
         vision=vision_metrics,
+        approach_diagnostics=approach_diagnostics,
         camera_stream_metrics=(
             dataclasses.asdict(receiver.reassembler.metrics) if receiver is not None else {}
         ),
@@ -785,6 +926,7 @@ def main() -> None:
     parser.add_argument("--idle-sleep-s", type=float, default=0.001)
     parser.add_argument("--control-mode", choices=["visual-servo", "policy"], default="visual-servo")
     parser.add_argument("--command-frame", choices=["body_ned", "local_ned"], default="local_ned")
+    parser.add_argument("--command-yaw-mode", choices=["yaw_and_rate", "ignore"], default="yaw_and_rate")
     parser.add_argument(
         "--policy-action-json",
         default="[0.0, 0.0, 0.0, 0.0]",
@@ -801,9 +943,19 @@ def main() -> None:
     parser.add_argument("--camera-max-packets-per-loop", type=int, default=512)
     parser.add_argument("--no-camera", action="store_true")
     parser.add_argument("--max-detection-age-s", type=float, default=0.25)
+    parser.add_argument("--visual-servo-desired-standoff-m", type=float, default=1.0)
+    parser.add_argument("--visual-servo-max-forward-m-s", type=float, default=1.0)
+    parser.add_argument("--visual-servo-max-lateral-m-s", type=float, default=0.5)
+    parser.add_argument("--visual-servo-max-vertical-m-s", type=float, default=0.4)
+    parser.add_argument("--visual-servo-max-yaw-rate-rad-s", type=float, default=0.6)
+    parser.add_argument("--visual-servo-k-forward", type=float, default=0.45)
+    parser.add_argument("--visual-servo-k-lateral", type=float, default=0.7)
+    parser.add_argument("--visual-servo-k-vertical", type=float, default=0.7)
+    parser.add_argument("--visual-servo-k-yaw", type=float, default=1.2)
     parser.add_argument("--detector-min-area-px", type=float, default=1200.0)
     parser.add_argument("--detector-max-aspect-error", type=float, default=0.5)
     parser.add_argument("--detector-min-fill-ratio", type=float, default=0.15)
+    parser.add_argument("--max-approach-diagnostic-samples", type=int, default=12)
     parser.add_argument("--target-gate-count", type=int, default=1)
     parser.add_argument("--require-official-race-progress", action="store_true")
     parser.add_argument("--gate-confidence-arm-min", type=float, default=None)

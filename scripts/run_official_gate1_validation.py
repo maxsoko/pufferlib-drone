@@ -58,6 +58,7 @@ def _build_smoke_args(args) -> SimpleNamespace:
         idle_sleep_s=args.idle_sleep_s,
         control_mode=args.control_mode,
         command_frame=args.command_frame,
+        command_yaw_mode=args.command_yaw_mode,
         policy_action_json=args.policy_action_json,
         policy_callable=args.policy_callable,
         camera_host=args.camera_host,
@@ -66,9 +67,19 @@ def _build_smoke_args(args) -> SimpleNamespace:
         camera_max_packets_per_loop=getattr(args, "camera_max_packets_per_loop", 512),
         no_camera=False,
         max_detection_age_s=args.max_detection_age_s,
+        visual_servo_desired_standoff_m=args.visual_servo_desired_standoff_m,
+        visual_servo_max_forward_m_s=args.visual_servo_max_forward_m_s,
+        visual_servo_max_lateral_m_s=args.visual_servo_max_lateral_m_s,
+        visual_servo_max_vertical_m_s=args.visual_servo_max_vertical_m_s,
+        visual_servo_max_yaw_rate_rad_s=args.visual_servo_max_yaw_rate_rad_s,
+        visual_servo_k_forward=args.visual_servo_k_forward,
+        visual_servo_k_lateral=args.visual_servo_k_lateral,
+        visual_servo_k_vertical=args.visual_servo_k_vertical,
+        visual_servo_k_yaw=args.visual_servo_k_yaw,
         detector_min_area_px=args.detector_min_area_px,
         detector_max_aspect_error=args.detector_max_aspect_error,
         detector_min_fill_ratio=args.detector_min_fill_ratio,
+        max_approach_diagnostic_samples=args.max_approach_diagnostic_samples,
         target_gate_count=args.target_gate_count,
         require_official_race_progress=args.require_official_race_progress,
         gate_confidence_arm_min=None,
@@ -123,11 +134,16 @@ def _default_next_commands(args) -> list[str]:
             f"--endpoint {args.endpoint} "
             f"--control-mode {args.control_mode} "
             f"--command-frame {args.command_frame} "
+            f"--command-yaw-mode {args.command_yaw_mode} "
+            f"--policy-action-json '{args.policy_action_json}' "
             + (f"--policy-callable {args.policy_callable} " if args.policy_callable else "")
             + f"--duration {args.smoke_duration} "
             + f"--camera-host {args.camera_host} "
             + f"--camera-port {args.camera_port} "
             + f"--camera-max-packets-per-loop {getattr(args, 'camera_max_packets_per_loop', 512)} "
+            + f"--max-approach-diagnostic-samples {args.max_approach_diagnostic_samples} "
+            + f"--visual-servo-desired-standoff-m {args.visual_servo_desired_standoff_m} "
+            + f"--visual-servo-max-forward-m-s {args.visual_servo_max_forward_m_s} "
             + f"--target-gate-count {args.target_gate_count} "
             + ("--require-official-race-progress " if args.require_official_race_progress else "")
             + f"--json-path {args.smoke_json_path} "
@@ -193,6 +209,7 @@ def main() -> None:
     parser.add_argument("--endpoint", default="udpin:0.0.0.0:14540")
     parser.add_argument("--control-mode", choices=["visual-servo", "policy"], default="visual-servo")
     parser.add_argument("--command-frame", choices=["body_ned", "local_ned"], default="local_ned")
+    parser.add_argument("--command-yaw-mode", choices=["yaw_and_rate", "ignore"], default="yaw_and_rate")
     parser.add_argument("--policy-callable", default="")
     parser.add_argument("--policy-action-json", default="[0.0, 0.0, 0.0, 0.0]")
     parser.add_argument("--smoke-duration", type=float, default=60.0)
@@ -205,9 +222,19 @@ def main() -> None:
     parser.add_argument("--camera-timeout-s", type=float, default=0.0)
     parser.add_argument("--camera-max-packets-per-loop", type=int, default=512)
     parser.add_argument("--max-detection-age-s", type=float, default=0.25)
+    parser.add_argument("--visual-servo-desired-standoff-m", type=float, default=1.0)
+    parser.add_argument("--visual-servo-max-forward-m-s", type=float, default=1.0)
+    parser.add_argument("--visual-servo-max-lateral-m-s", type=float, default=0.5)
+    parser.add_argument("--visual-servo-max-vertical-m-s", type=float, default=0.4)
+    parser.add_argument("--visual-servo-max-yaw-rate-rad-s", type=float, default=0.6)
+    parser.add_argument("--visual-servo-k-forward", type=float, default=0.45)
+    parser.add_argument("--visual-servo-k-lateral", type=float, default=0.7)
+    parser.add_argument("--visual-servo-k-vertical", type=float, default=0.7)
+    parser.add_argument("--visual-servo-k-yaw", type=float, default=1.2)
     parser.add_argument("--detector-min-area-px", type=float, default=1200.0)
     parser.add_argument("--detector-max-aspect-error", type=float, default=0.5)
     parser.add_argument("--detector-min-fill-ratio", type=float, default=0.15)
+    parser.add_argument("--max-approach-diagnostic-samples", type=int, default=12)
     parser.add_argument("--target-gate-count", type=int, default=1)
     parser.add_argument("--require-official-race-progress", action="store_true")
     parser.add_argument("--smoke-json-path", default="logs/sitl/competition_smoke_gate1_official.json")

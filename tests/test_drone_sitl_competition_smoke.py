@@ -65,6 +65,55 @@ def test_parse_policy_action_json_clamps_inputs():
     assert action == pytest.approx((1.0, -1.0, 0.5, 0.0))
 
 
+def test_update_approach_diagnostics_tracks_closest_and_samples():
+    diagnostics = smoke.ApproachDiagnostics()
+    far_detection = smoke.GateDetection(
+        corners=((290.0, 150.0), (350.0, 150.0), (350.0, 210.0), (290.0, 210.0)),
+        area_px=3600.0,
+        bounding_width_px=60.0,
+        bounding_height_px=60.0,
+        fill_ratio=0.9,
+        confidence=0.4,
+    )
+    near_detection = smoke.GateDetection(
+        corners=((250.0, 110.0), (390.0, 110.0), (390.0, 250.0), (250.0, 250.0)),
+        area_px=19600.0,
+        bounding_width_px=140.0,
+        bounding_height_px=140.0,
+        fill_ratio=0.9,
+        confidence=0.8,
+    )
+    far_pose = smoke.estimate_gate_pose_from_corners(far_detection.corners)
+    near_pose = smoke.estimate_gate_pose_from_corners(near_detection.corners)
+
+    smoke.update_approach_diagnostics(
+        diagnostics,
+        elapsed_s=1.2345678,
+        sim_time_ns=100,
+        gate_pose=far_pose,
+        detection=far_detection,
+        visual_servo_target=smoke.LocalNedSetpoint(vx=0.1, vy=0.2, vz=-0.3, yaw_rate=0.4),
+        max_samples=1,
+    )
+    smoke.update_approach_diagnostics(
+        diagnostics,
+        elapsed_s=2.0,
+        sim_time_ns=200,
+        gate_pose=near_pose,
+        detection=near_detection,
+        visual_servo_target=smoke.LocalNedSetpoint(vx=0.5, vy=-0.25, vz=0.1, yaw_rate=-0.2),
+        max_samples=1,
+    )
+
+    assert diagnostics.detections_sampled == 2
+    assert diagnostics.closest_range_m == pytest.approx(round(near_pose.range_camera_m, 6))
+    assert diagnostics.closest_range_elapsed_s == pytest.approx(2.0)
+    assert diagnostics.highest_confidence == pytest.approx(0.8)
+    assert diagnostics.latest_command["vx"] == pytest.approx(0.5)
+    assert len(diagnostics.samples) == 1
+    assert diagnostics.samples[0]["sim_time_ns"] == 200
+
+
 def test_vision_gate_pass_tracker_emits_ordered_pass_and_completion():
     cfg = smoke.GatePassConfig(
         arm_range_m=3.0,
