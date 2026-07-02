@@ -21,6 +21,7 @@ def _args(tmp_path: Path) -> SimpleNamespace:
         mavlink_port=14540,
         camera_port=5600,
         probe_duration=0.1,
+        race_start_check_s=0.0,
         probe_json_path=str(tmp_path / "probe.json"),
         send_sim_reset=False,
         post_reset_sleep_s=0.0,
@@ -29,6 +30,31 @@ def _args(tmp_path: Path) -> SimpleNamespace:
         control_mode="visual-servo",
         command_frame="local_ned",
         command_yaw_mode="yaw_and_rate",
+        attitude_mode="body_rates",
+        attitude_roll_rad=0.0,
+        attitude_pitch_rad=0.0,
+        attitude_yaw_rad=0.0,
+        body_roll_rate_rad_s=0.0,
+        body_pitch_rate_rad_s=0.0,
+        body_yaw_rate_rad_s=0.0,
+        attitude_thrust=0.5,
+        attitude_servo_desired_standoff_m=0.0,
+        attitude_servo_max_pitch_rate_rad_s=0.5,
+        attitude_servo_max_roll_rate_rad_s=0.4,
+        attitude_servo_max_yaw_rate_rad_s=0.7,
+        attitude_servo_hover_thrust=0.58,
+        attitude_servo_min_thrust=0.35,
+        attitude_servo_max_thrust=0.75,
+        attitude_servo_k_pitch=0.16,
+        attitude_servo_k_roll=0.0,
+        attitude_servo_k_yaw=1.2,
+        attitude_servo_k_thrust=0.08,
+        attitude_servo_search_pitch_rate_rad_s=0.0,
+        attitude_servo_search_yaw_rate_rad_s=0.0,
+        attitude_servo_search_thrust=None,
+        attitude_servo_forward_yaw_tolerance_rad=None,
+        attitude_servo_forward_z_tolerance_m=None,
+        attitude_servo_uncentered_forward_scale=1.0,
         policy_callable="",
         policy_action_json="[0,0,0,0]",
         smoke_duration=1.0,
@@ -37,6 +63,9 @@ def _args(tmp_path: Path) -> SimpleNamespace:
         telemetry_timeout_s=0.0,
         telemetry_dropout_s=1.0,
         idle_sleep_s=0.001,
+        arm_on_start=True,
+        arm_attempts=3,
+        prearm_heartbeat_timeout_s=2.0,
         camera_host="0.0.0.0",
         camera_timeout_s=0.0,
         camera_max_packets_per_loop=512,
@@ -143,3 +172,53 @@ def test_validation_runs_smoke_when_probe_passes(monkeypatch, tmp_path):
     assert summary.smoke["acceptance_passed"] is True
     assert Path(args.probe_json_path).exists()
     assert Path(args.smoke_json_path).exists()
+
+
+def test_validation_reports_race_not_started_when_camera_is_menu_stream(monkeypatch, tmp_path):
+    args = _args(tmp_path)
+    args.race_start_check_s = 1.0
+    probe_report = module.probe.ProbeReport(
+        duration_s=0.1,
+        host="0.0.0.0",
+        mavlink_port=14540,
+        camera_port=5600,
+        mavlink=module.probe.MavlinkProbeStats(packets_seen=1),
+        camera=module.probe.CameraProbeStats(packets_seen=1, ts002_header_packets=1),
+        requirements_met=True,
+        blockers=[],
+    )
+    monkeypatch.setattr(module.probe, "run_probe", lambda **kwargs: probe_report)
+    monkeypatch.setattr(
+        module.probe,
+        "evaluate_probe_requirements",
+        lambda report, **kwargs: (True, []),
+    )
+
+    monkeypatch.setattr(
+        module,
+        "_check_race_started",
+        lambda _args: {
+            "skipped": False,
+            "duration_s": 0.1,
+            "race_started": False,
+            "race_status": {
+                "sim_boot_time_ms": 10,
+                "race_start_boot_time_ms": -1,
+                "race_finish_time_ns": -1,
+                "active_gate_index": 0,
+                "last_gate_race_time": -1,
+            },
+            "heartbeats_seen": 1,
+            "messages_seen": 1,
+        },
+    )
+    monkeypatch.setattr(
+        module.smoke,
+        "run_smoke",
+        lambda _args: (_ for _ in ()).throw(AssertionError("smoke should wait for race start")),
+    )
+
+    summary = module.run_validation(args)
+
+    assert summary.status == "blocked_race_not_started"
+    assert summary.smoke is None

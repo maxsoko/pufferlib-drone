@@ -21,6 +21,7 @@ def _args(tmp_path: Path) -> SimpleNamespace:
         mavlink_port=14540,
         camera_port=5600,
         probe_duration=0.1,
+        race_start_check_s=0.0,
         probe_json_path=str(tmp_path / "probe.json"),
         send_sim_reset=False,
         post_reset_sleep_s=0.0,
@@ -29,6 +30,31 @@ def _args(tmp_path: Path) -> SimpleNamespace:
         control_mode="visual-servo",
         command_frame="local_ned",
         command_yaw_mode="yaw_and_rate",
+        attitude_mode="body_rates",
+        attitude_roll_rad=0.0,
+        attitude_pitch_rad=0.0,
+        attitude_yaw_rad=0.0,
+        body_roll_rate_rad_s=0.0,
+        body_pitch_rate_rad_s=0.0,
+        body_yaw_rate_rad_s=0.0,
+        attitude_thrust=0.5,
+        attitude_servo_desired_standoff_m=0.0,
+        attitude_servo_max_pitch_rate_rad_s=0.5,
+        attitude_servo_max_roll_rate_rad_s=0.4,
+        attitude_servo_max_yaw_rate_rad_s=0.7,
+        attitude_servo_hover_thrust=0.58,
+        attitude_servo_min_thrust=0.35,
+        attitude_servo_max_thrust=0.75,
+        attitude_servo_k_pitch=0.16,
+        attitude_servo_k_roll=0.0,
+        attitude_servo_k_yaw=1.2,
+        attitude_servo_k_thrust=0.08,
+        attitude_servo_search_pitch_rate_rad_s=0.0,
+        attitude_servo_search_yaw_rate_rad_s=0.0,
+        attitude_servo_search_thrust=None,
+        attitude_servo_forward_yaw_tolerance_rad=None,
+        attitude_servo_forward_z_tolerance_m=None,
+        attitude_servo_uncentered_forward_scale=1.0,
         policy_callable="",
         policy_action_json="[0,0,0,0]",
         smoke_duration=1.0,
@@ -37,6 +63,9 @@ def _args(tmp_path: Path) -> SimpleNamespace:
         telemetry_timeout_s=0.0,
         telemetry_dropout_s=1.0,
         idle_sleep_s=0.001,
+        arm_on_start=True,
+        arm_attempts=3,
+        prearm_heartbeat_timeout_s=2.0,
         camera_host="0.0.0.0",
         camera_timeout_s=0.0,
         camera_max_packets_per_loop=512,
@@ -130,3 +159,27 @@ def test_watch_stops_when_smoke_passes(tmp_path):
     assert summary.attempts == 2
     assert summary.attempt_statuses == ["blocked_no_traffic", "smoke_passed"]
     assert validation_args_seen[-1].camera_max_packets_per_loop == 512
+
+
+def test_watch_continues_while_race_has_not_started(tmp_path):
+    args = _args(tmp_path)
+    args.max_wait_s = 1.0
+    timeline = iter([0.0, 0.0, 0.2, 0.25])
+    statuses = iter(["blocked_race_not_started", "smoke_passed"])
+
+    def now_fn():
+        return next(timeline)
+
+    def run_once(_validation_args):
+        return _validation_result(next(statuses))
+
+    summary = module.run_watch(
+        args,
+        run_once=run_once,
+        now_fn=now_fn,
+        sleep_fn=lambda _s: None,
+    )
+
+    assert summary.final_status == "smoke_passed"
+    assert summary.attempts == 2
+    assert summary.attempt_statuses == ["blocked_race_not_started", "smoke_passed"]

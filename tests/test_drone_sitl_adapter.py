@@ -4,6 +4,8 @@ import struct
 import sys
 from pathlib import Path
 
+import pytest
+
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / "scripts" / "drone_sitl_adapter.py"
 SPEC = importlib.util.spec_from_file_location("drone_sitl_adapter", MODULE_PATH)
@@ -234,3 +236,106 @@ def test_dry_run_writes_report(tmp_path):
     assert report["mode"] == "dry-run"
     assert report["command_hz"] == 50.0
     assert report["telemetry"]["messages_seen"] == 0
+
+
+class FakeMavlinkConstants:
+    ATTITUDE_TARGET_TYPEMASK_BODY_ROLL_RATE_IGNORE = 1
+    ATTITUDE_TARGET_TYPEMASK_BODY_PITCH_RATE_IGNORE = 2
+    ATTITUDE_TARGET_TYPEMASK_BODY_YAW_RATE_IGNORE = 4
+    ATTITUDE_TARGET_TYPEMASK_ATTITUDE_IGNORE = 128
+
+
+class FakeMav:
+    def __init__(self):
+        self.attitude_calls = []
+
+    def set_attitude_target_send(
+        self,
+        time_boot_ms,
+        target_system,
+        target_component,
+        type_mask,
+        q,
+        body_roll_rate,
+        body_pitch_rate,
+        body_yaw_rate,
+        thrust,
+    ):
+        self.attitude_calls.append(
+            {
+                "time_boot_ms": time_boot_ms,
+                "target_system": target_system,
+                "target_component": target_component,
+                "type_mask": type_mask,
+                "q": q,
+                "body_roll_rate": body_roll_rate,
+                "body_pitch_rate": body_pitch_rate,
+                "body_yaw_rate": body_yaw_rate,
+                "thrust": thrust,
+            }
+        )
+
+
+class FakeMaster:
+    target_system = 9
+    target_component = 3
+
+    def __init__(self):
+        self.mav = FakeMav()
+
+
+class FakeMavutil:
+    mavlink = FakeMavlinkConstants()
+
+
+def make_fake_adapter():
+    adapter = sitl.MavlinkSitlAdapter.__new__(sitl.MavlinkSitlAdapter)
+    adapter.mavutil = FakeMavutil()
+    adapter.master = FakeMaster()
+    return adapter
+
+
+def test_send_attitude_setpoint_body_rates_matches_official_example_mask():
+    adapter = make_fake_adapter()
+    target = sitl.AttitudeSetpoint(
+        body_roll_rate=0.1,
+        body_pitch_rate=-0.3,
+        body_yaw_rate=0.2,
+        thrust=1.2,
+    )
+
+    adapter.send_attitude_setpoint(target, mode="body_rates")
+
+    call = adapter.master.mav.attitude_calls[0]
+    assert call["target_system"] == 9
+    assert call["target_component"] == 3
+    assert call["type_mask"] == FakeMavlinkConstants.ATTITUDE_TARGET_TYPEMASK_ATTITUDE_IGNORE
+    assert call["q"] == [1.0, 0.0, 0.0, 0.0]
+    assert call["body_roll_rate"] == pytest.approx(0.1)
+    assert call["body_pitch_rate"] == pytest.approx(-0.3)
+    assert call["body_yaw_rate"] == pytest.approx(0.2)
+    assert call["thrust"] == pytest.approx(1.0)
+
+
+def test_send_attitude_setpoint_attitude_mode_ignores_body_rates():
+    adapter = make_fake_adapter()
+    target = sitl.AttitudeSetpoint(roll=0.1, pitch=-0.2, yaw=0.3, thrust=-0.1)
+
+    adapter.send_attitude_setpoint(target, mode="attitude")
+
+    call = adapter.master.mav.attitude_calls[0]
+    expected_mask = (
+        FakeMavlinkConstants.ATTITUDE_TARGET_TYPEMASK_BODY_ROLL_RATE_IGNORE
+        | FakeMavlinkConstants.ATTITUDE_TARGET_TYPEMASK_BODY_PITCH_RATE_IGNORE
+        | FakeMavlinkConstants.ATTITUDE_TARGET_TYPEMASK_BODY_YAW_RATE_IGNORE
+    )
+    assert call["type_mask"] == expected_mask
+    assert call["q"][0] != pytest.approx(1.0)
+    assert call["thrust"] == pytest.approx(0.0)
+
+
+def test_send_attitude_setpoint_rejects_unknown_mode():
+    adapter = make_fake_adapter()
+
+    with pytest.raises(ValueError):
+        adapter.send_attitude_setpoint(sitl.AttitudeSetpoint(), mode="wat")

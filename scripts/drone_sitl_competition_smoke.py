@@ -24,6 +24,7 @@ from drone_policy_contract import (
     validate_observation,
 )
 from drone_sitl_adapter import (
+    AttitudeSetpoint,
     LocalNedSetpoint,
     MavlinkSitlAdapter,
     SitlRunReport,
@@ -358,6 +359,7 @@ class CompetitionSmokeReport:
     sitl: SitlRunReport
     control_mode: str
     policy_source: str
+    control_inputs: dict = dataclasses.field(default_factory=dict)
     crash_detected: bool | None = None
     invalid_run: bool | None = None
     completion_time_s: float | None = None
@@ -408,6 +410,20 @@ def setpoint_to_dict(target: LocalNedSetpoint | None) -> dict:
     }
 
 
+def attitude_setpoint_to_dict(target: AttitudeSetpoint | None) -> dict:
+    if target is None:
+        return {}
+    return {
+        "roll": round_float(target.roll),
+        "pitch": round_float(target.pitch),
+        "yaw": round_float(target.yaw),
+        "body_roll_rate": round_float(target.body_roll_rate),
+        "body_pitch_rate": round_float(target.body_pitch_rate),
+        "body_yaw_rate": round_float(target.body_yaw_rate),
+        "thrust": round_float(target.thrust),
+    }
+
+
 def pose_to_dict(pose) -> dict:
     if pose is None:
         return {}
@@ -430,22 +446,25 @@ def update_approach_diagnostics(
     gate_pose,
     detection: GateDetection,
     visual_servo_target: LocalNedSetpoint,
+    actual_command: dict | None = None,
     max_samples: int,
 ) -> None:
     confidence = float(detection.confidence)
     range_m = float(gate_pose.range_camera_m)
     pose_dict = pose_to_dict(gate_pose)
     command_dict = setpoint_to_dict(visual_servo_target)
+    actual_command_dict = dict(actual_command or command_dict)
     sample = {
         "elapsed_s": round_float(elapsed_s),
         "sim_time_ns": int(sim_time_ns),
         "confidence": round_float(confidence),
         "pose": pose_dict,
         "visual_servo_command": command_dict,
+        "actual_command": actual_command_dict,
     }
     diagnostics.detections_sampled += 1
     diagnostics.latest_pose = pose_dict
-    diagnostics.latest_command = command_dict
+    diagnostics.latest_command = actual_command_dict
 
     if diagnostics.closest_range_m is None or range_m < diagnostics.closest_range_m:
         diagnostics.closest_range_m = round_float(range_m)
@@ -455,7 +474,7 @@ def update_approach_diagnostics(
             round_float(value) for value in gate_pose.body_vector_ned_m
         )
         diagnostics.closest_range_yaw_error_rad = round_float(gate_pose.yaw_error_rad)
-        diagnostics.closest_range_command = command_dict
+        diagnostics.closest_range_command = actual_command_dict
 
     if diagnostics.highest_confidence is None or confidence > diagnostics.highest_confidence:
         diagnostics.highest_confidence = round_float(confidence)
@@ -487,6 +506,72 @@ def visual_servo_command_from_args(pose, *, yaw_rad: float, args) -> object:
     )
 
 
+def attitude_setpoint_from_args(args) -> AttitudeSetpoint:
+    return AttitudeSetpoint(
+        roll=float(getattr(args, "attitude_roll_rad", 0.0)),
+        pitch=float(getattr(args, "attitude_pitch_rad", 0.0)),
+        yaw=float(getattr(args, "attitude_yaw_rad", 0.0)),
+        body_roll_rate=float(getattr(args, "body_roll_rate_rad_s", 0.0)),
+        body_pitch_rate=float(getattr(args, "body_pitch_rate_rad_s", 0.0)),
+        body_yaw_rate=float(getattr(args, "body_yaw_rate_rad_s", 0.0)),
+        thrust=float(getattr(args, "attitude_thrust", 0.5)),
+    )
+
+
+def attitude_servo_command_from_args(pose, args) -> AttitudeSetpoint:
+    bx, by, bz = pose.body_vector_ned_m
+    desired_standoff_m = float(getattr(args, "attitude_servo_desired_standoff_m", 0.0))
+    max_pitch_rate = abs(float(getattr(args, "attitude_servo_max_pitch_rate_rad_s", 0.5)))
+    max_roll_rate = abs(float(getattr(args, "attitude_servo_max_roll_rate_rad_s", 0.4)))
+    max_yaw_rate = abs(float(getattr(args, "attitude_servo_max_yaw_rate_rad_s", 0.7)))
+    hover_thrust = float(getattr(args, "attitude_servo_hover_thrust", 0.58))
+    min_thrust = float(getattr(args, "attitude_servo_min_thrust", 0.35))
+    max_thrust = float(getattr(args, "attitude_servo_max_thrust", 0.75))
+    k_pitch = float(getattr(args, "attitude_servo_k_pitch", 0.16))
+    k_roll = float(getattr(args, "attitude_servo_k_roll", 0.0))
+    k_yaw = float(getattr(args, "attitude_servo_k_yaw", 1.2))
+    k_thrust = float(getattr(args, "attitude_servo_k_thrust", 0.08))
+    forward_yaw_tolerance = getattr(args, "attitude_servo_forward_yaw_tolerance_rad", None)
+    forward_z_tolerance = getattr(args, "attitude_servo_forward_z_tolerance_m", None)
+    uncentered_forward_scale = float(getattr(args, "attitude_servo_uncentered_forward_scale", 1.0))
+
+    if desired_standoff_m < 0.0:
+        raise ValueError("attitude_servo_desired_standoff_m must be non-negative")
+    if min_thrust > max_thrust:
+        raise ValueError("attitude_servo_min_thrust must be <= attitude_servo_max_thrust")
+    if uncentered_forward_scale < 0.0:
+        raise ValueError("attitude_servo_uncentered_forward_scale must be non-negative")
+
+    forward_error = max(0.0, bx - desired_standoff_m)
+    pitch_rate = -clamp(k_pitch * forward_error, 0.0, max_pitch_rate)
+    roll_rate = clamp(k_roll * by, -max_roll_rate, max_roll_rate)
+    yaw_rate = clamp(k_yaw * pose.yaw_error_rad, -max_yaw_rate, max_yaw_rate)
+    thrust = clamp(hover_thrust - k_thrust * bz, min_thrust, max_thrust)
+    centered = True
+    if forward_yaw_tolerance is not None and float(forward_yaw_tolerance) >= 0.0:
+        centered = centered and abs(float(pose.yaw_error_rad)) <= float(forward_yaw_tolerance)
+    if forward_z_tolerance is not None and float(forward_z_tolerance) >= 0.0:
+        centered = centered and abs(float(bz)) <= float(forward_z_tolerance)
+    if not centered:
+        pitch_rate *= uncentered_forward_scale
+    return AttitudeSetpoint(
+        body_roll_rate=roll_rate,
+        body_pitch_rate=pitch_rate,
+        body_yaw_rate=yaw_rate,
+        thrust=thrust,
+    )
+
+
+def attitude_search_command_from_args(args) -> AttitudeSetpoint:
+    hover_thrust = float(getattr(args, "attitude_servo_hover_thrust", 0.58))
+    search_thrust = getattr(args, "attitude_servo_search_thrust", None)
+    return AttitudeSetpoint(
+        body_pitch_rate=float(getattr(args, "attitude_servo_search_pitch_rate_rad_s", 0.0)),
+        body_yaw_rate=float(getattr(args, "attitude_servo_search_yaw_rate_rad_s", 0.0)),
+        thrust=hover_thrust if search_thrust is None else float(search_thrust),
+    )
+
+
 def maybe_write_csv(path: str, report: CompetitionSmokeReport) -> None:
     if not path:
         return
@@ -496,6 +581,7 @@ def maybe_write_csv(path: str, report: CompetitionSmokeReport) -> None:
     row = {
         "mode": report.control_mode,
         "policy_source": report.policy_source,
+        "command_kind": report.sitl.command_kind,
         "duration_s": report.sitl.duration_s,
         "heartbeats_sent": report.sitl.heartbeats_sent,
         "commands_sent": report.sitl.commands_sent,
@@ -535,6 +621,13 @@ def run_smoke(args) -> CompetitionSmokeReport:
         raise ValueError("duration must be positive")
     if args.idle_sleep_s < 0.0:
         raise ValueError("idle_sleep_s must be non-negative")
+    arm_on_start = bool(getattr(args, "arm_on_start", True))
+    arm_attempts = int(getattr(args, "arm_attempts", 3))
+    prearm_heartbeat_timeout_s = float(getattr(args, "prearm_heartbeat_timeout_s", 2.0))
+    if arm_attempts < 0:
+        raise ValueError("arm_attempts must be non-negative")
+    if prearm_heartbeat_timeout_s < 0.0:
+        raise ValueError("prearm_heartbeat_timeout_s must be non-negative")
     if args.target_gate_count <= 0:
         raise ValueError("target_gate_count must be positive")
     max_approach_diagnostic_samples = int(getattr(args, "max_approach_diagnostic_samples", 12))
@@ -636,6 +729,12 @@ def run_smoke(args) -> CompetitionSmokeReport:
         resolve_config_value(acceptance_config, "smoke_defaults", "require_official_race_progress", False)
     )
 
+    control_mode = getattr(args, "control_mode", "visual-servo")
+    if control_mode not in {"visual-servo", "policy", "attitude-rates", "visual-servo-attitude"}:
+        raise ValueError(
+            "control_mode must be 'visual-servo', 'policy', 'attitude-rates', or 'visual-servo-attitude'"
+        )
+
     policy_source = "visual_servo"
     policy_callable = None
     normalized_action = (0.0, 0.0, 0.0, 0.0)
@@ -645,12 +744,20 @@ def run_smoke(args) -> CompetitionSmokeReport:
     command_yaw_mode = getattr(args, "command_yaw_mode", "yaw_and_rate")
     if command_yaw_mode not in {"yaw_and_rate", "ignore"}:
         raise ValueError("command_yaw_mode must be 'yaw_and_rate' or 'ignore'")
-    if args.control_mode == "policy":
+    attitude_mode = getattr(args, "attitude_mode", "body_rates")
+    if attitude_mode not in {"body_rates", "attitude", "attitude_and_rates"}:
+        raise ValueError("attitude_mode must be 'body_rates', 'attitude', or 'attitude_and_rates'")
+    attitude_target = attitude_setpoint_from_args(args)
+    if control_mode == "policy":
         policy_source = "constant_action"
         normalized_action = maybe_parse_action_json(args.policy_action_json)
         if args.policy_callable:
             policy_callable = load_policy_callable(args.policy_callable)
             policy_source = args.policy_callable
+    elif control_mode == "attitude-rates":
+        policy_source = "constant_attitude_rates"
+    elif control_mode == "visual-servo-attitude":
+        policy_source = "visual_servo_attitude_rates"
 
     adapter = MavlinkSitlAdapter(args.endpoint, dropout_after_s=args.telemetry_dropout_s)
     receiver = None
@@ -674,8 +781,6 @@ def run_smoke(args) -> CompetitionSmokeReport:
     command_rate_violations = 0
     heartbeats_sent = 0
     commands_sent = 0
-    started_s = time.monotonic()
-    deadline_s = started_s + args.duration
     last_command_sent_s = None
     last_detection_s = None
     gate_detection = None
@@ -687,6 +792,24 @@ def run_smoke(args) -> CompetitionSmokeReport:
         config=gate_pass_config,
         target_gate_count=args.target_gate_count,
     )
+    arm_commands_sent = 0
+    prearm_heartbeats_seen = 0
+
+    if arm_on_start:
+        prearm_deadline_s = time.monotonic() + prearm_heartbeat_timeout_s
+        while adapter.telemetry.metrics.heartbeats <= 0 and time.monotonic() < prearm_deadline_s:
+            adapter.poll_telemetry(timeout_s=min(0.05, max(0.0, prearm_deadline_s - time.monotonic())))
+        prearm_heartbeats_seen = adapter.telemetry.metrics.heartbeats
+        for _attempt in range(arm_attempts):
+            adapter.send_heartbeat()
+            heartbeats_sent += 1
+            adapter.send_arm_command()
+            arm_commands_sent += 1
+            adapter.poll_telemetry(timeout_s=0.0)
+            time.sleep(min(0.05, heartbeat_period_s))
+
+    started_s = time.monotonic()
+    deadline_s = started_s + args.duration
 
     try:
         while time.monotonic() < deadline_s:
@@ -717,18 +840,35 @@ def run_smoke(args) -> CompetitionSmokeReport:
                             yaw_rad=safe_float(adapter.telemetry.state.yaw),
                             args=args,
                         )
+                        diagnostic_target = LocalNedSetpoint(
+                            vx=diagnostic_cmd.vx,
+                            vy=diagnostic_cmd.vy,
+                            vz=diagnostic_cmd.vz,
+                            yaw_rate=diagnostic_cmd.yaw_rate,
+                        )
+                        if control_mode == "visual-servo-attitude":
+                            actual_command = {
+                                "kind": "visual_servo_attitude_target",
+                                **attitude_setpoint_to_dict(attitude_servo_command_from_args(tracked_pose, args)),
+                            }
+                        elif control_mode == "attitude-rates":
+                            actual_command = {
+                                "kind": "attitude_target",
+                                **attitude_setpoint_to_dict(attitude_setpoint_from_args(args)),
+                            }
+                        else:
+                            actual_command = {
+                                "kind": "local_ned_setpoint",
+                                **setpoint_to_dict(diagnostic_target),
+                            }
                         update_approach_diagnostics(
                             approach_diagnostics,
                             elapsed_s=now_s - started_s,
                             sim_time_ns=frame.sim_time_ns,
                             gate_pose=tracked_pose,
                             detection=detection,
-                            visual_servo_target=LocalNedSetpoint(
-                                vx=diagnostic_cmd.vx,
-                                vy=diagnostic_cmd.vy,
-                                vz=diagnostic_cmd.vz,
-                                yaw_rate=diagnostic_cmd.yaw_rate,
-                            ),
+                            visual_servo_target=diagnostic_target,
+                            actual_command=actual_command,
                             max_samples=max_approach_diagnostic_samples,
                         )
                     pass_tracker.observe(
@@ -752,7 +892,7 @@ def run_smoke(args) -> CompetitionSmokeReport:
 
                 telemetry = adapter.telemetry.state
                 yaw = safe_float(telemetry.yaw)
-                if args.control_mode == "visual-servo":
+                if control_mode == "visual-servo":
                     if gate_pose is not None and (
                         last_detection_s is None or now_s - last_detection_s <= args.max_detection_age_s
                     ):
@@ -766,7 +906,7 @@ def run_smoke(args) -> CompetitionSmokeReport:
                         clamp(target.vz / 0.8, -1.0, 1.0),
                         clamp(target.yaw_rate / 1.0, -1.0, 1.0),
                     )
-                else:
+                elif control_mode == "policy":
                     elapsed_fraction = clamp((now_s - started_s) / args.duration, 0.0, 1.0)
                     observation = build_policy_observation(
                         telemetry,
@@ -784,8 +924,31 @@ def run_smoke(args) -> CompetitionSmokeReport:
                         yaw_rate=setpoint.yaw_rate_rad_s,
                     )
                     last_cmd_norm = action.normalized
+                elif control_mode == "visual-servo-attitude":
+                    if gate_pose is not None and (
+                        last_detection_s is None or now_s - last_detection_s <= args.max_detection_age_s
+                    ):
+                        attitude_target = attitude_servo_command_from_args(gate_pose, args)
+                    else:
+                        attitude_target = attitude_search_command_from_args(args)
+                    last_cmd_norm = (
+                        clamp(attitude_target.body_pitch_rate / 1.0, -1.0, 1.0),
+                        clamp(attitude_target.body_roll_rate / 1.0, -1.0, 1.0),
+                        clamp(attitude_target.thrust * 2.0 - 1.0, -1.0, 1.0),
+                        clamp(attitude_target.body_yaw_rate / 1.0, -1.0, 1.0),
+                    )
+                else:
+                    last_cmd_norm = (
+                        clamp(attitude_target.body_pitch_rate / 1.0, -1.0, 1.0),
+                        clamp(attitude_target.body_roll_rate / 1.0, -1.0, 1.0),
+                        clamp(attitude_target.thrust * 2.0 - 1.0, -1.0, 1.0),
+                        clamp(attitude_target.body_yaw_rate / 1.0, -1.0, 1.0),
+                    )
 
-                adapter.send_local_ned_setpoint(target, frame=command_frame, yaw_mode=command_yaw_mode)
+                if control_mode in {"attitude-rates", "visual-servo-attitude"}:
+                    adapter.send_attitude_setpoint(attitude_target, mode=attitude_mode)
+                else:
+                    adapter.send_local_ned_setpoint(target, frame=command_frame, yaw_mode=command_yaw_mode)
                 commands_sent += 1
                 last_command_sent_s = now_s
                 next_command_s = now_s + command_period_s
@@ -803,13 +966,19 @@ def run_smoke(args) -> CompetitionSmokeReport:
                 close_fn()
 
     adapter.telemetry.update_ages()
+    if control_mode == "attitude-rates":
+        command_kind = f"{attitude_mode}_attitude_target"
+    elif control_mode == "visual-servo-attitude":
+        command_kind = f"{attitude_mode}_visual_servo_attitude_target"
+    else:
+        command_kind = f"{command_frame}_{command_yaw_mode}_velocity"
     sitl_report = SitlRunReport(
         endpoint=args.endpoint,
         mode="competition-smoke",
         duration_s=round(time.monotonic() - started_s, 6),
         heartbeat_hz=args.heartbeat_hz,
         command_hz=args.command_hz,
-        command_kind=f"{command_frame}_{command_yaw_mode}_velocity",
+        command_kind=command_kind,
         heartbeats_sent=heartbeats_sent,
         commands_sent=commands_sent,
         command_rate_violations=command_rate_violations,
@@ -821,8 +990,64 @@ def run_smoke(args) -> CompetitionSmokeReport:
     race_status = sitl_report.latest_telemetry.race_status
     smoke_report = CompetitionSmokeReport(
         sitl=sitl_report,
-        control_mode=args.control_mode,
+        control_mode=control_mode,
         policy_source=policy_source,
+        control_inputs={
+            "command_frame": command_frame,
+            "command_yaw_mode": command_yaw_mode,
+            "arm_on_start": arm_on_start,
+            "arm_attempts": arm_attempts,
+            "arm_commands_sent": arm_commands_sent,
+            "prearm_heartbeat_timeout_s": round_float(prearm_heartbeat_timeout_s),
+            "prearm_heartbeats_seen": prearm_heartbeats_seen,
+            "attitude_mode": attitude_mode,
+            "attitude_target": attitude_setpoint_to_dict(attitude_target),
+            "attitude_servo": {
+                "desired_standoff_m": round_float(getattr(args, "attitude_servo_desired_standoff_m", 0.0)),
+                "max_pitch_rate_rad_s": round_float(getattr(args, "attitude_servo_max_pitch_rate_rad_s", 0.5)),
+                "max_roll_rate_rad_s": round_float(getattr(args, "attitude_servo_max_roll_rate_rad_s", 0.4)),
+                "max_yaw_rate_rad_s": round_float(getattr(args, "attitude_servo_max_yaw_rate_rad_s", 0.7)),
+                "hover_thrust": round_float(getattr(args, "attitude_servo_hover_thrust", 0.58)),
+                "min_thrust": round_float(getattr(args, "attitude_servo_min_thrust", 0.35)),
+                "max_thrust": round_float(getattr(args, "attitude_servo_max_thrust", 0.75)),
+                "k_pitch": round_float(getattr(args, "attitude_servo_k_pitch", 0.16)),
+                "k_roll": round_float(getattr(args, "attitude_servo_k_roll", 0.0)),
+                "k_yaw": round_float(getattr(args, "attitude_servo_k_yaw", 1.2)),
+                "k_thrust": round_float(getattr(args, "attitude_servo_k_thrust", 0.08)),
+                "search_pitch_rate_rad_s": round_float(
+                    getattr(args, "attitude_servo_search_pitch_rate_rad_s", 0.0)
+                ),
+                "search_yaw_rate_rad_s": round_float(
+                    getattr(args, "attitude_servo_search_yaw_rate_rad_s", 0.0)
+                ),
+                "search_thrust": (
+                    None
+                    if getattr(args, "attitude_servo_search_thrust", None) is None
+                    else round_float(getattr(args, "attitude_servo_search_thrust"))
+                ),
+                "forward_yaw_tolerance_rad": (
+                    None
+                    if getattr(args, "attitude_servo_forward_yaw_tolerance_rad", None) is None
+                    else round_float(getattr(args, "attitude_servo_forward_yaw_tolerance_rad"))
+                ),
+                "forward_z_tolerance_m": (
+                    None
+                    if getattr(args, "attitude_servo_forward_z_tolerance_m", None) is None
+                    else round_float(getattr(args, "attitude_servo_forward_z_tolerance_m"))
+                ),
+                "uncentered_forward_scale": round_float(
+                    getattr(args, "attitude_servo_uncentered_forward_scale", 1.0)
+                ),
+            },
+            "policy_action_json": args.policy_action_json if control_mode == "policy" else "",
+            "visual_servo": {
+                "desired_standoff_m": round_float(args.visual_servo_desired_standoff_m),
+                "max_forward_m_s": round_float(args.visual_servo_max_forward_m_s),
+                "max_lateral_m_s": round_float(args.visual_servo_max_lateral_m_s),
+                "max_vertical_m_s": round_float(args.visual_servo_max_vertical_m_s),
+                "max_yaw_rate_rad_s": round_float(args.visual_servo_max_yaw_rate_rad_s),
+            },
+        },
         crash_detected=(
             sitl_report.latest_telemetry.system_status is not None
             and int(sitl_report.latest_telemetry.system_status) in {5, 6, 7, 8}
@@ -924,9 +1149,46 @@ def main() -> None:
     parser.add_argument("--telemetry-timeout-s", type=float, default=0.0)
     parser.add_argument("--telemetry-dropout-s", type=float, default=1.0)
     parser.add_argument("--idle-sleep-s", type=float, default=0.001)
-    parser.add_argument("--control-mode", choices=["visual-servo", "policy"], default="visual-servo")
+    parser.add_argument("--no-arm-on-start", dest="arm_on_start", action="store_false")
+    parser.set_defaults(arm_on_start=True)
+    parser.add_argument("--arm-attempts", type=int, default=3)
+    parser.add_argument("--prearm-heartbeat-timeout-s", type=float, default=2.0)
+    parser.add_argument(
+        "--control-mode",
+        choices=["visual-servo", "policy", "attitude-rates", "visual-servo-attitude"],
+        default="visual-servo",
+    )
     parser.add_argument("--command-frame", choices=["body_ned", "local_ned"], default="local_ned")
     parser.add_argument("--command-yaw-mode", choices=["yaw_and_rate", "ignore"], default="yaw_and_rate")
+    parser.add_argument(
+        "--attitude-mode",
+        choices=["body_rates", "attitude", "attitude_and_rates"],
+        default="body_rates",
+    )
+    parser.add_argument("--attitude-roll-rad", type=float, default=0.0)
+    parser.add_argument("--attitude-pitch-rad", type=float, default=0.0)
+    parser.add_argument("--attitude-yaw-rad", type=float, default=0.0)
+    parser.add_argument("--body-roll-rate-rad-s", type=float, default=0.0)
+    parser.add_argument("--body-pitch-rate-rad-s", type=float, default=0.0)
+    parser.add_argument("--body-yaw-rate-rad-s", type=float, default=0.0)
+    parser.add_argument("--attitude-thrust", type=float, default=0.5)
+    parser.add_argument("--attitude-servo-desired-standoff-m", type=float, default=0.0)
+    parser.add_argument("--attitude-servo-max-pitch-rate-rad-s", type=float, default=0.5)
+    parser.add_argument("--attitude-servo-max-roll-rate-rad-s", type=float, default=0.4)
+    parser.add_argument("--attitude-servo-max-yaw-rate-rad-s", type=float, default=0.7)
+    parser.add_argument("--attitude-servo-hover-thrust", type=float, default=0.58)
+    parser.add_argument("--attitude-servo-min-thrust", type=float, default=0.35)
+    parser.add_argument("--attitude-servo-max-thrust", type=float, default=0.75)
+    parser.add_argument("--attitude-servo-k-pitch", type=float, default=0.16)
+    parser.add_argument("--attitude-servo-k-roll", type=float, default=0.0)
+    parser.add_argument("--attitude-servo-k-yaw", type=float, default=1.2)
+    parser.add_argument("--attitude-servo-k-thrust", type=float, default=0.08)
+    parser.add_argument("--attitude-servo-search-pitch-rate-rad-s", type=float, default=0.0)
+    parser.add_argument("--attitude-servo-search-yaw-rate-rad-s", type=float, default=0.0)
+    parser.add_argument("--attitude-servo-search-thrust", type=float, default=None)
+    parser.add_argument("--attitude-servo-forward-yaw-tolerance-rad", type=float, default=None)
+    parser.add_argument("--attitude-servo-forward-z-tolerance-m", type=float, default=None)
+    parser.add_argument("--attitude-servo-uncentered-forward-scale", type=float, default=1.0)
     parser.add_argument(
         "--policy-action-json",
         default="[0.0, 0.0, 0.0, 0.0]",

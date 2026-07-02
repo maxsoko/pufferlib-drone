@@ -30,6 +30,9 @@ class AttitudeSetpoint:
     roll: float = 0.0
     pitch: float = 0.0
     yaw: float = 0.0
+    body_roll_rate: float = 0.0
+    body_pitch_rate: float = 0.0
+    body_yaw_rate: float = 0.0
     thrust: float = 0.5
 
 
@@ -500,17 +503,37 @@ class MavlinkSitlAdapter:
             target.yaw_rate,
         )
 
-    def send_attitude_setpoint(self, target):
-        q = euler_to_quaternion(target.roll, target.pitch, target.yaw)
+    def _attitude_type_mask(self, mode: str) -> int:
+        if mode not in {"body_rates", "attitude", "attitude_and_rates"}:
+            raise ValueError("mode must be 'body_rates', 'attitude', or 'attitude_and_rates'")
+
+        mavlink = self.mavutil.mavlink
+        if mode == "body_rates":
+            return getattr(mavlink, "ATTITUDE_TARGET_TYPEMASK_ATTITUDE_IGNORE", 128)
+        if mode == "attitude":
+            return (
+                getattr(mavlink, "ATTITUDE_TARGET_TYPEMASK_BODY_ROLL_RATE_IGNORE", 1)
+                | getattr(mavlink, "ATTITUDE_TARGET_TYPEMASK_BODY_PITCH_RATE_IGNORE", 2)
+                | getattr(mavlink, "ATTITUDE_TARGET_TYPEMASK_BODY_YAW_RATE_IGNORE", 4)
+            )
+        return 0
+
+    def send_attitude_setpoint(self, target, *, mode: str = "body_rates"):
+        type_mask = self._attitude_type_mask(mode)
+        q = [1.0, 0.0, 0.0, 0.0] if mode == "body_rates" else euler_to_quaternion(
+            target.roll,
+            target.pitch,
+            target.yaw,
+        )
         self.master.mav.set_attitude_target_send(
             int(time.monotonic() * 1000) & 0xFFFFFFFF,
-            1,
-            1,
-            0,
+            self.master.target_system or 1,
+            self.master.target_component or 1,
+            type_mask,
             q,
-            0.0,
-            0.0,
-            0.0,
+            target.body_roll_rate,
+            target.body_pitch_rate,
+            target.body_yaw_rate,
             max(0.0, min(1.0, target.thrust)),
         )
 
@@ -685,10 +708,67 @@ def run_constant_velocity(args):
     print(json.dumps(report.to_dict(), indent=2, sort_keys=True))
 
 
+def run_constant_attitude(args):
+    adapter = MavlinkSitlAdapter(args.endpoint, dropout_after_s=args.telemetry_dropout_s)
+    heartbeat_period = 1.0 / args.heartbeat_hz
+    command_period = 1.0 / args.command_hz
+    next_heartbeat = 0.0
+    next_command = 0.0
+    started = time.monotonic()
+    deadline = started + args.duration
+    heartbeats_sent = 0
+    commands_sent = 0
+    command_rate_violations = 0
+    last_command_sent_s = None
+    target = AttitudeSetpoint(
+        roll=args.roll,
+        pitch=args.pitch,
+        yaw=args.yaw,
+        body_roll_rate=args.roll_rate,
+        body_pitch_rate=args.pitch_rate,
+        body_yaw_rate=args.yaw_rate,
+        thrust=args.thrust,
+    )
+
+    while time.monotonic() < deadline:
+        now = time.monotonic()
+        if now >= next_heartbeat:
+            adapter.send_heartbeat()
+            heartbeats_sent += 1
+            next_heartbeat = now + heartbeat_period
+        if now >= next_command:
+            if last_command_sent_s is not None and now - last_command_sent_s < 0.01:
+                command_rate_violations += 1
+            adapter.send_attitude_setpoint(target, mode=args.attitude_mode)
+            commands_sent += 1
+            last_command_sent_s = now
+            next_command = now + command_period
+        adapter.poll_telemetry(timeout_s=args.telemetry_timeout_s)
+        if args.telemetry_timeout_s <= 0.0:
+            time.sleep(args.idle_sleep_s)
+
+    report = make_report(
+        args,
+        adapter,
+        args.mode,
+        f"{args.attitude_mode}_attitude_target",
+        started,
+        heartbeats_sent,
+        commands_sent,
+        command_rate_violations,
+    )
+    write_report(args.json_path, report)
+    print(json.dumps(report.to_dict(), indent=2, sort_keys=True))
+
+
 def main():
     parser = argparse.ArgumentParser(description="MAVLink v2 UDP SITL scaffold for native drone policies")
     parser.add_argument("--endpoint", default="udpout:127.0.0.1:14540")
-    parser.add_argument("--mode", choices=["dry-run", "monitor", "constant-velocity"], default="dry-run")
+    parser.add_argument(
+        "--mode",
+        choices=["dry-run", "monitor", "constant-velocity", "constant-attitude"],
+        default="dry-run",
+    )
     parser.add_argument("--heartbeat-hz", type=float, default=2.0)
     parser.add_argument("--command-hz", type=float, default=50.0)
     parser.add_argument("--duration", type=float, default=5.0)
@@ -704,6 +784,16 @@ def main():
     parser.add_argument("--vz", type=float, default=0.0)
     parser.add_argument("--yaw", type=float, default=0.0)
     parser.add_argument("--yaw-rate", type=float, default=0.0)
+    parser.add_argument(
+        "--attitude-mode",
+        choices=["body_rates", "attitude", "attitude_and_rates"],
+        default="body_rates",
+    )
+    parser.add_argument("--roll", type=float, default=0.0)
+    parser.add_argument("--pitch", type=float, default=0.0)
+    parser.add_argument("--roll-rate", type=float, default=0.0)
+    parser.add_argument("--pitch-rate", type=float, default=0.0)
+    parser.add_argument("--thrust", type=float, default=0.5)
     args = parser.parse_args()
 
     validate_rates(args.heartbeat_hz, args.command_hz)
@@ -714,8 +804,10 @@ def main():
         run_dry(args)
     elif args.mode == "monitor":
         run_monitor(args)
-    else:
+    elif args.mode == "constant-velocity":
         run_constant_velocity(args)
+    else:
+        run_constant_attitude(args)
 
 
 if __name__ == "__main__":

@@ -29,6 +29,7 @@ class ValidationSummary:
     status: str
     reset_sent: bool
     probe: dict
+    race_start_check: dict | None
     smoke: dict | None
     next_commands: list[str]
 
@@ -56,9 +57,37 @@ def _build_smoke_args(args) -> SimpleNamespace:
         telemetry_timeout_s=args.telemetry_timeout_s,
         telemetry_dropout_s=args.telemetry_dropout_s,
         idle_sleep_s=args.idle_sleep_s,
+        arm_on_start=args.arm_on_start,
+        arm_attempts=args.arm_attempts,
+        prearm_heartbeat_timeout_s=args.prearm_heartbeat_timeout_s,
         control_mode=args.control_mode,
         command_frame=args.command_frame,
         command_yaw_mode=args.command_yaw_mode,
+        attitude_mode=args.attitude_mode,
+        attitude_roll_rad=args.attitude_roll_rad,
+        attitude_pitch_rad=args.attitude_pitch_rad,
+        attitude_yaw_rad=args.attitude_yaw_rad,
+        body_roll_rate_rad_s=args.body_roll_rate_rad_s,
+        body_pitch_rate_rad_s=args.body_pitch_rate_rad_s,
+        body_yaw_rate_rad_s=args.body_yaw_rate_rad_s,
+        attitude_thrust=args.attitude_thrust,
+        attitude_servo_desired_standoff_m=args.attitude_servo_desired_standoff_m,
+        attitude_servo_max_pitch_rate_rad_s=args.attitude_servo_max_pitch_rate_rad_s,
+        attitude_servo_max_roll_rate_rad_s=args.attitude_servo_max_roll_rate_rad_s,
+        attitude_servo_max_yaw_rate_rad_s=args.attitude_servo_max_yaw_rate_rad_s,
+        attitude_servo_hover_thrust=args.attitude_servo_hover_thrust,
+        attitude_servo_min_thrust=args.attitude_servo_min_thrust,
+        attitude_servo_max_thrust=args.attitude_servo_max_thrust,
+        attitude_servo_k_pitch=args.attitude_servo_k_pitch,
+        attitude_servo_k_roll=args.attitude_servo_k_roll,
+        attitude_servo_k_yaw=args.attitude_servo_k_yaw,
+        attitude_servo_k_thrust=args.attitude_servo_k_thrust,
+        attitude_servo_search_pitch_rate_rad_s=args.attitude_servo_search_pitch_rate_rad_s,
+        attitude_servo_search_yaw_rate_rad_s=args.attitude_servo_search_yaw_rate_rad_s,
+        attitude_servo_search_thrust=args.attitude_servo_search_thrust,
+        attitude_servo_forward_yaw_tolerance_rad=args.attitude_servo_forward_yaw_tolerance_rad,
+        attitude_servo_forward_z_tolerance_m=args.attitude_servo_forward_z_tolerance_m,
+        attitude_servo_uncentered_forward_scale=args.attitude_servo_uncentered_forward_scale,
         policy_action_json=args.policy_action_json,
         policy_callable=args.policy_callable,
         camera_host=args.camera_host,
@@ -117,6 +146,36 @@ def _maybe_send_sim_reset(args) -> bool:
     return True
 
 
+def _check_race_started(args) -> dict:
+    duration_s = float(getattr(args, "race_start_check_s", 1.0))
+    if duration_s <= 0.0:
+        return {"skipped": True, "duration_s": 0.0, "race_started": None, "race_status": None}
+
+    adapter = MavlinkSitlAdapter(args.endpoint, dropout_after_s=args.telemetry_dropout_s)
+    started_s = time.monotonic()
+    deadline_s = started_s + duration_s
+    try:
+        while time.monotonic() < deadline_s:
+            adapter.poll_telemetry(timeout_s=min(0.05, max(0.0, deadline_s - time.monotonic())))
+            if adapter.telemetry.state.race_status is not None:
+                break
+    finally:
+        adapter.close()
+
+    race_status = adapter.telemetry.state.race_status
+    race_started = None
+    if race_status is not None:
+        race_started = int(race_status.race_start_boot_time_ms) >= 0
+    return {
+        "skipped": False,
+        "duration_s": round(time.monotonic() - started_s, 6),
+        "race_started": race_started,
+        "race_status": None if race_status is None else asdict(race_status),
+        "heartbeats_seen": int(adapter.telemetry.metrics.heartbeats),
+        "messages_seen": int(adapter.telemetry.metrics.messages_seen),
+    }
+
+
 def _default_next_commands(args) -> list[str]:
     return [
         (
@@ -135,15 +194,69 @@ def _default_next_commands(args) -> list[str]:
             f"--control-mode {args.control_mode} "
             f"--command-frame {args.command_frame} "
             f"--command-yaw-mode {args.command_yaw_mode} "
+            f"--attitude-mode {args.attitude_mode} "
+            f"--attitude-roll-rad {args.attitude_roll_rad} "
+            f"--attitude-pitch-rad {args.attitude_pitch_rad} "
+            f"--attitude-yaw-rad {args.attitude_yaw_rad} "
+            f"--body-roll-rate-rad-s {args.body_roll_rate_rad_s} "
+            f"--body-pitch-rate-rad-s {args.body_pitch_rate_rad_s} "
+            f"--body-yaw-rate-rad-s {args.body_yaw_rate_rad_s} "
+            f"--attitude-thrust {args.attitude_thrust} "
+            f"--attitude-servo-desired-standoff-m {args.attitude_servo_desired_standoff_m} "
+            f"--attitude-servo-max-pitch-rate-rad-s {args.attitude_servo_max_pitch_rate_rad_s} "
+            f"--attitude-servo-max-roll-rate-rad-s {args.attitude_servo_max_roll_rate_rad_s} "
+            f"--attitude-servo-max-yaw-rate-rad-s {args.attitude_servo_max_yaw_rate_rad_s} "
+            f"--attitude-servo-hover-thrust {args.attitude_servo_hover_thrust} "
+            f"--attitude-servo-min-thrust {args.attitude_servo_min_thrust} "
+            f"--attitude-servo-max-thrust {args.attitude_servo_max_thrust} "
+            f"--attitude-servo-k-pitch {args.attitude_servo_k_pitch} "
+            f"--attitude-servo-k-roll {args.attitude_servo_k_roll} "
+            f"--attitude-servo-k-yaw {args.attitude_servo_k_yaw} "
+            f"--attitude-servo-k-thrust {args.attitude_servo_k_thrust} "
+            f"--attitude-servo-search-pitch-rate-rad-s {args.attitude_servo_search_pitch_rate_rad_s} "
+            f"--attitude-servo-search-yaw-rate-rad-s {args.attitude_servo_search_yaw_rate_rad_s} "
+            + (
+                ""
+                if args.attitude_servo_search_thrust is None
+                else f"--attitude-servo-search-thrust {args.attitude_servo_search_thrust} "
+            )
+            + (
+                ""
+                if args.attitude_servo_forward_yaw_tolerance_rad is None
+                else (
+                    "--attitude-servo-forward-yaw-tolerance-rad "
+                    f"{args.attitude_servo_forward_yaw_tolerance_rad} "
+                )
+            )
+            + (
+                ""
+                if args.attitude_servo_forward_z_tolerance_m is None
+                else f"--attitude-servo-forward-z-tolerance-m {args.attitude_servo_forward_z_tolerance_m} "
+            )
+            + f"--attitude-servo-uncentered-forward-scale {args.attitude_servo_uncentered_forward_scale} "
             f"--policy-action-json '{args.policy_action_json}' "
             + (f"--policy-callable {args.policy_callable} " if args.policy_callable else "")
             + f"--duration {args.smoke_duration} "
+            + ("" if args.arm_on_start else "--no-arm-on-start ")
+            + f"--arm-attempts {args.arm_attempts} "
+            + f"--prearm-heartbeat-timeout-s {args.prearm_heartbeat_timeout_s} "
             + f"--camera-host {args.camera_host} "
             + f"--camera-port {args.camera_port} "
             + f"--camera-max-packets-per-loop {getattr(args, 'camera_max_packets_per_loop', 512)} "
             + f"--max-approach-diagnostic-samples {args.max_approach_diagnostic_samples} "
+            + f"--max-detection-age-s {args.max_detection_age_s} "
             + f"--visual-servo-desired-standoff-m {args.visual_servo_desired_standoff_m} "
             + f"--visual-servo-max-forward-m-s {args.visual_servo_max_forward_m_s} "
+            + f"--visual-servo-max-lateral-m-s {args.visual_servo_max_lateral_m_s} "
+            + f"--visual-servo-max-vertical-m-s {args.visual_servo_max_vertical_m_s} "
+            + f"--visual-servo-max-yaw-rate-rad-s {args.visual_servo_max_yaw_rate_rad_s} "
+            + f"--visual-servo-k-forward {args.visual_servo_k_forward} "
+            + f"--visual-servo-k-lateral {args.visual_servo_k_lateral} "
+            + f"--visual-servo-k-vertical {args.visual_servo_k_vertical} "
+            + f"--visual-servo-k-yaw {args.visual_servo_k_yaw} "
+            + f"--detector-min-area-px {args.detector_min_area_px} "
+            + f"--detector-max-aspect-error {args.detector_max_aspect_error} "
+            + f"--detector-min-fill-ratio {args.detector_min_fill_ratio} "
             + f"--target-gate-count {args.target_gate_count} "
             + ("--require-official-race-progress " if args.require_official_race_progress else "")
             + f"--json-path {args.smoke_json_path} "
@@ -173,14 +286,27 @@ def run_validation(args) -> ValidationSummary:
     _write_json(args.probe_json_path, probe_payload)
 
     smoke_payload = None
+    race_start_check_payload = None
     status = "blocked_no_traffic"
     if requirements_met:
-        smoke_args = _build_smoke_args(args)
-        smoke_report = smoke.run_smoke(smoke_args)
-        smoke_payload = smoke_report.to_dict()
-        _write_json(args.smoke_json_path, smoke_payload)
-        smoke.maybe_write_csv(args.smoke_csv_path, smoke_report)
-        status = "smoke_passed" if smoke_report.acceptance_passed else "smoke_failed_acceptance"
+        race_start_check_payload = _check_race_started(args)
+        if race_start_check_payload.get("race_started") is False:
+            status = "blocked_race_not_started"
+        else:
+            smoke_args = _build_smoke_args(args)
+            smoke_report = smoke.run_smoke(smoke_args)
+            smoke_payload = smoke_report.to_dict()
+            _write_json(args.smoke_json_path, smoke_payload)
+            smoke.maybe_write_csv(args.smoke_csv_path, smoke_report)
+            status = "smoke_passed" if smoke_report.acceptance_passed else "smoke_failed_acceptance"
+            race_status = smoke_report.sitl.latest_telemetry.race_status
+            if (
+                status == "smoke_failed_acceptance"
+                and race_status is not None
+                and race_status.race_start_boot_time_ms is not None
+                and int(race_status.race_start_boot_time_ms) < 0
+            ):
+                status = "blocked_race_not_started"
 
     finished = time.time()
     return ValidationSummary(
@@ -190,6 +316,7 @@ def run_validation(args) -> ValidationSummary:
         status=status,
         reset_sent=reset_sent,
         probe=probe_payload,
+        race_start_check=race_start_check_payload,
         smoke=smoke_payload,
         next_commands=_default_next_commands(args),
     )
@@ -201,15 +328,49 @@ def main() -> None:
     parser.add_argument("--mavlink-port", type=int, default=14540)
     parser.add_argument("--camera-port", type=int, default=5600)
     parser.add_argument("--probe-duration", type=float, default=5.0)
+    parser.add_argument("--race-start-check-s", type=float, default=1.0)
     parser.add_argument("--probe-json-path", default="logs/sitl/stream_probe_official.json")
     parser.add_argument("--send-sim-reset", action="store_true")
     parser.add_argument("--post-reset-sleep-s", type=float, default=2.0)
 
     parser.add_argument("--acceptance-config", default=os.path.join("config", "sitl_competition_acceptance.json"))
     parser.add_argument("--endpoint", default="udpin:0.0.0.0:14540")
-    parser.add_argument("--control-mode", choices=["visual-servo", "policy"], default="visual-servo")
+    parser.add_argument(
+        "--control-mode",
+        choices=["visual-servo", "policy", "attitude-rates", "visual-servo-attitude"],
+        default="visual-servo",
+    )
     parser.add_argument("--command-frame", choices=["body_ned", "local_ned"], default="local_ned")
     parser.add_argument("--command-yaw-mode", choices=["yaw_and_rate", "ignore"], default="yaw_and_rate")
+    parser.add_argument(
+        "--attitude-mode",
+        choices=["body_rates", "attitude", "attitude_and_rates"],
+        default="body_rates",
+    )
+    parser.add_argument("--attitude-roll-rad", type=float, default=0.0)
+    parser.add_argument("--attitude-pitch-rad", type=float, default=0.0)
+    parser.add_argument("--attitude-yaw-rad", type=float, default=0.0)
+    parser.add_argument("--body-roll-rate-rad-s", type=float, default=0.0)
+    parser.add_argument("--body-pitch-rate-rad-s", type=float, default=0.0)
+    parser.add_argument("--body-yaw-rate-rad-s", type=float, default=0.0)
+    parser.add_argument("--attitude-thrust", type=float, default=0.5)
+    parser.add_argument("--attitude-servo-desired-standoff-m", type=float, default=0.0)
+    parser.add_argument("--attitude-servo-max-pitch-rate-rad-s", type=float, default=0.5)
+    parser.add_argument("--attitude-servo-max-roll-rate-rad-s", type=float, default=0.4)
+    parser.add_argument("--attitude-servo-max-yaw-rate-rad-s", type=float, default=0.7)
+    parser.add_argument("--attitude-servo-hover-thrust", type=float, default=0.58)
+    parser.add_argument("--attitude-servo-min-thrust", type=float, default=0.35)
+    parser.add_argument("--attitude-servo-max-thrust", type=float, default=0.75)
+    parser.add_argument("--attitude-servo-k-pitch", type=float, default=0.16)
+    parser.add_argument("--attitude-servo-k-roll", type=float, default=0.0)
+    parser.add_argument("--attitude-servo-k-yaw", type=float, default=1.2)
+    parser.add_argument("--attitude-servo-k-thrust", type=float, default=0.08)
+    parser.add_argument("--attitude-servo-search-pitch-rate-rad-s", type=float, default=0.0)
+    parser.add_argument("--attitude-servo-search-yaw-rate-rad-s", type=float, default=0.0)
+    parser.add_argument("--attitude-servo-search-thrust", type=float, default=None)
+    parser.add_argument("--attitude-servo-forward-yaw-tolerance-rad", type=float, default=None)
+    parser.add_argument("--attitude-servo-forward-z-tolerance-m", type=float, default=None)
+    parser.add_argument("--attitude-servo-uncentered-forward-scale", type=float, default=1.0)
     parser.add_argument("--policy-callable", default="")
     parser.add_argument("--policy-action-json", default="[0.0, 0.0, 0.0, 0.0]")
     parser.add_argument("--smoke-duration", type=float, default=60.0)
@@ -218,6 +379,10 @@ def main() -> None:
     parser.add_argument("--telemetry-timeout-s", type=float, default=0.0)
     parser.add_argument("--telemetry-dropout-s", type=float, default=1.0)
     parser.add_argument("--idle-sleep-s", type=float, default=0.001)
+    parser.add_argument("--no-arm-on-start", dest="arm_on_start", action="store_false")
+    parser.set_defaults(arm_on_start=True)
+    parser.add_argument("--arm-attempts", type=int, default=3)
+    parser.add_argument("--prearm-heartbeat-timeout-s", type=float, default=2.0)
     parser.add_argument("--camera-host", default="0.0.0.0")
     parser.add_argument("--camera-timeout-s", type=float, default=0.0)
     parser.add_argument("--camera-max-packets-per-loop", type=int, default=512)
