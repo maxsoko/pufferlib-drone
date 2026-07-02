@@ -27,6 +27,7 @@ def _args(tmp_path: Path) -> SimpleNamespace:
         acceptance_config="config/sitl_competition_acceptance.json",
         endpoint="udpin:0.0.0.0:14540",
         control_mode="visual-servo",
+        command_frame="local_ned",
         policy_callable="",
         policy_action_json="[0,0,0,0]",
         smoke_duration=1.0,

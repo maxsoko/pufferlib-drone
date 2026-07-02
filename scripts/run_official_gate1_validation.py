@@ -57,6 +57,7 @@ def _build_smoke_args(args) -> SimpleNamespace:
         telemetry_dropout_s=args.telemetry_dropout_s,
         idle_sleep_s=args.idle_sleep_s,
         control_mode=args.control_mode,
+        command_frame=args.command_frame,
         policy_action_json=args.policy_action_json,
         policy_callable=args.policy_callable,
         camera_host=args.camera_host,
@@ -121,6 +122,7 @@ def _default_next_commands(args) -> list[str]:
             f"--acceptance-config {args.acceptance_config} "
             f"--endpoint {args.endpoint} "
             f"--control-mode {args.control_mode} "
+            f"--command-frame {args.command_frame} "
             + (f"--policy-callable {args.policy_callable} " if args.policy_callable else "")
             + f"--duration {args.smoke_duration} "
             + f"--camera-host {args.camera_host} "
@@ -190,6 +192,7 @@ def main() -> None:
     parser.add_argument("--acceptance-config", default=os.path.join("config", "sitl_competition_acceptance.json"))
     parser.add_argument("--endpoint", default="udpin:0.0.0.0:14540")
     parser.add_argument("--control-mode", choices=["visual-servo", "policy"], default="visual-servo")
+    parser.add_argument("--command-frame", choices=["body_ned", "local_ned"], default="local_ned")
     parser.add_argument("--policy-callable", default="")
     parser.add_argument("--policy-action-json", default="[0.0, 0.0, 0.0, 0.0]")
     parser.add_argument("--smoke-duration", type=float, default=60.0)

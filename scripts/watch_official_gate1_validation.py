@@ -52,6 +52,7 @@ def _build_validation_args(args) -> SimpleNamespace:
         acceptance_config=args.acceptance_config,
         endpoint=args.endpoint,
         control_mode=args.control_mode,
+        command_frame=args.command_frame,
         policy_callable=args.policy_callable,
         policy_action_json=args.policy_action_json,
         smoke_duration=args.smoke_duration,
@@ -142,6 +143,7 @@ def main() -> None:
     parser.add_argument("--acceptance-config", default=os.path.join("config", "sitl_competition_acceptance.json"))
     parser.add_argument("--endpoint", default="udpin:0.0.0.0:14540")
     parser.add_argument("--control-mode", choices=["visual-servo", "policy"], default="visual-servo")
+    parser.add_argument("--command-frame", choices=["body_ned", "local_ned"], default="local_ned")
     parser.add_argument("--policy-callable", default="")
     parser.add_argument("--policy-action-json", default="[0.0, 0.0, 0.0, 0.0]")
     parser.add_argument("--smoke-duration", type=float, default=60.0)

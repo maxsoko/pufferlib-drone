@@ -522,6 +522,9 @@ def run_smoke(args) -> CompetitionSmokeReport:
     policy_source = "visual_servo"
     policy_callable = None
     normalized_action = (0.0, 0.0, 0.0, 0.0)
+    command_frame = getattr(args, "command_frame", "local_ned")
+    if command_frame not in {"body_ned", "local_ned"}:
+        raise ValueError("command_frame must be 'body_ned' or 'local_ned'")
     if args.control_mode == "policy":
         policy_source = "constant_action"
         normalized_action = maybe_parse_action_json(args.policy_action_json)
@@ -642,7 +645,7 @@ def run_smoke(args) -> CompetitionSmokeReport:
                     )
                     last_cmd_norm = action.normalized
 
-                adapter.send_local_ned_setpoint(target)
+                adapter.send_local_ned_setpoint(target, frame=command_frame)
                 commands_sent += 1
                 last_command_sent_s = now_s
                 next_command_s = now_s + command_period_s
@@ -666,7 +669,7 @@ def run_smoke(args) -> CompetitionSmokeReport:
         duration_s=round(time.monotonic() - started_s, 6),
         heartbeat_hz=args.heartbeat_hz,
         command_hz=args.command_hz,
-        command_kind="local_ned_velocity",
+        command_kind=f"{command_frame}_velocity",
         heartbeats_sent=heartbeats_sent,
         commands_sent=commands_sent,
         command_rate_violations=command_rate_violations,
@@ -781,6 +784,7 @@ def main() -> None:
     parser.add_argument("--telemetry-dropout-s", type=float, default=1.0)
     parser.add_argument("--idle-sleep-s", type=float, default=0.001)
     parser.add_argument("--control-mode", choices=["visual-servo", "policy"], default="visual-servo")
+    parser.add_argument("--command-frame", choices=["body_ned", "local_ned"], default="local_ned")
     parser.add_argument(
         "--policy-action-json",
         default="[0.0, 0.0, 0.0, 0.0]",

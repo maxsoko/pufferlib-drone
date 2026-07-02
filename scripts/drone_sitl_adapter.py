@@ -457,8 +457,14 @@ class MavlinkSitlAdapter:
         if close_fn is not None:
             close_fn()
 
-    def send_local_ned_setpoint(self, target):
+    def send_local_ned_setpoint(self, target, *, frame: str = "local_ned"):
         # Ignore position/acceleration for the first scaffold and send bounded velocity + yaw.
+        if frame == "local_ned":
+            mav_frame = self.mavutil.mavlink.MAV_FRAME_LOCAL_NED
+        elif frame == "body_ned":
+            mav_frame = self.mavutil.mavlink.MAV_FRAME_BODY_NED
+        else:
+            raise ValueError("frame must be 'local_ned' or 'body_ned'")
         type_mask = (
             self.mavutil.mavlink.POSITION_TARGET_TYPEMASK_X_IGNORE
             | self.mavutil.mavlink.POSITION_TARGET_TYPEMASK_Y_IGNORE
@@ -471,7 +477,7 @@ class MavlinkSitlAdapter:
             int(time.monotonic() * 1000) & 0xFFFFFFFF,
             1,
             1,
-            self.mavutil.mavlink.MAV_FRAME_LOCAL_NED,
+            mav_frame,
             type_mask,
             target.x,
             target.y,
@@ -645,7 +651,7 @@ def run_constant_velocity(args):
         if now >= next_command:
             if last_command_sent_s is not None and now - last_command_sent_s < 0.01:
                 command_rate_violations += 1
-            adapter.send_local_ned_setpoint(target)
+            adapter.send_local_ned_setpoint(target, frame=args.command_frame)
             commands_sent += 1
             last_command_sent_s = now
             next_command = now + command_period
@@ -657,7 +663,7 @@ def run_constant_velocity(args):
         args,
         adapter,
         args.mode,
-        "local_ned_velocity",
+        f"{args.command_frame}_velocity",
         started,
         heartbeats_sent,
         commands_sent,
@@ -679,6 +685,7 @@ def main():
     parser.add_argument("--idle-sleep-s", type=float, default=0.001)
     parser.add_argument("--json-path", default="")
     parser.add_argument("--command-kind", choices=["local_ned_velocity"], default="local_ned_velocity")
+    parser.add_argument("--command-frame", choices=["body_ned", "local_ned"], default="local_ned")
     parser.add_argument("--vx", type=float, default=0.0)
     parser.add_argument("--vy", type=float, default=0.0)
     parser.add_argument("--vz", type=float, default=0.0)
