@@ -101,6 +101,7 @@ Completed:
 - Manual simulator reset is currently the reliable start-state path. `logs/sitl/reset_snapshot_manual_001/snapshot_summary.json` captured a healthy reset state with normal local position near the origin, non-black camera frames, `race_status.active_gate_index=0`, and `188` detector hits in `5s`; the first detected frame shows the first gate centered in view.
 - The experimental MAVLink reset command `31000` can leave the simulator in an invalid/blank-camera state in the current session. `logs/sitl/reset_snapshot_auto_001/snapshot_summary.json` recorded black frames, zero detections, and an implausible local NED `z` near `-9342m`; do not use auto-reset as promotion evidence until this is understood.
 - The simulator does not currently expose a confirmed MAVLink race-start/restart command beyond this custom `31000` reset path.
+- Simulator-only route is intentionally validation-only right now: use the `31000` reset only for diagnostic re-baselining, but keep official progression proof on clean manual UI `R1/RACE` starts.
 - `MAVLINK_CMD_SIM_RESET` appears to be a soft/hard reset hook (course-and-state reinit only), not a “start race” command; the reliable race start for this session is still process/UI start flow (`scripts/start_windows_aigp_race.ps1`) followed by MAVLink smoke validation.
 
 Not complete / blocking:

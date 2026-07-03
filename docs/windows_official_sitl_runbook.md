@@ -53,6 +53,18 @@ Important: there is currently no confirmed dedicated MAVLink command for
 2) UI flow to select `AI-GP Virtual Qualifier R1` and press `RACE`,
 3) start controller only after race start is confirmed (`race_start_boot_time_ms >= 0`).
 
+For a one-shot flow, use:
+
+```powershell
+cd C:\Users\anon\code\pufferlib-drone
+.\scripts\run_windows_gate1_from_scratch.ps1 `
+  -Tag windows_auto_gate1_loop `
+  -RequireOfficialRaceProgress `
+  -ControlMode visual-servo-attitude `
+  -SmokeDuration 60 `
+  -SmokeTag windows_auto_gate1_loop_strict
+```
+
 The run writes deterministic artifacts under `logs\sitl\`:
 
 - `official_gate1_validation_summary_<tag>.json`
