@@ -79,9 +79,10 @@ def _build_smoke_args(args) -> SimpleNamespace:
         attitude_servo_min_thrust=args.attitude_servo_min_thrust,
         attitude_servo_max_thrust=args.attitude_servo_max_thrust,
         attitude_servo_k_pitch=args.attitude_servo_k_pitch,
-        attitude_servo_k_roll=args.attitude_servo_k_roll,
-        attitude_servo_k_yaw=args.attitude_servo_k_yaw,
-        attitude_servo_k_thrust=args.attitude_servo_k_thrust,
+        attitude_servo_k_roll=getattr(args, "attitude_servo_k_roll", 0.0),
+        attitude_servo_k_image_roll=getattr(args, "attitude_servo_k_image_roll", 0.0),
+        attitude_servo_k_yaw=getattr(args, "attitude_servo_k_yaw", 1.2),
+        attitude_servo_k_thrust=getattr(args, "attitude_servo_k_thrust", 0.08),
         attitude_servo_search_pitch_rate_rad_s=args.attitude_servo_search_pitch_rate_rad_s,
         attitude_servo_search_yaw_rate_rad_s=args.attitude_servo_search_yaw_rate_rad_s,
         attitude_servo_search_thrust=args.attitude_servo_search_thrust,
@@ -227,6 +228,7 @@ def _default_next_commands(args) -> list[str]:
             f"--attitude-servo-max-thrust {args.attitude_servo_max_thrust} "
             f"--attitude-servo-k-pitch {args.attitude_servo_k_pitch} "
             f"--attitude-servo-k-roll {args.attitude_servo_k_roll} "
+            f"--attitude-servo-k-image-roll {getattr(args, 'attitude_servo_k_image_roll', 0.0)} "
             f"--attitude-servo-k-yaw {args.attitude_servo_k_yaw} "
             f"--attitude-servo-k-thrust {args.attitude_servo_k_thrust} "
             f"--attitude-servo-search-pitch-rate-rad-s {args.attitude_servo_search_pitch_rate_rad_s} "
@@ -429,6 +431,7 @@ def main() -> None:
     parser.add_argument("--attitude-servo-max-thrust", type=float, default=0.75)
     parser.add_argument("--attitude-servo-k-pitch", type=float, default=0.16)
     parser.add_argument("--attitude-servo-k-roll", type=float, default=0.0)
+    parser.add_argument("--attitude-servo-k-image-roll", type=float, default=0.0)
     parser.add_argument("--attitude-servo-k-yaw", type=float, default=1.2)
     parser.add_argument("--attitude-servo-k-thrust", type=float, default=0.08)
     parser.add_argument("--attitude-servo-search-pitch-rate-rad-s", type=float, default=0.0)

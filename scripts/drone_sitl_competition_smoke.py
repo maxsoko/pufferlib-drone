@@ -16,7 +16,7 @@ from collections import defaultdict
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
-from drone_camera_receiver import DEFAULT_CAMERA_UDP_PORT, UdpCameraReceiver
+from drone_camera_receiver import CAMERA_WIDTH, DEFAULT_CAMERA_UDP_PORT, UdpCameraReceiver
 from drone_gate_detector import GateDetection, SquareGateDetector, cv2, np
 from drone_policy_contract import (
     OBSERVATION_SIZE,
@@ -618,6 +618,7 @@ def attitude_servo_command_from_args(pose, args) -> AttitudeSetpoint:
     k_roll = float(getattr(args, "attitude_servo_k_roll", 0.0))
     k_yaw = float(getattr(args, "attitude_servo_k_yaw", 1.2))
     k_thrust = float(getattr(args, "attitude_servo_k_thrust", 0.08))
+    k_image_roll = float(getattr(args, "attitude_servo_k_image_roll", 0.0))
     forward_yaw_tolerance = getattr(args, "attitude_servo_forward_yaw_tolerance_rad", None)
     forward_z_tolerance = getattr(args, "attitude_servo_forward_z_tolerance_m", None)
     uncentered_forward_scale = float(getattr(args, "attitude_servo_uncentered_forward_scale", 1.0))
@@ -631,7 +632,18 @@ def attitude_servo_command_from_args(pose, args) -> AttitudeSetpoint:
 
     forward_error = max(0.0, bx - desired_standoff_m)
     pitch_rate = -clamp(k_pitch * forward_error, 0.0, max_pitch_rate)
-    roll_rate = clamp(k_roll * by, -max_roll_rate, max_roll_rate)
+    image_roll_error = 0.0
+    if pose is not None and hasattr(pose, "image_width_px") and hasattr(pose, "image_center_px"):
+        image_width_m = float(pose.image_width_px)
+        if image_width_m < float(CAMERA_WIDTH) * 0.25:
+            image_width_m = float(CAMERA_WIDTH)
+        if image_width_m > 1.0:
+            image_roll_error = (float(pose.image_center_px[0]) - image_width_m / 2.0) / (image_width_m / 2.0)
+    roll_rate = clamp(
+        k_roll * by + k_image_roll * image_roll_error,
+        -max_roll_rate,
+        max_roll_rate,
+    )
     yaw_rate = clamp(k_yaw * pose.yaw_error_rad, -max_yaw_rate, max_yaw_rate)
     thrust = clamp(hover_thrust - k_thrust * bz, min_thrust, max_thrust)
     centered = True
@@ -738,17 +750,36 @@ def should_start_attitude_final_approach(
 def attitude_final_approach_command_from_args(pose, args) -> AttitudeSetpoint:
     min_thrust = float(getattr(args, "attitude_servo_min_thrust", 0.35))
     max_thrust = float(getattr(args, "attitude_servo_max_thrust", 0.75))
+    max_roll_rate = abs(float(getattr(args, "attitude_servo_max_roll_rate_rad_s", 0.4)))
     if min_thrust > max_thrust:
         raise ValueError("attitude_servo_min_thrust must be <= attitude_servo_max_thrust")
 
     pitch_rate = -abs(float(getattr(args, "attitude_servo_final_pitch_rate_rad_s", 0.2)))
     max_yaw_rate = abs(float(getattr(args, "attitude_servo_final_max_yaw_rate_rad_s", 0.35)))
     k_yaw = float(getattr(args, "attitude_servo_k_yaw", 1.2))
-    yaw_rate = 0.0 if pose is None else clamp(k_yaw * pose.yaw_error_rad, -max_yaw_rate, max_yaw_rate)
+    k_image_roll = float(getattr(args, "attitude_servo_k_image_roll", 0.0))
+    if pose is None:
+        roll_rate = 0.0
+        yaw_rate = 0.0
+    else:
+        image_roll_error = 0.0
+        if hasattr(pose, "image_width_px") and hasattr(pose, "image_center_px"):
+            image_width_m = float(pose.image_width_px)
+            if image_width_m < float(CAMERA_WIDTH) * 0.25:
+                image_width_m = float(CAMERA_WIDTH)
+            if image_width_m > 1.0:
+                image_roll_error = (float(pose.image_center_px[0]) - image_width_m / 2.0) / (image_width_m / 2.0)
+        roll_rate = clamp(
+            k_image_roll * image_roll_error,
+            -max_roll_rate,
+            max_roll_rate,
+        )
+        yaw_rate = clamp(k_yaw * pose.yaw_error_rad, -max_yaw_rate, max_yaw_rate)
     thrust = clamp(float(getattr(args, "attitude_servo_final_thrust", 0.62)), min_thrust, max_thrust)
     return AttitudeSetpoint(
         body_pitch_rate=pitch_rate,
         body_yaw_rate=yaw_rate,
+        body_roll_rate=roll_rate,
         thrust=thrust,
     )
 
@@ -1256,6 +1287,7 @@ def run_smoke(args) -> CompetitionSmokeReport:
                 "k_pitch": round_float(getattr(args, "attitude_servo_k_pitch", 0.16)),
                 "k_roll": round_float(getattr(args, "attitude_servo_k_roll", 0.0)),
                 "k_yaw": round_float(getattr(args, "attitude_servo_k_yaw", 1.2)),
+                "k_image_roll": round_float(getattr(args, "attitude_servo_k_image_roll", 0.0)),
                 "k_thrust": round_float(getattr(args, "attitude_servo_k_thrust", 0.08)),
                 "search_pitch_rate_rad_s": round_float(
                     getattr(args, "attitude_servo_search_pitch_rate_rad_s", 0.0)
@@ -1466,6 +1498,7 @@ def main() -> None:
     parser.add_argument("--attitude-servo-max-thrust", type=float, default=0.75)
     parser.add_argument("--attitude-servo-k-pitch", type=float, default=0.16)
     parser.add_argument("--attitude-servo-k-roll", type=float, default=0.0)
+    parser.add_argument("--attitude-servo-k-image-roll", type=float, default=0.0)
     parser.add_argument("--attitude-servo-k-yaw", type=float, default=1.2)
     parser.add_argument("--attitude-servo-k-thrust", type=float, default=0.08)
     parser.add_argument("--attitude-servo-search-pitch-rate-rad-s", type=float, default=0.0)

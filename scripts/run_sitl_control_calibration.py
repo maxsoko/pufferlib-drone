@@ -166,6 +166,22 @@ def default_cases() -> list[CalibrationCase]:
             attitude_thrust=0.60,
         ),
         CalibrationCase(
+            name="attitude_rates_roll_positive_t060",
+            description="Roll sign sanity check: positive roll rate, thrust 0.60.",
+            control_mode="attitude-rates",
+            attitude_mode="body_rates",
+            body_roll_rate_rad_s=0.2,
+            attitude_thrust=0.60,
+        ),
+        CalibrationCase(
+            name="attitude_rates_roll_negative_t060",
+            description="Roll sign sanity check: negative roll rate, thrust 0.60.",
+            control_mode="attitude-rates",
+            attitude_mode="body_rates",
+            body_roll_rate_rad_s=-0.2,
+            attitude_thrust=0.60,
+        ),
+        CalibrationCase(
             name="attitude_rates_hover_t055",
             description="Neutral body rates, thrust 0.55 hover/vertical response probe.",
             control_mode="attitude-rates",
@@ -240,10 +256,11 @@ def build_smoke_args(args, case: CalibrationCase, *, json_path: str, csv_path: s
         attitude_servo_hover_thrust=args.attitude_servo_hover_thrust,
         attitude_servo_min_thrust=args.attitude_servo_min_thrust,
         attitude_servo_max_thrust=args.attitude_servo_max_thrust,
-        attitude_servo_k_pitch=args.attitude_servo_k_pitch,
-        attitude_servo_k_roll=args.attitude_servo_k_roll,
-        attitude_servo_k_yaw=args.attitude_servo_k_yaw,
-        attitude_servo_k_thrust=args.attitude_servo_k_thrust,
+        attitude_servo_k_pitch=getattr(args, "attitude_servo_k_pitch", 0.16),
+        attitude_servo_k_roll=getattr(args, "attitude_servo_k_roll", 0.0),
+        attitude_servo_k_image_roll=getattr(args, "attitude_servo_k_image_roll", 0.0),
+        attitude_servo_k_yaw=getattr(args, "attitude_servo_k_yaw", 1.2),
+        attitude_servo_k_thrust=getattr(args, "attitude_servo_k_thrust", 0.08),
         attitude_servo_search_pitch_rate_rad_s=args.attitude_servo_search_pitch_rate_rad_s,
         attitude_servo_search_yaw_rate_rad_s=args.attitude_servo_search_yaw_rate_rad_s,
         attitude_servo_search_thrust=args.attitude_servo_search_thrust,
@@ -520,6 +537,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--attitude-servo-max-thrust", type=float, default=0.75)
     parser.add_argument("--attitude-servo-k-pitch", type=float, default=0.16)
     parser.add_argument("--attitude-servo-k-roll", type=float, default=0.0)
+    parser.add_argument("--attitude-servo-k-image-roll", type=float, default=0.0)
     parser.add_argument("--attitude-servo-k-yaw", type=float, default=1.2)
     parser.add_argument("--attitude-servo-k-thrust", type=float, default=0.08)
     parser.add_argument("--attitude-servo-search-pitch-rate-rad-s", type=float, default=0.0)
