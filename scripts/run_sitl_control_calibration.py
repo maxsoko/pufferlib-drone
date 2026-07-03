@@ -13,6 +13,7 @@ import json
 import os
 import re
 import time
+from dataclasses import replace
 from types import SimpleNamespace
 
 import drone_sitl_competition_smoke as smoke
@@ -36,6 +37,7 @@ class CalibrationCase:
     body_pitch_rate_rad_s: float = 0.0
     body_yaw_rate_rad_s: float = 0.0
     attitude_thrust: float = 0.5
+    attitude_servo_k_image_roll: float | None = None
 
 
 @dataclasses.dataclass
@@ -203,6 +205,49 @@ def sanitize_case_name(value: str) -> str:
     return out or "case"
 
 
+def _parse_k_image_roll_sweep(raw: str) -> list[float]:
+    if not raw:
+        return []
+
+    values: list[float] = []
+    for token in raw.split(","):
+        token = token.strip()
+        if not token:
+            continue
+        values.append(float(token))
+    return values
+
+
+def _format_k_image_roll_token(value: float) -> str:
+    if value == int(value):
+        return str(int(value))
+    return f"{value:.3f}".rstrip("0").rstrip(".")
+
+
+def _expand_visual_servo_k_image_roll_cases(cases: list[CalibrationCase], args) -> list[CalibrationCase]:
+    values = _parse_k_image_roll_sweep(getattr(args, "attitude_servo_k_image_roll_sweep", ""))
+    if not values:
+        return cases
+
+    expanded: list[CalibrationCase] = []
+    for case in cases:
+        if case.control_mode != "visual-servo-attitude":
+            expanded.append(case)
+            continue
+
+        for value in values:
+            expanded.append(
+                replace(
+                    case,
+                    name=f"{case.name}_k_image_roll_{_format_k_image_roll_token(value)}",
+                    description=f"{case.description} (k_image_roll={value}).",
+                    attitude_servo_k_image_roll=value,
+                )
+            )
+
+    return expanded
+
+
 def write_json(path: str, payload: dict) -> None:
     directory = os.path.dirname(path)
     if directory:
@@ -258,7 +303,11 @@ def build_smoke_args(args, case: CalibrationCase, *, json_path: str, csv_path: s
         attitude_servo_max_thrust=args.attitude_servo_max_thrust,
         attitude_servo_k_pitch=getattr(args, "attitude_servo_k_pitch", 0.16),
         attitude_servo_k_roll=getattr(args, "attitude_servo_k_roll", 0.0),
-        attitude_servo_k_image_roll=getattr(args, "attitude_servo_k_image_roll", 0.0),
+        attitude_servo_k_image_roll=(
+            case.attitude_servo_k_image_roll
+            if case.attitude_servo_k_image_roll is not None
+            else getattr(args, "attitude_servo_k_image_roll", 0.0)
+        ),
         attitude_servo_k_yaw=getattr(args, "attitude_servo_k_yaw", 1.2),
         attitude_servo_k_thrust=getattr(args, "attitude_servo_k_thrust", 0.08),
         attitude_servo_search_pitch_rate_rad_s=args.attitude_servo_search_pitch_rate_rad_s,
@@ -407,10 +456,11 @@ def run_calibration(args) -> CalibrationSummary:
             )
 
     case_filter = re.compile(args.case_filter) if args.case_filter else None
-    cases = [
+    base_cases = [
         case for case in default_cases()
         if case_filter is None or case_filter.search(case.name)
     ]
+    cases = _expand_visual_servo_k_image_roll_cases(base_cases, args)
     if not cases:
         raise ValueError("case_filter selected no calibration cases")
 
@@ -538,6 +588,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--attitude-servo-k-pitch", type=float, default=0.16)
     parser.add_argument("--attitude-servo-k-roll", type=float, default=0.0)
     parser.add_argument("--attitude-servo-k-image-roll", type=float, default=0.0)
+    parser.add_argument(
+        "--attitude-servo-k-image-roll-sweep",
+        default="",
+        help="Comma-separated k_image_roll values to override for visual-servo-attitude cases.",
+    )
     parser.add_argument("--attitude-servo-k-yaw", type=float, default=1.2)
     parser.add_argument("--attitude-servo-k-thrust", type=float, default=0.08)
     parser.add_argument("--attitude-servo-search-pitch-rate-rad-s", type=float, default=0.0)
