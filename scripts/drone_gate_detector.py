@@ -49,6 +49,7 @@ class SquareGateDetector:
         min_area_px: float = 1200.0,
         max_aspect_error: float = 0.5,
         min_fill_ratio: float = 0.15,
+        allow_grayscale_fallback: bool = True,
     ) -> None:
         if min_area_px <= 0.0:
             raise ValueError("min_area_px must be positive")
@@ -59,6 +60,7 @@ class SquareGateDetector:
         self.min_area_px = min_area_px
         self.max_aspect_error = max_aspect_error
         self.min_fill_ratio = min_fill_ratio
+        self.allow_grayscale_fallback = bool(allow_grayscale_fallback)
         self.metrics = GateDetectorMetrics()
         self.available = cv2 is not None and np is not None
 
@@ -67,11 +69,24 @@ class SquareGateDetector:
         if not self.available:
             self.metrics.decode_failures += 1
             return None
-        image = cv2.imdecode(np.frombuffer(jpeg, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
+        image = cv2.imdecode(np.frombuffer(jpeg, dtype=np.uint8), cv2.IMREAD_COLOR)
         if image is None:
             self.metrics.decode_failures += 1
             return None
-        return self.detect_grayscale(image)
+        return self.detect_bgr(image)
+
+    def detect_bgr(self, image) -> GateDetection | None:
+        if not self.available:
+            self.metrics.decode_failures += 1
+            return None
+        color_candidate = self._detect_red_gate(image)
+        if color_candidate is not None:
+            self.metrics.detections += 1
+            return color_candidate
+        if not self.allow_grayscale_fallback:
+            self.metrics.no_quad_found += 1
+            return None
+        return self.detect_grayscale(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY))
 
     def detect_grayscale(self, image) -> GateDetection | None:
         if not self.available:
@@ -138,6 +153,178 @@ class SquareGateDetector:
             return None
         self.metrics.detections += 1
         return candidate
+
+    def _detect_red_gate(self, image) -> GateDetection | None:
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        hue = hsv[:, :, 0]
+        saturation = hsv[:, :, 1]
+        value = hsv[:, :, 2]
+        saturated = (saturation > 60) & (value > 80)
+        red_like = ((hue < 15) | (hue > 145)) & saturated
+        mask = red_like.astype(np.uint8) * 255
+        kernel = np.ones((3, 3), dtype=np.uint8)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=1)
+        mask = cv2.dilate(mask, kernel, iterations=1)
+        contours, hierarchy = cv2.findContours(mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+
+        min_color_area_px = max(40.0, self.min_area_px * 0.2)
+        aperture_candidate = None
+        aperture_score = -math.inf
+        candidate = None
+        candidate_score = -math.inf
+        hierarchy_rows = [] if hierarchy is None else hierarchy[0]
+        children_by_parent: dict[int, list[int]] = {}
+        for idx, row in enumerate(hierarchy_rows):
+            parent = int(row[3])
+            if parent >= 0:
+                children_by_parent.setdefault(parent, []).append(idx)
+
+        for contour_idx, contour in enumerate(contours):
+            if hierarchy is not None and int(hierarchy_rows[contour_idx][3]) >= 0:
+                continue
+
+            area = abs(float(cv2.contourArea(contour)))
+            if area < min_color_area_px:
+                self.metrics.contour_rejections += 1
+                continue
+
+            x, y, width, height = cv2.boundingRect(contour)
+            if width <= 0 or height <= 0:
+                self.metrics.contour_rejections += 1
+                continue
+
+            aspect_error = abs((width / height) - 1.0)
+            if aspect_error > self.max_aspect_error:
+                self.metrics.contour_rejections += 1
+                continue
+
+            fill_ratio = area / (width * height)
+            if fill_ratio < self.min_fill_ratio:
+                self.metrics.contour_rejections += 1
+                continue
+
+            squareness = 1.0 - clamp(aspect_error / max(self.max_aspect_error, 1e-6), 0.0, 1.0)
+            confidence = clamp(fill_ratio * (0.5 + 0.5 * squareness), 0.0, 1.0)
+            score = (-float(y) * 10000.0) + (confidence * area)
+            if score > candidate_score:
+                gate_x = float(x)
+                gate_y = float(y)
+                gate_width = float(width)
+                gate_height = float(height)
+                if width > height * 1.25:
+                    gate_height = float(width)
+                elif height > width * 1.25:
+                    gate_width = float(height)
+
+                max_height, max_width = image.shape[:2]
+                gate_width = min(gate_width, float(max_width) - gate_x)
+                gate_height = min(gate_height, float(max_height) - gate_y)
+                points = np.array(
+                    [
+                        [gate_x, gate_y],
+                        [gate_x + gate_width, gate_y],
+                        [gate_x + gate_width, gate_y + gate_height],
+                        [gate_x, gate_y + gate_height],
+                    ],
+                    dtype=float,
+                )
+                candidate = GateDetection(
+                    corners=tuple(order_quad_corners(points)),
+                    area_px=area,
+                    bounding_width_px=float(width),
+                    bounding_height_px=float(height),
+                    fill_ratio=fill_ratio,
+                    confidence=confidence,
+                )
+                candidate_score = score
+
+            aperture = self._best_inner_aperture(
+                contours,
+                children_by_parent.get(contour_idx, []),
+                parent_x=x,
+                parent_y=y,
+                parent_width=width,
+                parent_height=height,
+            )
+            if aperture is None:
+                continue
+            aperture_detection, child_score = aperture
+            combined_score = (-float(y) * 10000.0) + child_score + area * 0.01
+            if combined_score > aperture_score:
+                aperture_candidate = aperture_detection
+                aperture_score = combined_score
+
+        return aperture_candidate if aperture_candidate is not None else candidate
+
+    def _best_inner_aperture(
+        self,
+        contours,
+        child_indices: list[int],
+        *,
+        parent_x: int,
+        parent_y: int,
+        parent_width: int,
+        parent_height: int,
+    ) -> tuple[GateDetection, float] | None:
+        parent_box_area = max(1, parent_width * parent_height)
+        min_child_box_area = max(36.0, parent_box_area * 0.05)
+        best_detection = None
+        best_score = -math.inf
+
+        for child_idx in child_indices:
+            child = contours[child_idx]
+            area = abs(float(cv2.contourArea(child)))
+            x, y, width, height = cv2.boundingRect(child)
+            if width <= 0 or height <= 0:
+                self.metrics.contour_rejections += 1
+                continue
+            box_area = width * height
+            if box_area < min_child_box_area:
+                continue
+            if x <= parent_x or y <= parent_y:
+                continue
+            if x + width >= parent_x + parent_width or y + height >= parent_y + parent_height:
+                continue
+
+            aspect_error = abs((width / height) - 1.0)
+            max_aperture_aspect_error = min(0.9, self.max_aspect_error + 0.25)
+            if aspect_error > max_aperture_aspect_error:
+                self.metrics.contour_rejections += 1
+                continue
+
+            fill_ratio = area / box_area
+            if fill_ratio < max(0.25, self.min_fill_ratio):
+                self.metrics.contour_rejections += 1
+                continue
+
+            squareness = 1.0 - clamp(aspect_error / max(max_aperture_aspect_error, 1e-6), 0.0, 1.0)
+            confidence = clamp(fill_ratio * (0.6 + 0.4 * squareness), 0.0, 1.0)
+            score = confidence * box_area
+            if score <= best_score:
+                continue
+
+            points = np.array(
+                [
+                    [float(x), float(y)],
+                    [float(x + width), float(y)],
+                    [float(x + width), float(y + height)],
+                    [float(x), float(y + height)],
+                ],
+                dtype=float,
+            )
+            best_detection = GateDetection(
+                corners=tuple(order_quad_corners(points)),
+                area_px=area,
+                bounding_width_px=float(width),
+                bounding_height_px=float(height),
+                fill_ratio=fill_ratio,
+                confidence=confidence,
+            )
+            best_score = score
+
+        if best_detection is None:
+            return None
+        return best_detection, best_score
 
 
 def order_quad_corners(points) -> tuple[tuple[float, float], tuple[float, float], tuple[float, float], tuple[float, float]]:

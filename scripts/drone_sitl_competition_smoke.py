@@ -17,7 +17,7 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 
 from drone_camera_receiver import DEFAULT_CAMERA_UDP_PORT, UdpCameraReceiver
-from drone_gate_detector import GateDetection, SquareGateDetector
+from drone_gate_detector import GateDetection, SquareGateDetector, cv2, np
 from drone_policy_contract import (
     OBSERVATION_SIZE,
     decode_policy_action,
@@ -199,6 +199,52 @@ class ApproachDiagnostics:
     samples: list[dict] = dataclasses.field(default_factory=list)
 
 
+@dataclasses.dataclass
+class AttitudeFinalApproachState:
+    active_until_s: float | None = None
+    active_command: AttitudeSetpoint | None = None
+    activations: int = 0
+    last_activation_s: float | None = None
+    last_activation_elapsed_s: float | None = None
+    last_trigger_pose: dict = dataclasses.field(default_factory=dict)
+    last_command: dict = dataclasses.field(default_factory=dict)
+
+    def is_active(self, now_s: float) -> bool:
+        return self.active_until_s is not None and now_s < self.active_until_s
+
+    def activate(
+        self,
+        *,
+        now_s: float,
+        started_s: float,
+        duration_s: float,
+        pose,
+        command: AttitudeSetpoint,
+    ) -> None:
+        self.active_until_s = now_s + duration_s
+        self.active_command = command
+        self.activations += 1
+        self.last_activation_s = now_s
+        self.last_activation_elapsed_s = round_float(now_s - started_s)
+        self.last_trigger_pose = pose_to_dict(pose)
+        self.last_command = attitude_setpoint_to_dict(command)
+
+    def to_summary(self, *, now_s: float, started_s: float) -> dict:
+        return {
+            "active": self.is_active(now_s),
+            "active_until_elapsed_s": (
+                None if self.active_until_s is None else round_float(self.active_until_s - started_s)
+            ),
+            "active_remaining_s": (
+                None if self.active_until_s is None else round_float(max(0.0, self.active_until_s - now_s))
+            ),
+            "activations": self.activations,
+            "last_activation_elapsed_s": self.last_activation_elapsed_s,
+            "last_trigger_pose": self.last_trigger_pose,
+            "last_command": self.last_command,
+        }
+
+
 @dataclasses.dataclass(frozen=True)
 class GatePassEvent:
     pass_index: int
@@ -377,6 +423,7 @@ class CompetitionSmokeReport:
     approach_diagnostics: ApproachDiagnostics = dataclasses.field(default_factory=ApproachDiagnostics)
     camera_stream_metrics: dict = dataclasses.field(default_factory=dict)
     detector_metrics: dict = dataclasses.field(default_factory=dict)
+    debug_frames: dict = dataclasses.field(default_factory=dict)
 
     def to_dict(self):
         return dataclasses.asdict(self)
@@ -435,6 +482,46 @@ def pose_to_dict(pose) -> dict:
         "body_vector_ned_m": [round_float(value) for value in pose.body_vector_ned_m],
         "yaw_error_rad": round_float(pose.yaw_error_rad),
         "confidence": round_float(pose.confidence),
+    }
+
+
+def annotate_jpeg(jpeg: bytes, detection: GateDetection | None, path: Path) -> bool:
+    if cv2 is None or np is None:
+        return False
+    image = cv2.imdecode(np.frombuffer(jpeg, dtype=np.uint8), cv2.IMREAD_COLOR)
+    if image is None:
+        return False
+    if detection is not None:
+        points = np.array(detection.corners, dtype=np.int32).reshape((-1, 1, 2))
+        cv2.polylines(image, [points], isClosed=True, color=(0, 255, 0), thickness=2)
+        label = f"conf={detection.confidence:.3f}"
+        cv2.putText(
+            image,
+            label,
+            (max(0, int(points[:, 0, 0].min())), max(20, int(points[:, 0, 1].min()) - 8)),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.55,
+            (0, 255, 0),
+            2,
+            cv2.LINE_AA,
+        )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return bool(cv2.imwrite(str(path), image))
+
+
+def save_debug_frame(output_dir: Path, frame, detection: GateDetection | None, label: str) -> dict:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    jpeg_path = output_dir / f"{label}.jpg"
+    annotated_path = output_dir / f"{label}_annotated.jpg"
+    jpeg_path.write_bytes(frame.jpeg)
+    annotated_written = annotate_jpeg(frame.jpeg, detection, annotated_path)
+    return {
+        "label": label,
+        "frame_id": int(frame.frame_id),
+        "sim_time_ns": int(frame.sim_time_ns),
+        "jpeg_path": str(jpeg_path),
+        "annotated_path": str(annotated_path) if annotated_written else "",
+        "detection": dataclasses.asdict(detection) if detection is not None else None,
     }
 
 
@@ -569,6 +656,100 @@ def attitude_search_command_from_args(args) -> AttitudeSetpoint:
         body_pitch_rate=float(getattr(args, "attitude_servo_search_pitch_rate_rad_s", 0.0)),
         body_yaw_rate=float(getattr(args, "attitude_servo_search_yaw_rate_rad_s", 0.0)),
         thrust=hover_thrust if search_thrust is None else float(search_thrust),
+    )
+
+
+def attitude_control_pose_allowed(pose, detection: GateDetection | None, args) -> bool:
+    min_size_px = float(getattr(args, "attitude_servo_min_control_size_px", 0.0))
+    max_range_m = float(getattr(args, "attitude_servo_max_control_range_m", 0.0))
+    min_confidence = float(getattr(args, "attitude_servo_min_control_confidence", 0.0))
+    if min_size_px < 0.0:
+        raise ValueError("attitude_servo_min_control_size_px must be non-negative")
+    if max_range_m < 0.0:
+        raise ValueError("attitude_servo_max_control_range_m must be non-negative")
+    if not 0.0 <= min_confidence <= 1.0:
+        raise ValueError("attitude_servo_min_control_confidence must be in [0, 1]")
+    if pose is None:
+        return False
+    if min(pose.image_width_px, pose.image_height_px) < min_size_px:
+        return False
+    if max_range_m > 0.0 and pose.range_camera_m > max_range_m:
+        return False
+    if detection is not None and float(detection.confidence) < min_confidence:
+        return False
+    return True
+
+
+def should_start_attitude_final_approach(
+    pose,
+    detection: GateDetection | None,
+    args,
+    state: AttitudeFinalApproachState,
+    *,
+    now_s: float,
+) -> bool:
+    if not bool(getattr(args, "attitude_servo_final_approach", False)):
+        return False
+    if pose is None or detection is None:
+        return False
+    if state.is_active(now_s):
+        return False
+
+    max_activations = int(getattr(args, "attitude_servo_final_max_activations", 1))
+    duration_s = float(getattr(args, "attitude_servo_final_duration_s", 1.0))
+    trigger_range_m = float(getattr(args, "attitude_servo_final_trigger_range_m", 6.5))
+    min_size_px = float(getattr(args, "attitude_servo_final_min_size_px", 40.0))
+    min_confidence = float(getattr(args, "attitude_servo_final_min_confidence", 0.45))
+    max_yaw_error_rad = float(getattr(args, "attitude_servo_final_max_yaw_error_rad", 0.25))
+    max_abs_z_m = getattr(args, "attitude_servo_final_max_abs_z_m", 1.0)
+
+    if max_activations < 0:
+        raise ValueError("attitude_servo_final_max_activations must be non-negative")
+    if duration_s <= 0.0:
+        return False
+    if trigger_range_m <= 0.0:
+        raise ValueError("attitude_servo_final_trigger_range_m must be positive")
+    if min_size_px < 0.0:
+        raise ValueError("attitude_servo_final_min_size_px must be non-negative")
+    if not 0.0 <= min_confidence <= 1.0:
+        raise ValueError("attitude_servo_final_min_confidence must be in [0, 1]")
+    if max_yaw_error_rad < 0.0:
+        raise ValueError("attitude_servo_final_max_yaw_error_rad must be non-negative")
+    if max_abs_z_m is not None and float(max_abs_z_m) < 0.0:
+        raise ValueError("attitude_servo_final_max_abs_z_m must be non-negative")
+
+    if max_activations > 0 and state.activations >= max_activations:
+        return False
+    if pose.range_camera_m > trigger_range_m:
+        return False
+    if min(pose.image_width_px, pose.image_height_px) < min_size_px:
+        return False
+    if float(detection.confidence) < min_confidence:
+        return False
+    if abs(float(pose.yaw_error_rad)) > max_yaw_error_rad:
+        return False
+    if max_abs_z_m is not None:
+        _bx, _by, bz = pose.body_vector_ned_m
+        if abs(float(bz)) > float(max_abs_z_m):
+            return False
+    return True
+
+
+def attitude_final_approach_command_from_args(pose, args) -> AttitudeSetpoint:
+    min_thrust = float(getattr(args, "attitude_servo_min_thrust", 0.35))
+    max_thrust = float(getattr(args, "attitude_servo_max_thrust", 0.75))
+    if min_thrust > max_thrust:
+        raise ValueError("attitude_servo_min_thrust must be <= attitude_servo_max_thrust")
+
+    pitch_rate = -abs(float(getattr(args, "attitude_servo_final_pitch_rate_rad_s", 0.2)))
+    max_yaw_rate = abs(float(getattr(args, "attitude_servo_final_max_yaw_rate_rad_s", 0.35)))
+    k_yaw = float(getattr(args, "attitude_servo_k_yaw", 1.2))
+    yaw_rate = 0.0 if pose is None else clamp(k_yaw * pose.yaw_error_rad, -max_yaw_rate, max_yaw_rate)
+    thrust = clamp(float(getattr(args, "attitude_servo_final_thrust", 0.62)), min_thrust, max_thrust)
+    return AttitudeSetpoint(
+        body_pitch_rate=pitch_rate,
+        body_yaw_rate=yaw_rate,
+        thrust=thrust,
     )
 
 
@@ -772,6 +953,7 @@ def run_smoke(args) -> CompetitionSmokeReport:
             min_area_px=args.detector_min_area_px,
             max_aspect_error=args.detector_max_aspect_error,
             min_fill_ratio=args.detector_min_fill_ratio,
+            allow_grayscale_fallback=not bool(getattr(args, "detector_require_color", False)),
         )
 
     heartbeat_period_s = 1.0 / args.heartbeat_hz
@@ -783,10 +965,18 @@ def run_smoke(args) -> CompetitionSmokeReport:
     commands_sent = 0
     last_command_sent_s = None
     last_detection_s = None
+    last_control_detection_s = None
     gate_detection = None
     gate_pose = None
+    control_gate_detection = None
+    control_gate_pose = None
     vision_metrics = SmokeVisionMetrics()
     approach_diagnostics = ApproachDiagnostics()
+    final_approach_state = AttitudeFinalApproachState()
+    debug_frame_dir = str(getattr(args, "debug_frame_dir", "") or "")
+    debug_output_dir = Path(debug_frame_dir) if debug_frame_dir else None
+    debug_frames = {}
+    debug_closest_range_m = None
     last_cmd_norm = (0.0, 0.0, 0.0, 0.0)
     pass_tracker = VisionGatePassTracker(
         config=gate_pass_config,
@@ -835,6 +1025,14 @@ def run_smoke(args) -> CompetitionSmokeReport:
                         gate_pose = tracked_pose
                         vision_metrics.last_detection_confidence = float(detection.confidence)
                         last_detection_s = now_s
+                        if control_mode == "visual-servo-attitude" and attitude_control_pose_allowed(
+                            tracked_pose,
+                            detection,
+                            args,
+                        ):
+                            control_gate_pose = tracked_pose
+                            control_gate_detection = detection
+                            last_control_detection_s = now_s
                         diagnostic_cmd = visual_servo_command_from_args(
                             tracked_pose,
                             yaw_rad=safe_float(adapter.telemetry.state.yaw),
@@ -871,6 +1069,20 @@ def run_smoke(args) -> CompetitionSmokeReport:
                             actual_command=actual_command,
                             max_samples=max_approach_diagnostic_samples,
                         )
+                        if debug_output_dir is not None:
+                            if "first_detection" not in debug_frames:
+                                debug_frames["first_detection"] = save_debug_frame(
+                                    debug_output_dir, frame, detection, "first_detection"
+                                )
+                            range_m = float(tracked_pose.range_camera_m)
+                            if debug_closest_range_m is None or range_m < debug_closest_range_m:
+                                debug_closest_range_m = range_m
+                                debug_frames["closest_detection"] = save_debug_frame(
+                                    debug_output_dir, frame, detection, "closest_detection"
+                                )
+                            debug_frames["latest_detection"] = save_debug_frame(
+                                debug_output_dir, frame, detection, "latest_detection"
+                            )
                     pass_tracker.observe(
                         now_s=now_s,
                         gate_pose=tracked_pose,
@@ -925,10 +1137,41 @@ def run_smoke(args) -> CompetitionSmokeReport:
                     )
                     last_cmd_norm = action.normalized
                 elif control_mode == "visual-servo-attitude":
-                    if gate_pose is not None and (
-                        last_detection_s is None or now_s - last_detection_s <= args.max_detection_age_s
+                    fresh_control_pose = None
+                    fresh_control_detection = None
+                    if (
+                        control_gate_pose is not None
+                        and last_control_detection_s is not None
+                        and now_s - last_control_detection_s <= args.max_detection_age_s
                     ):
-                        attitude_target = attitude_servo_command_from_args(gate_pose, args)
+                        fresh_control_pose = control_gate_pose
+                        fresh_control_detection = control_gate_detection
+
+                    if (
+                        final_approach_state.is_active(now_s)
+                        and final_approach_state.active_command is not None
+                    ):
+                        attitude_target = final_approach_state.active_command
+                    elif (
+                        fresh_control_pose is not None
+                        and should_start_attitude_final_approach(
+                            fresh_control_pose,
+                            fresh_control_detection,
+                            args,
+                            final_approach_state,
+                            now_s=now_s,
+                        )
+                    ):
+                        attitude_target = attitude_final_approach_command_from_args(fresh_control_pose, args)
+                        final_approach_state.activate(
+                            now_s=now_s,
+                            started_s=started_s,
+                            duration_s=float(getattr(args, "attitude_servo_final_duration_s", 1.0)),
+                            pose=fresh_control_pose,
+                            command=attitude_target,
+                        )
+                    elif fresh_control_pose is not None:
+                        attitude_target = attitude_servo_command_from_args(fresh_control_pose, args)
                     else:
                         attitude_target = attitude_search_command_from_args(args)
                     last_cmd_norm = (
@@ -1038,6 +1281,47 @@ def run_smoke(args) -> CompetitionSmokeReport:
                 "uncentered_forward_scale": round_float(
                     getattr(args, "attitude_servo_uncentered_forward_scale", 1.0)
                 ),
+                "min_control_size_px": round_float(
+                    getattr(args, "attitude_servo_min_control_size_px", 0.0)
+                ),
+                "max_control_range_m": round_float(
+                    getattr(args, "attitude_servo_max_control_range_m", 0.0)
+                ),
+                "min_control_confidence": round_float(
+                    getattr(args, "attitude_servo_min_control_confidence", 0.0)
+                ),
+                "final_approach": {
+                    "enabled": bool(getattr(args, "attitude_servo_final_approach", False)),
+                    "trigger_range_m": round_float(
+                        getattr(args, "attitude_servo_final_trigger_range_m", 6.5)
+                    ),
+                    "min_size_px": round_float(
+                        getattr(args, "attitude_servo_final_min_size_px", 40.0)
+                    ),
+                    "min_confidence": round_float(
+                        getattr(args, "attitude_servo_final_min_confidence", 0.45)
+                    ),
+                    "max_yaw_error_rad": round_float(
+                        getattr(args, "attitude_servo_final_max_yaw_error_rad", 0.25)
+                    ),
+                    "max_abs_z_m": (
+                        None
+                        if getattr(args, "attitude_servo_final_max_abs_z_m", 1.0) is None
+                        else round_float(getattr(args, "attitude_servo_final_max_abs_z_m", 1.0))
+                    ),
+                    "duration_s": round_float(
+                        getattr(args, "attitude_servo_final_duration_s", 1.0)
+                    ),
+                    "pitch_rate_rad_s": round_float(
+                        -abs(float(getattr(args, "attitude_servo_final_pitch_rate_rad_s", 0.2)))
+                    ),
+                    "max_yaw_rate_rad_s": round_float(
+                        getattr(args, "attitude_servo_final_max_yaw_rate_rad_s", 0.35)
+                    ),
+                    "thrust": round_float(getattr(args, "attitude_servo_final_thrust", 0.62)),
+                    "max_activations": int(getattr(args, "attitude_servo_final_max_activations", 1)),
+                    "state": final_approach_state.to_summary(now_s=time.monotonic(), started_s=started_s),
+                },
             },
             "policy_action_json": args.policy_action_json if control_mode == "policy" else "",
             "visual_servo": {
@@ -1076,6 +1360,7 @@ def run_smoke(args) -> CompetitionSmokeReport:
             dataclasses.asdict(receiver.reassembler.metrics) if receiver is not None else {}
         ),
         detector_metrics=(dataclasses.asdict(detector.metrics) if detector is not None else {}),
+        debug_frames=debug_frames,
     )
     smoke_report.invalid_run = bool(smoke_report.crash_detected)
     smoke_report.acceptance_passed, smoke_report.acceptance_blockers = evaluate_acceptance(
@@ -1189,6 +1474,20 @@ def main() -> None:
     parser.add_argument("--attitude-servo-forward-yaw-tolerance-rad", type=float, default=None)
     parser.add_argument("--attitude-servo-forward-z-tolerance-m", type=float, default=None)
     parser.add_argument("--attitude-servo-uncentered-forward-scale", type=float, default=1.0)
+    parser.add_argument("--attitude-servo-min-control-size-px", type=float, default=0.0)
+    parser.add_argument("--attitude-servo-max-control-range-m", type=float, default=0.0)
+    parser.add_argument("--attitude-servo-min-control-confidence", type=float, default=0.0)
+    parser.add_argument("--attitude-servo-final-approach", action="store_true")
+    parser.add_argument("--attitude-servo-final-trigger-range-m", type=float, default=6.5)
+    parser.add_argument("--attitude-servo-final-min-size-px", type=float, default=40.0)
+    parser.add_argument("--attitude-servo-final-min-confidence", type=float, default=0.45)
+    parser.add_argument("--attitude-servo-final-max-yaw-error-rad", type=float, default=0.25)
+    parser.add_argument("--attitude-servo-final-max-abs-z-m", type=float, default=1.0)
+    parser.add_argument("--attitude-servo-final-duration-s", type=float, default=1.0)
+    parser.add_argument("--attitude-servo-final-pitch-rate-rad-s", type=float, default=0.2)
+    parser.add_argument("--attitude-servo-final-max-yaw-rate-rad-s", type=float, default=0.35)
+    parser.add_argument("--attitude-servo-final-thrust", type=float, default=0.62)
+    parser.add_argument("--attitude-servo-final-max-activations", type=int, default=1)
     parser.add_argument(
         "--policy-action-json",
         default="[0.0, 0.0, 0.0, 0.0]",
@@ -1204,6 +1503,7 @@ def main() -> None:
     parser.add_argument("--camera-timeout-s", type=float, default=0.0)
     parser.add_argument("--camera-max-packets-per-loop", type=int, default=512)
     parser.add_argument("--no-camera", action="store_true")
+    parser.add_argument("--debug-frame-dir", default="")
     parser.add_argument("--max-detection-age-s", type=float, default=0.25)
     parser.add_argument("--visual-servo-desired-standoff-m", type=float, default=1.0)
     parser.add_argument("--visual-servo-max-forward-m-s", type=float, default=1.0)
@@ -1217,6 +1517,7 @@ def main() -> None:
     parser.add_argument("--detector-min-area-px", type=float, default=1200.0)
     parser.add_argument("--detector-max-aspect-error", type=float, default=0.5)
     parser.add_argument("--detector-min-fill-ratio", type=float, default=0.15)
+    parser.add_argument("--detector-require-color", action="store_true")
     parser.add_argument("--max-approach-diagnostic-samples", type=int, default=12)
     parser.add_argument("--target-gate-count", type=int, default=1)
     parser.add_argument("--require-official-race-progress", action="store_true")

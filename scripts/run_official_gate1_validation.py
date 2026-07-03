@@ -88,6 +88,20 @@ def _build_smoke_args(args) -> SimpleNamespace:
         attitude_servo_forward_yaw_tolerance_rad=args.attitude_servo_forward_yaw_tolerance_rad,
         attitude_servo_forward_z_tolerance_m=args.attitude_servo_forward_z_tolerance_m,
         attitude_servo_uncentered_forward_scale=args.attitude_servo_uncentered_forward_scale,
+        attitude_servo_min_control_size_px=getattr(args, "attitude_servo_min_control_size_px", 0.0),
+        attitude_servo_max_control_range_m=getattr(args, "attitude_servo_max_control_range_m", 0.0),
+        attitude_servo_min_control_confidence=getattr(args, "attitude_servo_min_control_confidence", 0.0),
+        attitude_servo_final_approach=getattr(args, "attitude_servo_final_approach", False),
+        attitude_servo_final_trigger_range_m=getattr(args, "attitude_servo_final_trigger_range_m", 6.5),
+        attitude_servo_final_min_size_px=getattr(args, "attitude_servo_final_min_size_px", 40.0),
+        attitude_servo_final_min_confidence=getattr(args, "attitude_servo_final_min_confidence", 0.45),
+        attitude_servo_final_max_yaw_error_rad=getattr(args, "attitude_servo_final_max_yaw_error_rad", 0.25),
+        attitude_servo_final_max_abs_z_m=getattr(args, "attitude_servo_final_max_abs_z_m", 1.0),
+        attitude_servo_final_duration_s=getattr(args, "attitude_servo_final_duration_s", 1.0),
+        attitude_servo_final_pitch_rate_rad_s=getattr(args, "attitude_servo_final_pitch_rate_rad_s", 0.2),
+        attitude_servo_final_max_yaw_rate_rad_s=getattr(args, "attitude_servo_final_max_yaw_rate_rad_s", 0.35),
+        attitude_servo_final_thrust=getattr(args, "attitude_servo_final_thrust", 0.62),
+        attitude_servo_final_max_activations=getattr(args, "attitude_servo_final_max_activations", 1),
         policy_action_json=args.policy_action_json,
         policy_callable=args.policy_callable,
         camera_host=args.camera_host,
@@ -95,6 +109,7 @@ def _build_smoke_args(args) -> SimpleNamespace:
         camera_timeout_s=args.camera_timeout_s,
         camera_max_packets_per_loop=getattr(args, "camera_max_packets_per_loop", 512),
         no_camera=False,
+        debug_frame_dir=getattr(args, "debug_frame_dir", ""),
         max_detection_age_s=args.max_detection_age_s,
         visual_servo_desired_standoff_m=args.visual_servo_desired_standoff_m,
         visual_servo_max_forward_m_s=args.visual_servo_max_forward_m_s,
@@ -108,6 +123,7 @@ def _build_smoke_args(args) -> SimpleNamespace:
         detector_min_area_px=args.detector_min_area_px,
         detector_max_aspect_error=args.detector_max_aspect_error,
         detector_min_fill_ratio=args.detector_min_fill_ratio,
+        detector_require_color=getattr(args, "detector_require_color", False),
         max_approach_diagnostic_samples=args.max_approach_diagnostic_samples,
         target_gate_count=args.target_gate_count,
         require_official_race_progress=args.require_official_race_progress,
@@ -234,7 +250,55 @@ def _default_next_commands(args) -> list[str]:
                 else f"--attitude-servo-forward-z-tolerance-m {args.attitude_servo_forward_z_tolerance_m} "
             )
             + f"--attitude-servo-uncentered-forward-scale {args.attitude_servo_uncentered_forward_scale} "
-            f"--policy-action-json '{args.policy_action_json}' "
+            + f"--attitude-servo-min-control-size-px {getattr(args, 'attitude_servo_min_control_size_px', 0.0)} "
+            + f"--attitude-servo-max-control-range-m {getattr(args, 'attitude_servo_max_control_range_m', 0.0)} "
+            + (
+                "--attitude-servo-min-control-confidence "
+                f"{getattr(args, 'attitude_servo_min_control_confidence', 0.0)} "
+            )
+            + ("--attitude-servo-final-approach " if getattr(args, "attitude_servo_final_approach", False) else "")
+            + (
+                "--attitude-servo-final-trigger-range-m "
+                f"{getattr(args, 'attitude_servo_final_trigger_range_m', 6.5)} "
+            )
+            + (
+                "--attitude-servo-final-min-size-px "
+                f"{getattr(args, 'attitude_servo_final_min_size_px', 40.0)} "
+            )
+            + (
+                "--attitude-servo-final-min-confidence "
+                f"{getattr(args, 'attitude_servo_final_min_confidence', 0.45)} "
+            )
+            + (
+                "--attitude-servo-final-max-yaw-error-rad "
+                f"{getattr(args, 'attitude_servo_final_max_yaw_error_rad', 0.25)} "
+            )
+            + (
+                ""
+                if getattr(args, "attitude_servo_final_max_abs_z_m", 1.0) is None
+                else (
+                    "--attitude-servo-final-max-abs-z-m "
+                    f"{getattr(args, 'attitude_servo_final_max_abs_z_m', 1.0)} "
+                )
+            )
+            + (
+                "--attitude-servo-final-duration-s "
+                f"{getattr(args, 'attitude_servo_final_duration_s', 1.0)} "
+            )
+            + (
+                "--attitude-servo-final-pitch-rate-rad-s "
+                f"{getattr(args, 'attitude_servo_final_pitch_rate_rad_s', 0.2)} "
+            )
+            + (
+                "--attitude-servo-final-max-yaw-rate-rad-s "
+                f"{getattr(args, 'attitude_servo_final_max_yaw_rate_rad_s', 0.35)} "
+            )
+            + f"--attitude-servo-final-thrust {getattr(args, 'attitude_servo_final_thrust', 0.62)} "
+            + (
+                "--attitude-servo-final-max-activations "
+                f"{getattr(args, 'attitude_servo_final_max_activations', 1)} "
+            )
+            + f"--policy-action-json '{args.policy_action_json}' "
             + (f"--policy-callable {args.policy_callable} " if args.policy_callable else "")
             + f"--duration {args.smoke_duration} "
             + ("" if args.arm_on_start else "--no-arm-on-start ")
@@ -243,6 +307,7 @@ def _default_next_commands(args) -> list[str]:
             + f"--camera-host {args.camera_host} "
             + f"--camera-port {args.camera_port} "
             + f"--camera-max-packets-per-loop {getattr(args, 'camera_max_packets_per_loop', 512)} "
+            + (f"--debug-frame-dir {args.debug_frame_dir} " if getattr(args, "debug_frame_dir", "") else "")
             + f"--max-approach-diagnostic-samples {args.max_approach_diagnostic_samples} "
             + f"--max-detection-age-s {args.max_detection_age_s} "
             + f"--visual-servo-desired-standoff-m {args.visual_servo_desired_standoff_m} "
@@ -257,6 +322,7 @@ def _default_next_commands(args) -> list[str]:
             + f"--detector-min-area-px {args.detector_min_area_px} "
             + f"--detector-max-aspect-error {args.detector_max_aspect_error} "
             + f"--detector-min-fill-ratio {args.detector_min_fill_ratio} "
+            + ("--detector-require-color " if getattr(args, "detector_require_color", False) else "")
             + f"--target-gate-count {args.target_gate_count} "
             + ("--require-official-race-progress " if args.require_official_race_progress else "")
             + f"--json-path {args.smoke_json_path} "
@@ -371,6 +437,20 @@ def main() -> None:
     parser.add_argument("--attitude-servo-forward-yaw-tolerance-rad", type=float, default=None)
     parser.add_argument("--attitude-servo-forward-z-tolerance-m", type=float, default=None)
     parser.add_argument("--attitude-servo-uncentered-forward-scale", type=float, default=1.0)
+    parser.add_argument("--attitude-servo-min-control-size-px", type=float, default=0.0)
+    parser.add_argument("--attitude-servo-max-control-range-m", type=float, default=0.0)
+    parser.add_argument("--attitude-servo-min-control-confidence", type=float, default=0.0)
+    parser.add_argument("--attitude-servo-final-approach", action="store_true")
+    parser.add_argument("--attitude-servo-final-trigger-range-m", type=float, default=6.5)
+    parser.add_argument("--attitude-servo-final-min-size-px", type=float, default=40.0)
+    parser.add_argument("--attitude-servo-final-min-confidence", type=float, default=0.45)
+    parser.add_argument("--attitude-servo-final-max-yaw-error-rad", type=float, default=0.25)
+    parser.add_argument("--attitude-servo-final-max-abs-z-m", type=float, default=1.0)
+    parser.add_argument("--attitude-servo-final-duration-s", type=float, default=1.0)
+    parser.add_argument("--attitude-servo-final-pitch-rate-rad-s", type=float, default=0.2)
+    parser.add_argument("--attitude-servo-final-max-yaw-rate-rad-s", type=float, default=0.35)
+    parser.add_argument("--attitude-servo-final-thrust", type=float, default=0.62)
+    parser.add_argument("--attitude-servo-final-max-activations", type=int, default=1)
     parser.add_argument("--policy-callable", default="")
     parser.add_argument("--policy-action-json", default="[0.0, 0.0, 0.0, 0.0]")
     parser.add_argument("--smoke-duration", type=float, default=60.0)
@@ -386,6 +466,7 @@ def main() -> None:
     parser.add_argument("--camera-host", default="0.0.0.0")
     parser.add_argument("--camera-timeout-s", type=float, default=0.0)
     parser.add_argument("--camera-max-packets-per-loop", type=int, default=512)
+    parser.add_argument("--debug-frame-dir", default="")
     parser.add_argument("--max-detection-age-s", type=float, default=0.25)
     parser.add_argument("--visual-servo-desired-standoff-m", type=float, default=1.0)
     parser.add_argument("--visual-servo-max-forward-m-s", type=float, default=1.0)
@@ -399,6 +480,7 @@ def main() -> None:
     parser.add_argument("--detector-min-area-px", type=float, default=1200.0)
     parser.add_argument("--detector-max-aspect-error", type=float, default=0.5)
     parser.add_argument("--detector-min-fill-ratio", type=float, default=0.15)
+    parser.add_argument("--detector-require-color", action="store_true")
     parser.add_argument("--max-approach-diagnostic-samples", type=int, default=12)
     parser.add_argument("--target-gate-count", type=int, default=1)
     parser.add_argument("--require-official-race-progress", action="store_true")

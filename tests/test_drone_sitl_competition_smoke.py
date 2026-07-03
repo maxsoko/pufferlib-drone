@@ -193,6 +193,91 @@ def test_attitude_servo_can_hold_forward_until_gate_centered():
     assert target.thrust == pytest.approx(0.74)
 
 
+def test_attitude_control_pose_filter_rejects_tiny_or_far_targets():
+    detection = smoke.GateDetection(
+        corners=((314.0, 348.0), (325.0, 348.0), (325.0, 358.0), (314.0, 358.0)),
+        area_px=66.5,
+        bounding_width_px=11.0,
+        bounding_height_px=10.0,
+        fill_ratio=0.6,
+        confidence=0.56,
+    )
+    pose = smoke.estimate_gate_pose_from_corners(detection.corners)
+    args = SimpleNamespace(
+        attitude_servo_min_control_size_px=30.0,
+        attitude_servo_max_control_range_m=20.0,
+        attitude_servo_min_control_confidence=0.3,
+    )
+
+    assert smoke.attitude_control_pose_allowed(pose, detection, args) is False
+
+    near_detection = smoke.GateDetection(
+        corners=((293.0, 263.0), (368.0, 263.0), (368.0, 338.0), (293.0, 338.0)),
+        area_px=2906.0,
+        bounding_width_px=49.0,
+        bounding_height_px=75.0,
+        fill_ratio=0.79,
+        confidence=0.62,
+    )
+    near_pose = smoke.estimate_gate_pose_from_corners(near_detection.corners)
+
+    assert smoke.attitude_control_pose_allowed(near_pose, near_detection, args) is True
+
+
+def test_attitude_final_approach_latches_bounded_command():
+    detection = smoke.GateDetection(
+        corners=((293.0, 263.0), (368.0, 263.0), (368.0, 338.0), (293.0, 338.0)),
+        area_px=2906.0,
+        bounding_width_px=49.0,
+        bounding_height_px=75.0,
+        fill_ratio=0.79,
+        confidence=0.62,
+    )
+    pose = smoke.estimate_gate_pose_from_corners(detection.corners)
+    args = SimpleNamespace(
+        attitude_servo_final_approach=True,
+        attitude_servo_final_max_activations=1,
+        attitude_servo_final_duration_s=1.2,
+        attitude_servo_final_trigger_range_m=7.0,
+        attitude_servo_final_min_size_px=40.0,
+        attitude_servo_final_min_confidence=0.45,
+        attitude_servo_final_max_yaw_error_rad=0.25,
+        attitude_servo_final_max_abs_z_m=1.0,
+        attitude_servo_final_pitch_rate_rad_s=0.22,
+        attitude_servo_final_max_yaw_rate_rad_s=0.35,
+        attitude_servo_final_thrust=0.63,
+        attitude_servo_min_thrust=0.35,
+        attitude_servo_max_thrust=0.78,
+        attitude_servo_k_yaw=2.0,
+    )
+    state = smoke.AttitudeFinalApproachState()
+
+    assert smoke.should_start_attitude_final_approach(
+        pose,
+        detection,
+        args,
+        state,
+        now_s=10.0,
+    ) is True
+
+    command = smoke.attitude_final_approach_command_from_args(pose, args)
+    state.activate(now_s=10.0, started_s=9.0, duration_s=1.2, pose=pose, command=command)
+    summary = state.to_summary(now_s=10.5, started_s=9.0)
+
+    assert command.body_pitch_rate == pytest.approx(-0.22)
+    assert command.thrust == pytest.approx(0.63)
+    assert state.is_active(10.5) is True
+    assert summary["activations"] == 1
+    assert summary["last_activation_elapsed_s"] == pytest.approx(1.0)
+    assert smoke.should_start_attitude_final_approach(
+        pose,
+        detection,
+        args,
+        state,
+        now_s=10.5,
+    ) is False
+
+
 def test_vision_gate_pass_tracker_emits_ordered_pass_and_completion():
     cfg = smoke.GatePassConfig(
         arm_range_m=3.0,
