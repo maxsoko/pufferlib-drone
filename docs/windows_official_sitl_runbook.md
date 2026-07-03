@@ -8,7 +8,7 @@ Windows controller runtime unless a policy checkpoint is ready to test.
 
 ## Validated Topology
 
-- Simulator: `C:\Users\anon\Desktop\AI-GP Simulator v1.0.3364\AIGP_3364`
+- Simulator: `C:\Users\anon\Desktop\AI-GP Simulator v1.0.3379\AIGP_3379`
 - Simulator process: `DCGame-Win64-Shipping.exe`
 - Controller repo: `C:\Users\anon\code\pufferlib-drone`
 - Controller Python: `C:\Users\anon\code\pufferlib-drone\.venv-win\Scripts\python.exe`
@@ -34,8 +34,8 @@ For competition-progress evidence, require simulator race-status advancement:
   -RequireOfficialRaceProgress
 ```
 
-The simulator's bundled `PyAIPilotExample` also documents a custom MAVLink reset
-command, `31000`. The project wrapper exposes it as an optional switch:
+The simulator's bundled `PyAIPilotExample-v2` also documents a custom MAVLink
+reset command, `31000`. The project wrapper exposes it as an optional switch:
 
 ```powershell
 .\scripts\run_windows_official_gate1_validation.ps1 `
@@ -45,6 +45,13 @@ command, `31000`. The project wrapper exposes it as an optional switch:
 
 Treat `-SendSimReset` as experimental until repeated trials prove it returns the
 course to the same initial first-gate view as a manual reset.
+
+Important: there is currently no confirmed dedicated MAVLink command for
+`start race`/`restart race`. The reliable race reset/start path remains:
+
+1) process/menu reset flow (launch or menu reset),
+2) UI flow to select `AI-GP Virtual Qualifier R1` and press `RACE`,
+3) start controller only after race start is confirmed (`race_start_boot_time_ms >= 0`).
 
 The run writes deterministic artifacts under `logs\sitl\`:
 
@@ -86,7 +93,7 @@ $env:PUFFER_POLICY_CHECKPOINT_PATH = "C:\path\to\checkpoint.bin"
 
 The simulator ships a Python example at:
 
-`C:\Users\anon\Desktop\AI-GP Simulator v1.0.3364\PyAIPilotExample`
+`C:\Users\anon\Desktop\AI-GP Simulator v1.0.3379\PyAIPilotExample-v2`
 
 Useful confirmed details:
 
