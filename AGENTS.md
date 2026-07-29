@@ -9703,3 +9703,34 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   floor, and persisting every predicate in a JSON rejection report before any
   failure. It does not weaken the crash, reach, transport, layout, or phase
   gates. No FlightSim packet was sent; N712 and Submission remain forbidden.
+
+### VQ2 Stage-3 two-failure stop — VG008, 2026-07-29
+
+- VG008 source commit `6cd6c1a5...` ran 512 new exact-uniform mixed-count
+  episodes at seed `429048`. Bootstrap 001 used a mistyped expected full
+  commit and stopped before state/build/test/action (log SHA `7a0f7e18...`);
+  bootstrap 002 used the exact commit, passed native suites and `25/25` tests,
+  and executed the sole rollout.
+- Retained legal arrays prove `127,886` records, one final terminal per all 512
+  episodes, lengths `111/249.777/2,048`, and phase histogram
+  `[63,340,59,296,5,250,0,...]`. 485/512 reach phase 1 and 32/512 phase 2,
+  passing the volume and reach gates. Phase cadence/monotonicity/encoding and
+  oracle-query finite/action-envelope checks all pass.
+- The computed admission Boolean was nevertheless false. Its intended full
+  rejection report then failed before state update because the loop rebound
+  the `output` Path parameter to a `RecurrentActorOutput`, causing
+  `output.with_name()` to raise. The state remains `collecting`, but VG008 is
+  rejected and may not be resumed or trained on. Log/state hashes are
+  `94529c46...`/`ab1d4a76...`.
+- Strong source-locked diagnosis is the erroneous zero crossing-margin gate:
+  native code marks any accepted crossing above `0.50 m` radial even though
+  the true aperture is `0.75 m`; the same VG005 policy measured
+  `0.421875--0.4375` violation rates in VG006. This quality diagnostic
+  contradicts deliberate DAgger collection of imperfect student states. Crash
+  and terminal-inclusive transport metrics were lost with the failed report,
+  so the diagnosis is explicitly an inference, not reconstructed fact.
+- VG007 and VG008 are two distinct Stage-3 acceptance/evidence failures. Per
+  the active prompt, stop before a third collection variation. Diagnosis JSON
+  SHA is `f9d99a43...`; it specifies a future new-tag correction only if an
+  explicit superseding decision authorizes it. FlightSim remains frozen after
+  N522, N712 closed, and VQ2 Submission forbidden.

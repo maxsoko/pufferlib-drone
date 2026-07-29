@@ -9965,3 +9965,36 @@ For each training/eval block, record:
   transport/layout/phase gates. Its collector writes a complete predicate map
   on rejection. This preserves source-balanced DAgger intent without weakening
   evidence. FlightSim remains frozen, N712 closed, and Submission forbidden.
+
+### VQ2 Stage-3 two-failure diagnosis — VG008, 2026-07-29
+
+- Commit `6cd6c1a5...` doubles the DAgger population to 512 at new seed
+  `429048`, retains the 100,000-record floor, and attempts to persist a full
+  rejection predicate map. A mistyped expected commit made bootstrap 001 stop
+  before state or action (log SHA `7a0f7e18...`); bootstrap 002 passed native
+  suites, float32 build/ABI, and `25/25` tests before the only rollout.
+- VG008 stages `127,886` records, so the corrected volume gate passes. Episode
+  lengths are `111/249.77734375/2,048`; all 512 have exactly one final
+  terminal. Phase records are `[63,340,59,296,5,250,0,...]`; 485 episodes
+  reach held phase >=1 and 32 reach >=2. Phase tick/decrease/skip/encoding and
+  finite/enveloped oracle-label audits pass.
+- Admission still evaluated false, then rejection reporting raised
+  `AttributeError` because `output` had been rebound from the output Path to
+  the actor result. Consequently native metrics and direct executed-action
+  parity died in process memory, state remained `collecting`, and no report
+  finalized. Treat VG008 as rejected forever; its collection log/state hashes
+  are `94529c46...`/`ab1d4a76...`.
+- The strongest source-locked cause is the DAgger admission's inappropriate
+  `crossing_margin_violation == 0` condition. Native code sets this flag for a
+  passed gate at radial `>0.50 m`, inside the official `0.75 m` aperture. The
+  same VG005 checkpoint's VG006 rates are `0.421875/0.4375/0.4375/0.421875`
+  for counts 5/8/11/12, so this is an expected imperfection distribution, not
+  unsafe transport. Preserve it as a diagnostic in any future collector but
+  do not use it alone to reject DAgger labels.
+- The required two-failure stop now applies: no VG009 or third collection
+  variation is authorized under the active prompt. Full diagnosis report SHA
+  is `f9d99a43...`. A future explicit superseding decision must authorize a
+  new tag/seed that fixes path shadowing, commits the predicate map first,
+  retains crash/transport/layout/phase/count gates and the 512/100,000 volume,
+  and only demotes crossing margin from rejection to diagnosis. No FlightSim,
+  N712, shadow, bounded attempt, or Submission action occurred.

@@ -1,0 +1,138 @@
+{
+  "schema": "vq2_variable_gate_dagger_stage3_two_failure_diagnosis_v1",
+  "tag": "vq2_vg008_variable_gate_dagger_round1_512",
+  "source_commit": "6cd6c1a5ded17331f9d27d62e38d85cc6fab5dfa",
+  "seed": 429048,
+  "status": "rejected_before_report_commit",
+  "admitted_for_training": false,
+  "unchanged_retry_allowed": false,
+  "third_collection_variation_allowed_by_active_prompt": false,
+  "rollout": {
+    "agents": 512,
+    "episodes": 512,
+    "collection_step_limit": 2048,
+    "records": 127886,
+    "minimum_records_required": 100000,
+    "minimum_records_passed": true,
+    "used_steps": 2048,
+    "episode_length_min": 111,
+    "episode_length_mean": 249.77734375,
+    "episode_length_max": 2048,
+    "terminal_count_per_episode_min": 1,
+    "terminal_count_per_episode_max": 1,
+    "terminal_is_last_for_all_episodes": true
+  },
+  "legal_phase_audit": {
+    "phase_records": [
+      63340,
+      59296,
+      5250,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "held_phase_changes": 517,
+    "phase_changes_off_tick": 0,
+    "phase_decreases": 0,
+    "phase_skips": 0,
+    "phase_encoding_max_error": 0.0,
+    "episodes_observed_at_phase_1_or_later": 485,
+    "episodes_observed_at_phase_2_or_later": 32,
+    "phase_1_or_later_rate": 0.947265625,
+    "phase_2_or_later_rate": 0.0625,
+    "gate_reach_thresholds_passed": true
+  },
+  "oracle_query_audit": {
+    "finite": true,
+    "action_min": [
+      -0.800000011920929,
+      -1.0,
+      -1.0,
+      0.0
+    ],
+    "action_max": [
+      0.800000011920929,
+      1.0,
+      1.0,
+      0.0
+    ],
+    "action_envelope_excess": 0.0
+  },
+  "failure_sequence": {
+    "collector_admission_boolean_was_false": true,
+    "evidence": "Execution entered the if-not-admitted branch after all predicates were computed.",
+    "reporting_exception": "AttributeError: 'RecurrentActorOutput' object has no attribute 'with_name'",
+    "reporting_root_cause": "The actor loop rebound the collect() Path parameter named output to RecurrentActorOutput; the rejection branch then called output.with_name().",
+    "terminal_state_not_updated": true,
+    "terminal_state_status_left_as": "collecting"
+  },
+  "admission_root_cause_diagnosis": {
+    "confirmed_passing_from_retained_arrays": [
+      "minimum_record_count",
+      "episode_length_shape_and_bounds",
+      "one_terminal_per_episode",
+      "terminal_is_last",
+      "label_count_matches_lengths",
+      "phase_changes_only_on_public_ticks",
+      "phase_never_decreases",
+      "phase_never_skips",
+      "phase_encoding_exact",
+      "post_gate_1_records_present",
+      "gate_1_reach_rate",
+      "gate_2_reach_rate",
+      "oracle_query_finite_and_enveloped"
+    ],
+    "unrecoverable_after_process_exit": [
+      "native flattened crash and outcome metrics",
+      "collector-direct terminal-inclusive executed-action parity",
+      "student-versus-query error accumulators"
+    ],
+    "strongest_source_locked_inference": "crossing_margin_violation was nonzero",
+    "inference_basis": [
+      "The same VG005 checkpoint in VG006 had crossing_margin_violation rates 0.421875, 0.4375, 0.4375, and 0.421875 for counts 5, 8, 11, and 12.",
+      "Native source sets crossing_margin_violation when an ordered gate plane is crossed above 0.50 m radial, even though the actual admitted aperture radius is 0.75 m.",
+      "VG008 incorrectly required this diagnostic quality margin to be zero while deliberately collecting the VG005 failure distribution."
+    ],
+    "interpretation": "The zero crossing-margin predicate is suitable for a centered oracle or final policy screen, but contradicts DAgger collection of successful-yet-imperfect and failed student states. It should be recorded, not used as a dataset safety rejection."
+  },
+  "two_failure_stop": {
+    "first_failure": "VG007 rejected at 60887 records below its 100000-record floor; its missing rejection metrics also prevented proof of all other predicates.",
+    "second_failure": "VG008 passed the corrected volume/layout/phase/reach checks, entered the rejection branch because another predicate failed, then lost the predicate map to the output-name shadowing bug.",
+    "required_disposition": "Stop before a third Stage-3 collection variation and request an explicit superseding decision after this diagnosis."
+  },
+  "required_future_correction_if_authorized": [
+    "Use a new tag and seed; never reuse VG007 or VG008 arrays for training.",
+    "Rename the actor result variable so rejection reporting cannot shadow the output Path.",
+    "Persist the complete predicate map before any exception.",
+    "Keep crash, out-of-order, action, wire-rate, thrust, finite-value, terminal-layout, phase, and exact-uniform-count gates.",
+    "Record crossing_margin_violation diagnostically but do not reject a DAgger failure-state corpus solely because a valid 0.50--0.75 m crossing occurred.",
+    "Retain at least 512 episodes and the 100000-record floor."
+  ],
+  "artifact_sha256": {
+    "bootstrap_log": "7a0f7e1807c61d51e853bd4c550b8f9589a26ffa36390413e7305fa8e99d8db0",
+    "collection_log": "94529c4627eb70cc5cff1d91cbf48d3c83559d5daf8a5d7b35fc523de882bf41",
+    "interrupted_state": "ab1d4a76cc1e927e466cf32b15476fd6760f3dd2844a727338c7b9e64d327f8b",
+    "diagnostic_action": "9fdcc7ca7225d75634e34a2cc7407ff1a91f49019253a8650c6d3d893d7e0278",
+    "diagnostic_tail": "8528bb1956d88034a015ff00ee72000d14494e0f7554b4121a46833d55bce310",
+    "diagnostic_terminal": "d2cc180dbd794c2f769691c6b922460bc997b4558c7dfcae46fd3a70c2871393",
+    "diagnostic_valid": "95d02c1ce91301d4dcd448736381fa04236ce78445a09a8896de06ddf3fa67a0"
+  },
+  "safety": {
+    "teacher_actions_executed": 0,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "submission_authorized": false
+  }
+}
