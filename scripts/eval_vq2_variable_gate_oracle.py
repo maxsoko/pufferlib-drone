@@ -7,6 +7,8 @@ import argparse
 import hashlib
 import json
 import math
+import platform
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -45,12 +47,84 @@ DEFAULT_OUTPUT_ROOT = (
 )
 
 
+def write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
+    """Replace a mutable run-state file without exposing a partial JSON."""
+
+    temporary = path.with_name(f".{path.name}.{time.time_ns()}.tmp")
+    temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    temporary.replace(path)
+
+
+def write_json_once(path: Path, payload: dict[str, Any]) -> None:
+    """Atomically publish immutable evidence and refuse an overwrite."""
+
+    if path.exists():
+        raise FileExistsError(f"refusing to overwrite {path}")
+    write_json_atomic(path, payload)
+
+
 def sha256_path(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def current_source_sha256() -> tuple[dict[str, str], str, str]:
+    """Return all executable VG002 sources, extension path, and Git commit."""
+
+    from pufferlib import _C
+
+    if getattr(_C, "env_name", None) != BACKEND_ENV_NAME:
+        raise RuntimeError(
+            f"compiled backend is {getattr(_C, 'env_name', None)!r}; "
+            f"expected {BACKEND_ENV_NAME!r}"
+        )
+    if getattr(_C, "precision_bytes", None) != 4:
+        raise RuntimeError("VG002 requires a float32 drone_race_vision binding")
+    extension_path = str(Path(_C.__file__).resolve())
+    sources = {
+        str(path.relative_to(ROOT)): sha256_path(path)
+        for path in (
+            ROOT / "ocean/drone_race/drone_race.c",
+            ROOT / "ocean/drone_race/drone_race.h",
+            ROOT / "ocean/drone_race/binding.c",
+            ROOT / "pufferlib/vq2_public_phase.py",
+            ROOT / "pufferlib/vq2_informed.py",
+            ROOT / "config/drone_race_vq2_informed_dreamer.ini",
+            ROOT / "scripts/eval_vq2_native_oracle.py",
+            ROOT / "scripts/run_vq2_vg002_vast.sh",
+            Path(__file__).resolve(),
+        )
+    }
+    sources["compiled_extension"] = sha256_path(Path(extension_path))
+    source_commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    return sources, extension_path, source_commit
+
+
+def current_runtime_manifest() -> dict[str, str]:
+    """Record package/platform versions that can affect native evaluation."""
+
+    import numpy
+    import pybind11
+    import torch
+
+    return {
+        "python": platform.python_version(),
+        "platform": platform.platform(),
+        "machine": platform.machine(),
+        "torch": torch.__version__,
+        "torch_cuda": str(torch.version.cuda),
+        "numpy": numpy.__version__,
+        "pybind11": pybind11.__version__,
+    }
 
 
 def variable_environment(num_gates: int) -> dict[str, int | float]:
@@ -175,13 +249,8 @@ def run_count(
 ) -> dict[str, Any]:
     from pufferlib import _C, pufferl
 
-    if getattr(_C, "env_name", None) != BACKEND_ENV_NAME:
-        raise RuntimeError(
-            f"compiled backend is {getattr(_C, 'env_name', None)!r}; "
-            f"expected {BACKEND_ENV_NAME!r}"
-        )
-    if getattr(_C, "precision_bytes", None) != 4:
-        raise RuntimeError("VG002 requires a float32 drone_race_vision binding")
+    sources, extension_path, source_commit = current_source_sha256()
+    runtime = current_runtime_manifest()
     config, loader_overrides = load_variable_config(
         pufferl,
         agents=agents,
@@ -207,30 +276,17 @@ def run_count(
     finally:
         vector.close()
 
-    sources = {
-        str(path.relative_to(ROOT)): sha256_path(path)
-        for path in (
-            ROOT / "ocean/drone_race/drone_race.c",
-            ROOT / "ocean/drone_race/drone_race.h",
-            ROOT / "ocean/drone_race/binding.c",
-            ROOT / "pufferlib/vq2_public_phase.py",
-            ROOT / "pufferlib/vq2_informed.py",
-            ROOT / "config/drone_race_vq2_informed_dreamer.ini",
-            ROOT / "scripts/eval_vq2_native_oracle.py",
-            Path(__file__).resolve(),
-        )
-    }
-    sources[str(Path(_C.__file__).resolve())] = sha256_path(
-        Path(_C.__file__).resolve()
-    )
     return {
         "schema": "vq2_variable_gate_oracle_count_report_v1",
-        "tag": f"{TAG_PREFIX}_{num_gates}g_512",
+        "tag": f"{TAG_PREFIX}_{num_gates}g_{episodes}",
         "num_gates": num_gates,
         "agents": agents,
         "episodes": episodes,
         "seed": seed,
         "precision_bytes": int(_C.precision_bytes),
+        "compiled_extension_path": extension_path,
+        "source_commit": source_commit,
+        "runtime": runtime,
         "native_steps": native_steps,
         "wall_time_seconds": time.perf_counter() - started,
         "minimum_success_rate": MINIMUM_SUCCESS_RATE,
@@ -258,29 +314,151 @@ def run_admission(
     agents: int = DEFAULT_AGENTS,
     episodes: int = DEFAULT_EPISODES,
     seed: int = DEFAULT_SEED,
+    resume: bool = False,
 ) -> dict[str, Any]:
-    if output_root.exists():
+    if not counts or len(set(counts)) != len(counts):
+        raise ValueError("counts must be a nonempty sequence without duplicates")
+    if any(count < 5 or count > 12 for count in counts):
+        raise ValueError("all VG002 counts must be in [5, 12]")
+    if agents <= 0 or episodes <= 0 or episodes % agents:
+        raise ValueError("episodes must be a positive multiple of agents")
+
+    sources, extension_path, source_commit = current_source_sha256()
+    runtime = current_runtime_manifest()
+    state_identity = {
+        "schema": "vq2_variable_gate_oracle_run_state_v1",
+        "tag": f"vq2_vg002_variable_gate_oracle_admission_{episodes * len(counts)}",
+        "required_counts": list(counts),
+        "agents": agents,
+        "episodes_per_count": episodes,
+        "base_seed": seed,
+        "count_seeds": {
+            str(count): seed + offset for offset, count in enumerate(counts)
+        },
+        "source_sha256": sources,
+        "compiled_extension_path": extension_path,
+        "source_commit": source_commit,
+        "runtime": runtime,
+        "safety": {
+            "flight_sim_packets_sent": 0,
+            "sealed_test_accesses": 0,
+            "student_updates": 0,
+            "student_checkpoints_written": 0,
+            "submission_authorized": False,
+        },
+    }
+    state_path = output_root / "state.json"
+    if output_root.exists() and not resume:
         raise FileExistsError(f"refusing to overwrite {output_root}")
-    output_root.mkdir(parents=True)
+    if not output_root.exists():
+        output_root.mkdir(parents=True)
+    if state_path.exists():
+        state = json.loads(state_path.read_text())
+        for key, expected in state_identity.items():
+            if state.get(key) != expected:
+                raise RuntimeError(f"resume state mismatch for {key}")
+    else:
+        material = [path for path in output_root.iterdir() if not path.name.startswith(".")]
+        if material:
+            raise RuntimeError("cannot resume an evidence directory without state.json")
+        state = dict(state_identity)
+        state.update({
+            "status": "pending",
+            "running_count": None,
+            "completed_counts": [],
+            "count_report_sha256": {},
+        })
+        write_json_atomic(state_path, state)
+
     reports: list[dict[str, Any]] = []
     for offset, count in enumerate(counts):
-        report = run_count(
-            num_gates=count,
-            agents=agents,
-            episodes=episodes,
-            seed=seed + offset,
-        )
         report_path = output_root / f"count_{count}.json"
-        report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+        if report_path.exists():
+            report = json.loads(report_path.read_text())
+        else:
+            state.update({
+                "status": "running",
+                "running_count": count,
+                "completed_counts": [item["num_gates"] for item in reports],
+                "count_report_sha256": {
+                    str(item["num_gates"]): sha256_path(
+                        output_root / f"count_{item['num_gates']}.json"
+                    )
+                    for item in reports
+                },
+            })
+            write_json_atomic(state_path, state)
+            report = run_count(
+                num_gates=count,
+                agents=agents,
+                episodes=episodes,
+                seed=seed + offset,
+            )
+            write_json_once(report_path, report)
+
+        expected_admission = variable_oracle_passes(
+            report.get("metrics", {}), episodes=episodes, num_gates=count
+        )
+        expected_fields = {
+            "schema": "vq2_variable_gate_oracle_count_report_v1",
+            "tag": f"{TAG_PREFIX}_{count}g_{episodes}",
+            "num_gates": count,
+            "agents": agents,
+            "episodes": episodes,
+            "seed": seed + offset,
+            "precision_bytes": 4,
+            "compiled_extension_path": extension_path,
+            "source_commit": source_commit,
+            "runtime": runtime,
+            "native_steps": native_step_budget(
+                max_steps=int(variable_environment(count)["max_steps"]),
+                episodes=episodes,
+                agents=agents,
+            ),
+            "minimum_success_rate": MINIMUM_SUCCESS_RATE,
+            "admitted": expected_admission,
+            "loader_overrides": fixed_overrides(agents=agents, seed=seed + offset),
+            "fixed_environment": variable_environment(count),
+            "source_sha256": sources,
+            "safety": state_identity["safety"],
+        }
+        for key, expected in expected_fields.items():
+            if report.get(key) != expected:
+                raise RuntimeError(
+                    f"count {count} evidence mismatch for {key}"
+                )
         reports.append(report)
+        state.update({
+            "status": "count_complete",
+            "running_count": None,
+            "completed_counts": [item["num_gates"] for item in reports],
+            "count_report_sha256": {
+                str(item["num_gates"]): sha256_path(
+                    output_root / f"count_{item['num_gates']}.json"
+                )
+                for item in reports
+            },
+        })
+        write_json_atomic(state_path, state)
         if not report["admitted"]:
             break
 
+    expected_count_paths = {
+        output_root / f"count_{report['num_gates']}.json" for report in reports
+    }
+    actual_count_paths = set(output_root.glob("count_*.json"))
+    if actual_count_paths != expected_count_paths:
+        raise RuntimeError("count evidence is not one ordered completed prefix")
+
     aggregate = {
         "schema": "vq2_variable_gate_oracle_admission_report_v1",
-        "tag": "vq2_vg002_variable_gate_oracle_admission_2048",
+        "tag": f"vq2_vg002_variable_gate_oracle_admission_{episodes * len(counts)}",
         "required_counts": list(counts),
         "completed_counts": [report["num_gates"] for report in reports],
+        "agents": agents,
+        "episodes_per_count": episodes,
+        "total_required_episodes": episodes * len(counts),
+        "base_seed": seed,
         "admitted": len(reports) == len(counts)
         and all(report["admitted"] for report in reports),
         "count_report_sha256": {
@@ -289,16 +467,33 @@ def run_admission(
             )
             for report in reports
         },
+        "source_sha256": sources,
+        "compiled_extension_path": extension_path,
+        "source_commit": source_commit,
+        "runtime": runtime,
         "safety": {
             "flight_sim_packets_sent": 0,
             "sealed_test_accesses": 0,
+            "student_updates": 0,
+            "student_checkpoints_written": 0,
             "submission_authorized": False,
         },
     }
     aggregate_path = output_root / "report.json"
-    aggregate_path.write_text(
-        json.dumps(aggregate, indent=2, sort_keys=True) + "\n"
-    )
+    if aggregate_path.exists():
+        existing_aggregate = json.loads(aggregate_path.read_text())
+        if existing_aggregate != aggregate:
+            raise RuntimeError("existing aggregate report does not match run evidence")
+    else:
+        write_json_once(aggregate_path, aggregate)
+    state.update({
+        "status": "admitted" if aggregate["admitted"] else "rejected",
+        "running_count": None,
+        "completed_counts": aggregate["completed_counts"],
+        "count_report_sha256": aggregate["count_report_sha256"],
+        "aggregate_report_sha256": sha256_path(aggregate_path),
+    })
+    write_json_atomic(state_path, state)
     return aggregate
 
 
@@ -308,6 +503,11 @@ def main() -> int:
     parser.add_argument("--agents", type=int, default=DEFAULT_AGENTS)
     parser.add_argument("--episodes", type=int, default=DEFAULT_EPISODES)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="resume only source-identical completed count evidence",
+    )
     parser.add_argument(
         "--counts",
         type=int,
@@ -321,6 +521,7 @@ def main() -> int:
         agents=args.agents,
         episodes=args.episodes,
         seed=args.seed,
+        resume=args.resume,
     )
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0 if report["admitted"] else 2

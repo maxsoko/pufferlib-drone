@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
+import scripts.eval_vq2_variable_gate_oracle as variable_oracle
 from scripts.eval_vq2_variable_gate_oracle import (
     ACCEPTANCE_COUNTS,
     EPISODE_SECONDS,
     MINIMUM_SUCCESS_RATE,
+    fixed_overrides,
     mixed_variable_environment,
+    native_step_budget,
+    run_admission,
     variable_environment,
     variable_oracle_passes,
 )
@@ -79,3 +85,210 @@ def test_variable_oracle_requires_every_counted_gate_and_envelope() -> None:
     assert variable_oracle_passes(metrics, episodes=512, num_gates=11)
     metrics["env/ordered_gate10_sampled"] = 0.0
     assert not variable_oracle_passes(metrics, episodes=512, num_gates=11)
+
+
+def _count_report(
+    *,
+    count: int,
+    agents: int,
+    episodes: int,
+    seed: int,
+    sources: dict[str, str],
+    extension_path: str,
+    source_commit: str,
+    runtime: dict[str, str],
+) -> dict[str, object]:
+    metrics = _passing_metrics(count)
+    metrics["env/n"] = float(episodes)
+    environment = variable_environment(count)
+    return {
+        "schema": "vq2_variable_gate_oracle_count_report_v1",
+        "tag": f"vq2_vg002_variable_gate_oracle_{count}g_{episodes}",
+        "num_gates": count,
+        "agents": agents,
+        "episodes": episodes,
+        "seed": seed,
+        "precision_bytes": 4,
+        "compiled_extension_path": extension_path,
+        "source_commit": source_commit,
+        "runtime": runtime,
+        "native_steps": native_step_budget(
+            max_steps=int(environment["max_steps"]),
+            episodes=episodes,
+            agents=agents,
+        ),
+        "wall_time_seconds": 1.0,
+        "minimum_success_rate": MINIMUM_SUCCESS_RATE,
+        "admitted": True,
+        "loader_overrides": fixed_overrides(agents=agents, seed=seed),
+        "fixed_environment": environment,
+        "metrics": metrics,
+        "source_sha256": sources,
+        "safety": {
+            "flight_sim_packets_sent": 0,
+            "sealed_test_accesses": 0,
+            "student_updates": 0,
+            "student_checkpoints_written": 0,
+            "submission_authorized": False,
+        },
+    }
+
+
+def test_admission_resumes_only_missing_count_without_rewriting_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = tmp_path / "vg002"
+    sources = {"source": "locked"}
+    extension_path = "/workspace/pufferlib/_C.so"
+    source_commit = "a" * 40
+    runtime = {"runtime": "locked"}
+    monkeypatch.setattr(
+        variable_oracle,
+        "current_source_sha256",
+        lambda: (sources, extension_path, source_commit),
+    )
+    monkeypatch.setattr(variable_oracle, "current_runtime_manifest", lambda: runtime)
+    first_calls: list[int] = []
+
+    def interrupted_count(**kwargs: int) -> dict[str, object]:
+        count = kwargs["num_gates"]
+        first_calls.append(count)
+        if count == 8:
+            raise InterruptedError("host interruption")
+        return _count_report(
+            count=count,
+            agents=kwargs["agents"],
+            episodes=kwargs["episodes"],
+            seed=kwargs["seed"],
+            sources=sources,
+            extension_path=extension_path,
+            source_commit=source_commit,
+            runtime=runtime,
+        )
+
+    monkeypatch.setattr(variable_oracle, "run_count", interrupted_count)
+    with pytest.raises(InterruptedError, match="host interruption"):
+        run_admission(
+            output_root=output,
+            counts=(5, 8),
+            agents=2,
+            episodes=2,
+            seed=900,
+        )
+    count5_before = (output / "count_5.json").read_bytes()
+    assert first_calls == [5, 8]
+    assert not (output / "report.json").exists()
+
+    resumed_calls: list[int] = []
+
+    def resumed_count(**kwargs: int) -> dict[str, object]:
+        count = kwargs["num_gates"]
+        resumed_calls.append(count)
+        return _count_report(
+            count=count,
+            agents=kwargs["agents"],
+            episodes=kwargs["episodes"],
+            seed=kwargs["seed"],
+            sources=sources,
+            extension_path=extension_path,
+            source_commit=source_commit,
+            runtime=runtime,
+        )
+
+    monkeypatch.setattr(variable_oracle, "run_count", resumed_count)
+    aggregate = run_admission(
+        output_root=output,
+        counts=(5, 8),
+        agents=2,
+        episodes=2,
+        seed=900,
+        resume=True,
+    )
+    assert aggregate["admitted"] is True
+    assert aggregate["completed_counts"] == [5, 8]
+    assert resumed_calls == [8]
+    assert (output / "count_5.json").read_bytes() == count5_before
+
+    monkeypatch.setattr(
+        variable_oracle,
+        "run_count",
+        lambda **_: pytest.fail("completed resume reran a count"),
+    )
+    assert run_admission(
+        output_root=output,
+        counts=(5, 8),
+        agents=2,
+        episodes=2,
+        seed=900,
+        resume=True,
+    ) == aggregate
+
+
+def test_admission_resume_rejects_source_change(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output = tmp_path / "vg002"
+    sources = {"source": "locked"}
+    extension_path = "/workspace/pufferlib/_C.so"
+    source_commit = "b" * 40
+    runtime = {"runtime": "locked"}
+    monkeypatch.setattr(
+        variable_oracle,
+        "current_source_sha256",
+        lambda: (sources, extension_path, source_commit),
+    )
+    monkeypatch.setattr(variable_oracle, "current_runtime_manifest", lambda: runtime)
+    monkeypatch.setattr(
+        variable_oracle,
+        "run_count",
+        lambda **kwargs: _count_report(
+            count=kwargs["num_gates"],
+            agents=kwargs["agents"],
+            episodes=kwargs["episodes"],
+            seed=kwargs["seed"],
+            sources=sources,
+            extension_path=extension_path,
+            source_commit=source_commit,
+            runtime=runtime,
+        ),
+    )
+    run_admission(
+        output_root=output,
+        counts=(5,),
+        agents=2,
+        episodes=2,
+        seed=901,
+    )
+    monkeypatch.setattr(
+        variable_oracle,
+        "current_source_sha256",
+        lambda: ({"source": "changed"}, extension_path, source_commit),
+    )
+    with pytest.raises(RuntimeError, match="source_sha256"):
+        run_admission(
+            output_root=output,
+            counts=(5,),
+            agents=2,
+            episodes=2,
+            seed=901,
+            resume=True,
+        )
+    monkeypatch.setattr(
+        variable_oracle,
+        "current_source_sha256",
+        lambda: (sources, extension_path, source_commit),
+    )
+    monkeypatch.setattr(
+        variable_oracle,
+        "current_runtime_manifest",
+        lambda: {"runtime": "changed"},
+    )
+    with pytest.raises(RuntimeError, match="runtime"):
+        run_admission(
+            output_root=output,
+            counts=(5,),
+            agents=2,
+            episodes=2,
+            seed=901,
+            resume=True,
+        )

@@ -43,7 +43,9 @@ The source-locked implementation SHA-256 values are:
 - `scripts/eval_vq2_native_oracle.py`:
   `98e099a3286173322b56054a98b095faa4366cedd72359516ead606cdb37863f`
 - `scripts/eval_vq2_variable_gate_oracle.py`:
-  `acf79349fc2c6ec8dda47dbfd95b8e2f1eb8b94d615d661d56fa9b3b939cdbfb`
+  `ec65b09c614b16240717266f32fd49221f7f7075b5540eb802c6008f2acd93c6`
+- `scripts/run_vq2_vg002_vast.sh`:
+  `cabb80a634f8e5f397bb460011d41757344eca651c1ef4e53c25b5d9b220e38a`
 - Local float32 compiled extension used by the accepted VG001B smoke:
   `847d77eea021e83d13910d732186a2da9419629c938992231cbf337de981c46f`
 
@@ -70,7 +72,21 @@ course generation if the unchanged oracle cannot solve a longer course. A
 passing aggregate requires all four count reports to pass. Reports are written
 once under
 `logs/drone_race_full_policy_six_gate_bootstrap/vq2_vg002_variable_gate_oracle_admission`;
-the evaluator refuses to overwrite that directory.
+the evaluator refuses an existing directory unless `--resume` passes the
+strict checks below.
+
+The paid remote run must be resumable without relabeling or retrying completed
+evidence. Before the first count, atomically publish `state.json` with the full
+run contract, source hashes, extension hash/path, and count seeds. Atomically
+publish one immutable count report after each completed count and update the
+mutable state at count boundaries. `--resume` may execute only the first
+missing count after validating byte-exact source identity, Git commit,
+Python/Torch/CUDA/NumPy/pybind11 platform manifest, and every field of the
+completed ordered prefix. It must refuse source or runtime drift, a gap or
+extra count report, mismatched metrics/configuration, or an altered aggregate.
+When state exists, the remote wrapper must skip apt, pip, tests, and extension
+rebuild before resuming. A rejected count is terminal and is never rerun. The
+aggregate report is also immutable.
 
 ## Safety boundary
 

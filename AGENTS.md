@@ -9546,7 +9546,7 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   a five-versus-twelve-gate fixture with identical visible state; only public
   progress and episode termination may reveal advancement.
 - Native regressions pass, including `4096` course constructions over counts
-  `5..12`, and the focused Python suite passes `32/32`. The frozen SF012
+  `5..12`, and the focused Python suite passes `36/36`. The frozen SF012
   collector correctly fails its old source lock after these native changes;
   never relabel that six-gate artifact as the variable-count corpus.
 - The original VG001 binding smoke passed the count distribution but was built
@@ -9561,3 +9561,10 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   safety/envelope checks. Do not collect the new corpus or train a student
   before that aggregate passes. FlightSim remains frozen after N522, N712's
   consumed sealed test must never be reopened, and Submission is forbidden.
+- Remote execution is source-locked and count-boundary resumable. Before any
+  episode, `state.json` records the Git commit, source/extension hashes,
+  runtime versions, seeds, and full contract. Count/aggregate reports are
+  atomic and immutable; `--resume` accepts only the exact completed prefix and
+  runs its first missing count. Once state exists, the Vast wrapper must not
+  apt-install, pip-install, test, or rebuild. Sync state, reports, and runner
+  log back after every count and before stopping/destroying the instance.

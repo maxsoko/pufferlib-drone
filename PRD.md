@@ -9802,7 +9802,7 @@ For each training/eval block, record:
   proves the complete `4096` mask plus `22`-value legal tail is byte-identical
   for five- and twelve-gate courses when the visible state is identical.
 - Both native regression suites pass, including `4096` randomized course
-  constructions spanning every count `5..12`; all `32` focused Python tests
+  constructions spanning every count `5..12`; all `36` focused Python tests
   pass. Existing SF012 collection now intentionally fails its frozen source
   lock rather than silently relabeling the old six-gate corpus.
 - The first compiled-binding distribution report passed but used the default
@@ -9817,3 +9817,11 @@ For each training/eval block, record:
   policy training is admitted until it passes. FlightSim received no packet,
   N712's consumed sealed test was not accessed, and Submission remains
   forbidden.
+- The paid-run wrapper requires the pushed Git commit, float32 extension, and
+  full hardware envelope. VG002 now publishes atomic count-boundary state and
+  immutable reports; resume validates the commit, all source/binary hashes,
+  runtime versions, and the completed ordered prefix, then executes only the
+  first missing count. It never reruns a rejected/completed count and skips
+  apt, pip, tests, and rebuilds after state exists. A separate one-shot sync
+  command copies state, reports, and the runner log and is invoked repeatedly
+  while the rental is active.
