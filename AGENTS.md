@@ -9679,3 +9679,27 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   explicitly routes a single localized transition failure to Stage-3 DAgger.
   Preserve VG003 clean anchors and collect source-balanced VG005-visited
   Gate-2 failure states with oracle query labels; do not rerun VG006.
+
+### VQ2 variable-gate DAgger collection rejection — VG007, 2026-07-29
+
+- Source commit `77534145...` preregistered 256 new mixed-count rollouts at
+  seed `429047`, driven entirely by VG005 with the SF016-admitted oracle used
+  only as an offline query label. Bootstrap 001 stopped before state or action
+  because the remote clone lacked the exact historical SF016 report; its log
+  SHA is `5a41eae6...`. Supplying that immutable report did not change source.
+- The actual VG007 collection is permanently rejected. It terminated all 256
+  episodes but produced `60,887` records, below its arbitrary `100,000` floor;
+  lengths are `113/237.840/1,436` min/mean/max. Retained legal-array audit
+  proves one final terminal per episode, zero held-phase off-tick change,
+  decrease, skip, or encoding error, and finite/enveloped oracle labels.
+- Held public progress shows 242/256 episodes reached phase 1 and 18/256
+  reached phase 2, yielding `27,982` phase-1 and `1,279` phase-2 records. The
+  rejected collector failed to persist native metrics and executed-action
+  parity, so this evidence cannot claim record volume was the only overall
+  failed predicate. Its state/collection-log/postmortem SHA-256 values are
+  `3bba5b43...`/`fe8726fb...`/`9f494eaa...`.
+- Never train on, finalize, resume, or retry VG007. VG008 corrects the sampling
+  design by using 512 new episodes/seed `429048`, retaining the 100,000-record
+  floor, and persisting every predicate in a JSON rejection report before any
+  failure. It does not weaken the crash, reach, transport, layout, or phase
+  gates. No FlightSim packet was sent; N712 and Submission remain forbidden.

@@ -9939,3 +9939,29 @@ For each training/eval block, record:
   VG005-visited Gate-2 states while retaining source-balanced VG003 clean
   anchors. VG004 was an implementation audit failure before acceptance, not
   a second model screen. VG006 cannot authorize live work.
+
+### VQ2 variable-gate DAgger collection rejection — VG007, 2026-07-29
+
+- Commit `77534145...` froze 256 exact-uniform count-5--12 episodes at seed
+  `429047`. VG005 emitted every plant action; the admitted SF016 oracle only
+  labeled student-visited states. The first bootstrap stopped before state or
+  rollout because one frozen SF016 evidence file was absent remotely (log SHA
+  `5a41eae6...`); copying its exact hash was an evidence repair, not a retry.
+- The collection itself reached terminal for all 256 agents and was rejected
+  without unchanged retry. It yielded `60,887` labels versus the preregistered
+  `100,000` minimum, with episode length min/mean/max
+  `113/237.83984375/1,436` steps.
+- A postmortem over retained legal arrays observes 242 episodes at held phase
+  >=1 and 18 at phase >=2, with phase-record histogram
+  `[31,626,27,982,1,279,0,...]`. All episodes have one terminal on their last
+  valid row; phase has zero off-tick change/decrease/skip/encoding error; query
+  labels are finite and within the action envelope.
+- Rejected-state/log/postmortem hashes are `3bba5b43...`/`fe8726fb...`/
+  `9f494eaa...`. Native metrics and executed-action parity were not persisted
+  on rejection, so the postmortem explicitly does not claim the record floor
+  was the only overall predicate failure. VG007 data is quarantined forever.
+- Preregister VG008 as the single correction: 512 new episodes at seed
+  `429048`, the same 2,048-step bound and unchanged 100,000-record/crash/reach/
+  transport/layout/phase gates. Its collector writes a complete predicate map
+  on rejection. This preserves source-balanced DAgger intent without weakening
+  evidence. FlightSim remains frozen, N712 closed, and Submission forbidden.

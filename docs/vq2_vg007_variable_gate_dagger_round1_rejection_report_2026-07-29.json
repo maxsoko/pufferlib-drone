@@ -1,0 +1,87 @@
+{
+  "schema": "vq2_variable_gate_dagger_rejection_postmortem_v1",
+  "tag": "vq2_vg007_variable_gate_dagger_round1_256",
+  "status": "rejected",
+  "admitted": false,
+  "source_commit": "77534145b7f1cdfa7f8a96e98359d2a95ff0cf62",
+  "seed": 429047,
+  "agents": 256,
+  "episodes": 256,
+  "collection_step_limit": 2048,
+  "records": 60887,
+  "minimum_records_required": 100000,
+  "minimum_records_passed": false,
+  "vector_steps": 1436,
+  "episode_length_min": 113,
+  "episode_length_mean": 237.83984375,
+  "episode_length_max": 1436,
+  "terminal_count_per_episode_min": 1,
+  "terminal_count_per_episode_max": 1,
+  "terminal_is_last_for_all_episodes": true,
+  "phase_records": [
+    31626,
+    27982,
+    1279,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "held_phase_changes": 260,
+  "phase_changes_off_tick": 0,
+  "phase_decreases": 0,
+  "phase_skips": 0,
+  "raw_phase_encoding_max_error": 0.0,
+  "episodes_observed_at_phase_1_or_later": 242,
+  "episodes_observed_at_phase_2_or_later": 18,
+  "phase_1_or_later_rate": 0.9453125,
+  "phase_2_or_later_rate": 0.0703125,
+  "oracle_query_actions_finite": true,
+  "oracle_query_action_min": [
+    -0.800000011920929,
+    -1.0,
+    -1.0,
+    0.0
+  ],
+  "oracle_query_action_max": [
+    0.800000011920929,
+    1.0,
+    1.0,
+    0.0
+  ],
+  "oracle_query_action_envelope_excess": 0.0,
+  "known_failed_admission_predicates": [
+    "records >= 100000"
+  ],
+  "postmortem_limitations": [
+    "The rejected collector persisted only records and vector_steps in its terminal state.",
+    "Native flattened metrics, crash rate, and executed-action parity existed only in process memory and cannot be reconstructed from the retained legal arrays.",
+    "This report therefore does not claim that the record floor was the only overall failed predicate."
+  ],
+  "artifact_sha256": {
+    "bootstrap_log": "5a41eae66cc701106623c8bac7f97ff009bc5f31a575e62279f0840bba5f0bcd",
+    "collection_log": "fe8726fb8885b34fc5eef79898043cb612e6c42afbbb3f1d9a9924a12e1a0dcc",
+    "terminal_state": "3bba5b43d591561aeb87c0c815c6940086cfd80882673cfcc90e6f6204ba24a8",
+    "diagnostic_action": "be74b9cf3bcaddb45e3e9f7ba8c7f01f67d7a0b50867976a110c8a92af7d8018",
+    "diagnostic_tail": "49b7462638f413bd3d5349067707665bfbe8c67a38976a053f593295671ca2e5",
+    "diagnostic_terminal": "462e8928f189a420118de5083d39cf5cfe2258d9b9fb747a3543a193735b1491",
+    "diagnostic_valid": "c1174dc73789bf16a0d3b733d1e09148729680bec6888643b8869f53c7060301"
+  },
+  "disposition": {
+    "dataset_admitted_for_training": false,
+    "unchanged_retry_allowed": false,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "submission_authorized": false
+  }
+}

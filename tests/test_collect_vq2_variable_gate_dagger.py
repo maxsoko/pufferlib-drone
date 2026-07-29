@@ -13,6 +13,7 @@ from scripts.collect_vq2_variable_gate_dagger import (
     MINIMUM_GATE1_RATE,
     MINIMUM_GATE2_RATE,
     MINIMUM_RECORDS,
+    dagger_collection_predicates,
     dagger_collection_passes,
     dagger_config,
     verify_inputs,
@@ -57,7 +58,7 @@ def _passing_arguments() -> dict[str, object]:
     }
 
 
-def test_vg007_admission_preserves_failure_states_but_requires_safe_transport() -> None:
+def test_vg008_admission_preserves_failure_states_but_requires_safe_transport() -> None:
     metrics = _passing_metrics()
     arguments = _passing_arguments()
     assert dagger_collection_passes(metrics, **arguments)
@@ -82,7 +83,7 @@ def test_vg007_admission_preserves_failure_states_but_requires_safe_transport() 
     assert not dagger_collection_passes(metrics, **changed)
 
 
-def test_vg007_config_is_exact_uniform_teacher_free_and_bounded(
+def test_vg008_config_is_exact_uniform_teacher_free_and_bounded(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     def fake_load(*args: object, **kwargs: object):
@@ -109,5 +110,19 @@ def test_vg007_config_is_exact_uniform_teacher_free_and_bounded(
     assert environment["observable_gate_index_denominator"] == 16.0
 
 
-def test_vg007_frozen_failure_and_oracle_query_inputs_verify() -> None:
+def test_vg008_rejection_predicates_identify_the_record_floor() -> None:
+    metrics = _passing_metrics()
+    arguments = _passing_arguments()
+    arguments["lengths"] = np.full(
+        AGENTS, MINIMUM_RECORDS // AGENTS - 1, dtype=np.int32
+    )
+    arguments["labels"] = int(np.asarray(arguments["lengths"]).sum())
+    predicates = dagger_collection_predicates(metrics, **arguments)
+    assert predicates["minimum_record_count"] is False
+    assert all(
+        passed for name, passed in predicates.items() if name != "minimum_record_count"
+    )
+
+
+def test_vg008_frozen_failure_and_oracle_query_inputs_verify() -> None:
     verify_inputs()

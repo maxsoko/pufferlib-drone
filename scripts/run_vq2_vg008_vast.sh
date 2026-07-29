@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Source-locked Vast.ai bootstrap and resumable VG007 DAgger collection.
+# Source-locked Vast.ai bootstrap and resumable VG008 DAgger collection.
 set -euo pipefail
 
 VQ2_EXPECTED_COMMIT="${VQ2_EXPECTED_COMMIT:?set VQ2_EXPECTED_COMMIT to the pushed source commit}"
 VQ2_WORKSPACE_PATH="${VQ2_WORKSPACE_PATH:-/workspace/pufferlib-drone}"
-VQ2_OUTPUT="${VQ2_OUTPUT:-$VQ2_WORKSPACE_PATH/logs/drone_race_full_policy_six_gate_bootstrap/vq2_vg007_variable_gate_dagger_round1_256}"
+VQ2_OUTPUT="${VQ2_OUTPUT:-$VQ2_WORKSPACE_PATH/logs/drone_race_full_policy_six_gate_bootstrap/vq2_vg008_variable_gate_dagger_round1_512}"
 VQ2_STATE="${VQ2_OUTPUT}_state.json"
 
 cd "$VQ2_WORKSPACE_PATH"
@@ -18,7 +18,7 @@ if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
     exit 2
 fi
 if [ ! -x .venv/bin/python ]; then
-    echo "VG007 requires the source-locked Vast virtual environment" >&2
+    echo "VG008 requires the source-locked Vast virtual environment" >&2
     exit 2
 fi
 source .venv/bin/activate
@@ -38,12 +38,12 @@ for command_name in git clang nvcc nvidia-smi python; do
     fi
 done
 if [ "$(nproc)" -lt 32 ]; then
-    echo "VG007 requires at least 32 visible CPUs" >&2
+    echo "VG008 requires at least 32 visible CPUs" >&2
     exit 2
 fi
 VQ2_DISK_FREE_GIB="$(df -BG --output=avail "$VQ2_WORKSPACE_PATH" | tail -1 | tr -dc '0-9')"
 if [ "$VQ2_DISK_FREE_GIB" -lt 15 ]; then
-    echo "VG007 requires at least 15 GiB free" >&2
+    echo "VG008 requires at least 15 GiB free" >&2
     exit 2
 fi
 
@@ -51,7 +51,7 @@ VQ2_CUDA_HOME="$(dirname "$(dirname "$(command -v nvcc)")")"
 VQ2_NVCC_ARCH="$(python - <<'PY'
 import torch
 if not torch.cuda.is_available():
-    raise SystemExit("VG007 cannot see CUDA")
+    raise SystemExit("VG008 cannot see CUDA")
 major, minor = torch.cuda.get_device_capability(0)
 print(f"sm_{major}{minor}")
 PY

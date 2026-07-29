@@ -54,11 +54,11 @@ from scripts.eval_vq2_variable_gate_recurrent_policy import (
 )
 
 
-TAG = "vq2_vg007_variable_gate_dagger_round1_256"
+TAG = "vq2_vg008_variable_gate_dagger_round1_512"
 SCHEMA = "vq2_variable_gate_dagger_time_major_v1"
-AGENTS = 256
-EPISODES = 256
-SEED = 429047
+AGENTS = 512
+EPISODES = 512
+SEED = 429048
 COLLECTION_STEP_LIMIT = 2048
 MINIMUM_RECORDS = 100_000
 MINIMUM_GATE1_RATE = 0.90
@@ -68,7 +68,7 @@ DEFAULT_OUTPUT = (
     ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
 )
 PREREGISTRATION = (
-    ROOT / "docs/vq2_vg007_variable_gate_dagger_round1_preregistration_2026-07-29.md"
+    ROOT / "docs/vq2_vg008_variable_gate_dagger_round1_preregistration_2026-07-29.md"
 )
 VG006_REPORT = (
     ROOT
@@ -115,7 +115,7 @@ def dagger_config(pufferl_module: Any) -> tuple[dict[str, Any], list[str]]:
     return config, overrides
 
 
-def dagger_collection_passes(
+def dagger_collection_predicates(
     metrics: dict[str, float],
     *,
     lengths: np.ndarray,
@@ -128,9 +128,7 @@ def dagger_collection_passes(
     phase_skips: int,
     raw_phase_encoding_max_error: float,
     phase_records: np.ndarray,
-) -> bool:
-    if metrics.get("env/n") != float(EPISODES):
-        return False
+) -> dict[str, bool]:
     required_zero = (
         "out_of_order",
         "crossing_margin_violation",
@@ -138,34 +136,52 @@ def dagger_collection_passes(
         "wire_rate_envelope_violation",
         "thrust_envelope_violation",
     )
-    if any(metrics.get(f"env/{name}", math.inf) != 0.0 for name in required_zero):
-        return False
-    if metrics.get("env/crash", math.inf) > MAXIMUM_CRASH_RATE:
-        return False
-    for count in range(1, 17):
-        expected = 0.125 if 5 <= count <= 12 else 0.0
-        if abs(metrics.get(f"env/gate_count{count}_episode", -1.0) - expected) > 1e-12:
-            return False
-    if metrics.get("env/ordered_gate0_sampled", 0.0) < MINIMUM_GATE1_RATE:
-        return False
-    if metrics.get("env/ordered_gate1_sampled", 0.0) < MINIMUM_GATE2_RATE:
-        return False
-    return bool(
-        lengths.shape == (AGENTS,)
-        and np.all(lengths > 0)
-        and np.all(lengths <= COLLECTION_STEP_LIMIT)
-        and np.all(terminal_count == 1)
-        and np.all(terminal_is_last)
-        and labels == int(lengths.sum())
-        and labels >= MINIMUM_RECORDS
-        and executed_action_max_error <= 1e-7
-        and phase_changes_off_tick == 0
-        and phase_decreases == 0
-        and phase_skips == 0
-        and raw_phase_encoding_max_error <= 1e-6
-        and phase_records.shape == (ENGINE_GATE_CAP + 1,)
-        and phase_records[1] > 0
+    exact_uniform_counts = all(
+        abs(
+            metrics.get(f"env/gate_count{count}_episode", -1.0)
+            - (0.125 if 5 <= count <= 12 else 0.0)
+        )
+        <= 1e-12
+        for count in range(1, 17)
     )
+    return {
+        "native_episode_count": metrics.get("env/n") == float(EPISODES),
+        "zero_safety_envelope_metrics": not any(
+            metrics.get(f"env/{name}", math.inf) != 0.0
+            for name in required_zero
+        ),
+        "crash_rate": metrics.get("env/crash", math.inf) <= MAXIMUM_CRASH_RATE,
+        "exact_uniform_gate_counts": exact_uniform_counts,
+        "gate_1_reach_rate": (
+            metrics.get("env/ordered_gate0_sampled", 0.0) >= MINIMUM_GATE1_RATE
+        ),
+        "gate_2_reach_rate": (
+            metrics.get("env/ordered_gate1_sampled", 0.0) >= MINIMUM_GATE2_RATE
+        ),
+        "episode_length_shape": lengths.shape == (AGENTS,),
+        "episode_lengths_positive": bool(np.all(lengths > 0)),
+        "episode_lengths_bounded": bool(np.all(lengths <= COLLECTION_STEP_LIMIT)),
+        "one_terminal_per_episode": bool(np.all(terminal_count == 1)),
+        "terminal_is_last": bool(np.all(terminal_is_last)),
+        "label_count_matches_lengths": labels == int(lengths.sum()),
+        "minimum_record_count": labels >= MINIMUM_RECORDS,
+        "executed_action_parity": executed_action_max_error <= 1e-7,
+        "phase_changes_only_on_public_ticks": phase_changes_off_tick == 0,
+        "phase_never_decreases": phase_decreases == 0,
+        "phase_never_skips": phase_skips == 0,
+        "phase_encoding_exact": raw_phase_encoding_max_error <= 1e-6,
+        "phase_record_shape": phase_records.shape == (ENGINE_GATE_CAP + 1,),
+        "post_gate_1_records_present": (
+            phase_records.shape == (ENGINE_GATE_CAP + 1,) and phase_records[1] > 0
+        ),
+    }
+
+
+def dagger_collection_passes(
+    metrics: dict[str, float],
+    **kwargs: Any,
+) -> bool:
+    return all(dagger_collection_predicates(metrics, **kwargs).values())
 
 
 def verify_inputs() -> None:
@@ -192,20 +208,20 @@ def collect(
 
     verify_inputs()
     if not PREREGISTRATION.is_file():
-        raise RuntimeError("VG007 preregistration is missing")
+        raise RuntimeError("VG008 preregistration is missing")
     if device_name == "cuda" and not torch.cuda.is_available():
-        raise RuntimeError("VG007 preregisters CUDA student inference")
+        raise RuntimeError("VG008 preregisters CUDA student inference")
     if getattr(_C, "env_name", None) != BACKEND_ENV_NAME:
-        raise RuntimeError("VG007 requires drone_race_vision backend")
+        raise RuntimeError("VG008 requires drone_race_vision backend")
     if getattr(_C, "precision_bytes", None) != 4:
-        raise RuntimeError("VG007 requires a float32 native binding")
+        raise RuntimeError("VG008 requires a float32 native binding")
     device = torch.device(device_name)
     actor, _checkpoint = load_actor(device)
     extension = Path(_C.__file__).resolve()
     source_paths = (
         Path(__file__).resolve(),
         PREREGISTRATION,
-        ROOT / "scripts/run_vq2_vg007_vast.sh",
+        ROOT / "scripts/run_vq2_vg008_vast.sh",
         ROOT / "pufferlib/vq2_oracle.py",
         ROOT / "pufferlib/vq2_informed.py",
         ROOT / "pufferlib/vq2_public_phase.py",
@@ -227,7 +243,7 @@ def collect(
         text=True,
     ).stdout.strip()
     state_identity = {
-        "schema": "vq2_variable_gate_dagger_collection_state_v1",
+        "schema": "vq2_variable_gate_dagger_collection_state_v2",
         "tag": TAG,
         "agents": AGENTS,
         "episodes": EPISODES,
@@ -263,7 +279,7 @@ def collect(
     vector = _C.create_vec(config, gpu=0)
     if vector.total_agents != AGENTS or vector.obs_size != ENV_OBS_SIZE:
         vector.close()
-        raise RuntimeError("VG007 native vector ABI changed")
+        raise RuntimeError("VG008 native vector ABI changed")
     observations = _cpu_tensor(
         vector.obs_ptr, (AGENTS, ENV_OBS_SIZE), torch.float32
     )
@@ -337,7 +353,7 @@ def collect(
                     torch.zeros_like(output.mean),
                 )
                 if not bool(torch.isfinite(student[active_device]).all()):
-                    raise RuntimeError("VG007 student emitted a non-finite action")
+                    raise RuntimeError("VG008 student emitted a non-finite action")
                 student_np = student.detach().cpu().numpy().astype(np.float32, copy=False)
                 selected_query = query[active].astype(np.float64)
                 selected_student = student_np[active].astype(np.float64)
@@ -381,29 +397,84 @@ def collect(
         native_log = dict(vector.log())
         terminal_count, terminal_is_last = writer.validate_episode_layout(lengths)
         if not np.array_equal(terminal_count, tracked_terminal_count):
-            raise RuntimeError("VG007 staged/tracked terminal counts differ")
+            raise RuntimeError("VG008 staged/tracked terminal counts differ")
         metrics = flatten_log(pufferl, native_log)
-        admitted = dagger_collection_passes(
+        predicate_arguments = {
+            "lengths": lengths,
+            "terminal_count": terminal_count,
+            "terminal_is_last": terminal_is_last,
+            "labels": label_count,
+            "executed_action_max_error": executed_action_max_error,
+            "phase_changes_off_tick": phase_changes_off_tick,
+            "phase_decreases": phase_decreases,
+            "phase_skips": phase_skips,
+            "raw_phase_encoding_max_error": raw_phase_encoding_max_error,
+            "phase_records": phase_records,
+        }
+        predicates = dagger_collection_predicates(
             metrics,
-            lengths=lengths,
-            terminal_count=terminal_count,
-            terminal_is_last=terminal_is_last,
-            labels=label_count,
-            executed_action_max_error=executed_action_max_error,
-            phase_changes_off_tick=phase_changes_off_tick,
-            phase_decreases=phase_decreases,
-            phase_skips=phase_skips,
-            raw_phase_encoding_max_error=raw_phase_encoding_max_error,
-            phase_records=phase_records,
+            **predicate_arguments,
         )
+        admitted = all(predicates.values())
         if not admitted:
+            rejection_report = {
+                "schema": "vq2_variable_gate_dagger_collection_rejection_v1",
+                "tag": TAG,
+                "admitted": False,
+                "checkpoint_sha256": CHECKPOINT_SHA256,
+                "agents": AGENTS,
+                "episodes": EPISODES,
+                "seed": SEED,
+                "collection_step_limit": COLLECTION_STEP_LIMIT,
+                "minimum_records": MINIMUM_RECORDS,
+                "records": int(label_count),
+                "vector_steps": int(lengths.max(initial=0)),
+                "episode_length_min": int(lengths.min()),
+                "episode_length_mean": float(lengths.mean()),
+                "episode_length_max": int(lengths.max(initial=0)),
+                "phase_records": phase_records.tolist(),
+                "phase_changes_off_tick": phase_changes_off_tick,
+                "phase_decreases": phase_decreases,
+                "phase_skips": phase_skips,
+                "raw_phase_encoding_max_error": raw_phase_encoding_max_error,
+                "executed_action_max_error": executed_action_max_error,
+                "student_query_mse": (query_square_error / label_count).tolist(),
+                "student_query_mae": (query_absolute_error / label_count).tolist(),
+                "query_action_min": query_min.tolist(),
+                "query_action_max": query_max.tolist(),
+                "student_action_min": student_min.tolist(),
+                "student_action_max": student_max.tolist(),
+                "metrics": metrics,
+                "admission_predicates": predicates,
+                "failed_admission_predicates": [
+                    name for name, passed in predicates.items() if not passed
+                ],
+                "source_commit": source_commit,
+                "source_sha256": source_sha256,
+                "runtime": state_identity["runtime"],
+                "wall_time_seconds": time.perf_counter() - started,
+                "safety": {
+                    "student_actions_executed": int(label_count),
+                    "teacher_actions_executed": 0,
+                    "student_updates": 0,
+                    "flight_sim_packets_sent": 0,
+                    "sealed_test_accesses": 0,
+                    "submission_authorized": False,
+                },
+            }
+            rejection_path = output.with_name(f"{output.name}_rejection_report.json")
+            write_json_atomic(rejection_path, rejection_report)
             state.update({
                 "status": "rejected",
                 "records": int(label_count),
                 "vector_steps": int(lengths.max(initial=0)),
+                "rejection_report_sha256": sha256_path(rejection_path),
+                "failed_admission_predicates": (
+                    rejection_report["failed_admission_predicates"]
+                ),
             })
             write_json_atomic(state_path, state)
-            raise RuntimeError("VG007 DAgger collection failed admission")
+            raise RuntimeError("VG008 DAgger collection failed admission")
         manifest = writer.finalize(output)
     finally:
         vector.close()
