@@ -9917,3 +9917,25 @@ For each training/eval block, record:
   preregistered teacher-free closed-loop screen: 256 unseen courses, 64 each
   at 5/8/11/12 gates, at least 90% aggregate success, zero crash and clean
   transport. FlightSim and Submission remain forbidden.
+
+### VQ2 variable-gate teacher-free rejection — VG006, 2026-07-29
+
+- Commit `988b50fc...` passes native regressions and `22/22` tests, rebuilds
+  float32 extension SHA `52d60c20...`, and executes the one preregistered
+  256-course screen on the sole VG005 checkpoint.
+- Result is `0/256`, rejected without unchanged retry. The failure is sharply
+  localized and identical across all counts: `61/64` pass Gate 1, `5/64`
+  pass Gate 2, none reach Gate 3, and mean gates passed is `1.03125`. Gate-1
+  crossing radial is `0.468--0.471 m`; the few Gate-2 crossings are centered
+  near `0.035 m`.
+- Two total crashes occur (one each at counts 5 and 11); remaining failures
+  are missed gates. Executed-action error is exactly zero and no nonfinite,
+  action-envelope, held-phase, teacher, student-update, FlightSim, N712, or
+  Submission fault occurs.
+- Count 5/8/11/12 report hashes are `7e9a75c2...`/`f33fb70c...`/
+  `a19bbc31...`/`0b78cff2...`; aggregate/state hashes are `1f848400...`/
+  `300df9e6...`. Treat this as model acceptance failure one. Per the goal
+  prompt's explicit localized-transition rule, proceed to Stage-3 DAgger on
+  VG005-visited Gate-2 states while retaining source-balanced VG003 clean
+  anchors. VG004 was an implementation audit failure before acceptance, not
+  a second model screen. VG006 cannot authorize live work.

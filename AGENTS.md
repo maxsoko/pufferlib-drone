@@ -9657,3 +9657,25 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   VG006 screen over 256 new courses: 64 each at counts 5/8/11/12, at least
   90% aggregate full-course success and zero crash. It is not authorized for
   live or Submission use.
+
+### VQ2 variable-gate teacher-free rejection — VG006, 2026-07-29
+
+- Source commit `988b50fc...` passes both native suites and `22/22` focused
+  tests, rebuilds the float32 extension to SHA `52d60c20...`, and screens the
+  sole VG005 epoch-12 checkpoint on 64 new courses each at counts 5/8/11/12.
+- VG006 is rejected without retry: `0/256` full courses. Behavior is count-
+  invariant and localized at the Gate-1 -> Gate-2 transition: every count
+  averages `1.03125` gates, `61/64` pass Gate 1, and `5/64` pass Gate 2; no
+  course reaches Gate 3. Gate-1 mean crossing radial is `0.468--0.471 m`, and
+  Gate-2 successful crossings are centered near `0.035 m`.
+- Count 5/11 each record one crash; count 8/12 record zero, for two crashes in
+  256. All other failures are missed-gate terminals. Transport is exact:
+  executed-action error `0`, zero nonfinite/action/phase faults, and all
+  teacher, student-update, FlightSim, N712, and Submission safety fields zero.
+- Count report SHA-256 values for 5/8/11/12 are `7e9a75c2...`/
+  `f33fb70c...`/`a19bbc31...`/`0b78cff2...`; aggregate/state hashes are
+  `1f848400...`/`300df9e6...`. This is the first model acceptance failure;
+  VG004 was a pre-acceptance audit implementation rejection. The prompt
+  explicitly routes a single localized transition failure to Stage-3 DAgger.
+  Preserve VG003 clean anchors and collect source-balanced VG005-visited
+  Gate-2 failure states with oracle query labels; do not rerun VG006.
