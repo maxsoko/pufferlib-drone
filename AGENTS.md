@@ -9531,3 +9531,33 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   rented remote compute; handoff commit is `508286e`. All legality, evidence,
   and freeze contracts stand: FlightSim frozen after N522, Submission
   forbidden, N712 sealed test never reopened.
+
+### VQ2 variable-gate environment — VG001/VG001B, 2026-07-29
+
+- VG001 extends the existing SF010/SF011 course randomizer with default-off
+  per-vector-environment gate counts. Enabled instances assign one fixed count
+  in `5..12`, uniformly by instance index; 512 environments contain exactly
+  64 of each count and episode reset does not resample it. Optional bounded
+  validation enforces finite ordered, non-overlapping, reachable geometry
+  while retaining the historical randomization streams and default behavior.
+- The sole new public phase encoding is
+  `clamp(active_gate_index, 0, 16) / 16`, held at `4 Hz`. Gate count is not an
+  actor input. The legal `4096` mask and `22`-value tail are byte-identical in
+  a five-versus-twelve-gate fixture with identical visible state; only public
+  progress and episode termination may reveal advancement.
+- Native regressions pass, including `4096` course constructions over counts
+  `5..12`, and the focused Python suite passes `32/32`. The frozen SF012
+  collector correctly fails its old source lock after these native changes;
+  never relabel that six-gate artifact as the variable-count corpus.
+- The original VG001 binding smoke passed the count distribution but was built
+  in bf16 and is rejected as legal ABI evidence; preserve report SHA-256
+  `0f67ff81...`. VG001B rebuilds with `--float`, proves
+  `precision_bytes == 4`, and passes 128 forced episodes with exactly `0.125`
+  mass per count before and after reset. Float extension/report SHA-256 values
+  are `847d77ee...`/`0845ea46...`.
+- VG002 is the next blocking gate: the unchanged training-only oracle must pass
+  at least `507/512` randomized courses independently at each count
+  `{5,8,11,12}`, true radius `0.75 m`, with zero collision and all fixed
+  safety/envelope checks. Do not collect the new corpus or train a student
+  before that aggregate passes. FlightSim remains frozen after N522, N712's
+  consumed sealed test must never be reopened, and Submission is forbidden.

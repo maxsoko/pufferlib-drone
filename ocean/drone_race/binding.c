@@ -29,6 +29,21 @@ void my_init(Env* env, Dict* kwargs) {
     env->num_agents = get_int(kwargs, "num_drones", 64);
     env->dt = get_float(kwargs, "dt", 0.02f);
     env->num_gates = get_int(kwargs, "num_gates", 4);
+    env->num_gates_per_env_randomize = get_int(
+        kwargs, "num_gates_per_env_randomize", 0);
+    env->num_gates_per_env_min = get_int(
+        kwargs, "num_gates_per_env_min", env->num_gates);
+    env->num_gates_per_env_max = get_int(
+        kwargs, "num_gates_per_env_max", env->num_gates);
+    env->num_gates_per_env_seed = (unsigned int)get_int(
+        kwargs, "num_gates_per_env_seed", 0);
+    env->num_gates = select_num_gates_for_env(
+        env->num_gates,
+        env->num_gates_per_env_randomize,
+        env->num_gates_per_env_min,
+        env->num_gates_per_env_max,
+        env->rng,
+        env->num_gates_per_env_seed);
     env->gate_spacing = get_float(kwargs, "gate_spacing", 5.0f);
     env->gate_radius = get_float(kwargs, "gate_radius", 1.0f);
     env->gate_radius_randomize = get_int(kwargs, "gate_radius_randomize", 0);
@@ -288,6 +303,14 @@ void my_init(Env* env, Dict* kwargs) {
     env->gate_position_jitter_x = get_float(kwargs, "gate_position_jitter_x", 0.0f);
     env->gate_position_jitter_y = get_float(kwargs, "gate_position_jitter_y", 0.0f);
     env->gate_position_jitter_z = get_float(kwargs, "gate_position_jitter_z", 0.0f);
+    env->gate_position_require_valid_course = get_int(
+        kwargs, "gate_position_require_valid_course", 0);
+    env->gate_position_min_forward_gap_m = get_float(
+        kwargs, "gate_position_min_forward_gap_m", 0.0f);
+    env->gate_position_max_segment_distance_m = get_float(
+        kwargs, "gate_position_max_segment_distance_m", 0.0f);
+    env->gate_position_resample_attempts = get_int(
+        kwargs, "gate_position_resample_attempts", 64);
     env->observable_gate_index = get_int(kwargs, "observable_gate_index", 0);
     env->observable_gate_index_denominator = get_float(
         kwargs, "observable_gate_index_denominator", 0.0f);
@@ -373,6 +396,36 @@ void my_log(Log* log, Dict* out) {
     dict_set(out, "valid_run_rate", log->valid_run_rate);
     dict_set(out, "success_rate", log->success_rate);
     dict_set(out, "gates_passed", log->gates_passed);
+    static const char* gate_count_episode_keys[DRONE_RACE_MAX_GATES] = {
+        "gate_count1_episode", "gate_count2_episode",
+        "gate_count3_episode", "gate_count4_episode",
+        "gate_count5_episode", "gate_count6_episode",
+        "gate_count7_episode", "gate_count8_episode",
+        "gate_count9_episode", "gate_count10_episode",
+        "gate_count11_episode", "gate_count12_episode",
+        "gate_count13_episode", "gate_count14_episode",
+        "gate_count15_episode", "gate_count16_episode",
+    };
+    static const char* gate_count_success_keys[DRONE_RACE_MAX_GATES] = {
+        "gate_count1_success", "gate_count2_success",
+        "gate_count3_success", "gate_count4_success",
+        "gate_count5_success", "gate_count6_success",
+        "gate_count7_success", "gate_count8_success",
+        "gate_count9_success", "gate_count10_success",
+        "gate_count11_success", "gate_count12_success",
+        "gate_count13_success", "gate_count14_success",
+        "gate_count15_success", "gate_count16_success",
+    };
+    for (int gate_count = 0; gate_count < DRONE_RACE_MAX_GATES; gate_count++) {
+        dict_set(
+            out,
+            gate_count_episode_keys[gate_count],
+            log->gate_count_episode[gate_count]);
+        dict_set(
+            out,
+            gate_count_success_keys[gate_count],
+            log->gate_count_success[gate_count]);
+    }
     dict_set(out, "completion_time", log->completion_time);
     dict_set(out, "final_progress", log->final_progress);
     dict_set(out, "max_progress", log->max_progress);
@@ -412,53 +465,93 @@ void my_log(Log* log, Dict* out) {
     dict_set(out, "terminal_crossing_vertical", log->terminal_crossing_vertical);
     dict_set(out, "terminal_crossing_abs_right", log->terminal_crossing_abs_right);
     dict_set(out, "terminal_crossing_abs_vertical", log->terminal_crossing_abs_vertical);
-    static const char* sampled_keys[6] = {
+    static const char* sampled_keys[DRONE_RACE_MAX_GATES] = {
         "terminal_gate0_sampled", "terminal_gate1_sampled",
         "terminal_gate2_sampled", "terminal_gate3_sampled",
         "terminal_gate4_sampled", "terminal_gate5_sampled",
+        "terminal_gate6_sampled", "terminal_gate7_sampled",
+        "terminal_gate8_sampled", "terminal_gate9_sampled",
+        "terminal_gate10_sampled", "terminal_gate11_sampled",
+        "terminal_gate12_sampled", "terminal_gate13_sampled",
+        "terminal_gate14_sampled", "terminal_gate15_sampled",
     };
-    static const char* radial_keys[6] = {
+    static const char* radial_keys[DRONE_RACE_MAX_GATES] = {
         "terminal_gate0_radial", "terminal_gate1_radial",
         "terminal_gate2_radial", "terminal_gate3_radial",
         "terminal_gate4_radial", "terminal_gate5_radial",
+        "terminal_gate6_radial", "terminal_gate7_radial",
+        "terminal_gate8_radial", "terminal_gate9_radial",
+        "terminal_gate10_radial", "terminal_gate11_radial",
+        "terminal_gate12_radial", "terminal_gate13_radial",
+        "terminal_gate14_radial", "terminal_gate15_radial",
     };
-    static const char* right_keys[6] = {
+    static const char* right_keys[DRONE_RACE_MAX_GATES] = {
         "terminal_gate0_right", "terminal_gate1_right",
         "terminal_gate2_right", "terminal_gate3_right",
         "terminal_gate4_right", "terminal_gate5_right",
+        "terminal_gate6_right", "terminal_gate7_right",
+        "terminal_gate8_right", "terminal_gate9_right",
+        "terminal_gate10_right", "terminal_gate11_right",
+        "terminal_gate12_right", "terminal_gate13_right",
+        "terminal_gate14_right", "terminal_gate15_right",
     };
-    static const char* vertical_keys[6] = {
+    static const char* vertical_keys[DRONE_RACE_MAX_GATES] = {
         "terminal_gate0_vertical", "terminal_gate1_vertical",
         "terminal_gate2_vertical", "terminal_gate3_vertical",
         "terminal_gate4_vertical", "terminal_gate5_vertical",
+        "terminal_gate6_vertical", "terminal_gate7_vertical",
+        "terminal_gate8_vertical", "terminal_gate9_vertical",
+        "terminal_gate10_vertical", "terminal_gate11_vertical",
+        "terminal_gate12_vertical", "terminal_gate13_vertical",
+        "terminal_gate14_vertical", "terminal_gate15_vertical",
     };
-    for (int gate = 0; gate < 6; gate++) {
+    for (int gate = 0; gate < DRONE_RACE_MAX_GATES; gate++) {
         dict_set(out, sampled_keys[gate], log->terminal_gate_sampled[gate]);
         dict_set(out, radial_keys[gate], log->terminal_gate_radial[gate]);
         dict_set(out, right_keys[gate], log->terminal_gate_right[gate]);
         dict_set(out, vertical_keys[gate], log->terminal_gate_vertical[gate]);
     }
-    static const char* ordered_sampled_keys[6] = {
+    static const char* ordered_sampled_keys[DRONE_RACE_MAX_GATES] = {
         "ordered_gate0_sampled", "ordered_gate1_sampled",
         "ordered_gate2_sampled", "ordered_gate3_sampled",
         "ordered_gate4_sampled", "ordered_gate5_sampled",
+        "ordered_gate6_sampled", "ordered_gate7_sampled",
+        "ordered_gate8_sampled", "ordered_gate9_sampled",
+        "ordered_gate10_sampled", "ordered_gate11_sampled",
+        "ordered_gate12_sampled", "ordered_gate13_sampled",
+        "ordered_gate14_sampled", "ordered_gate15_sampled",
     };
-    static const char* ordered_radial_keys[6] = {
+    static const char* ordered_radial_keys[DRONE_RACE_MAX_GATES] = {
         "ordered_gate0_radial", "ordered_gate1_radial",
         "ordered_gate2_radial", "ordered_gate3_radial",
         "ordered_gate4_radial", "ordered_gate5_radial",
+        "ordered_gate6_radial", "ordered_gate7_radial",
+        "ordered_gate8_radial", "ordered_gate9_radial",
+        "ordered_gate10_radial", "ordered_gate11_radial",
+        "ordered_gate12_radial", "ordered_gate13_radial",
+        "ordered_gate14_radial", "ordered_gate15_radial",
     };
-    static const char* ordered_right_keys[6] = {
+    static const char* ordered_right_keys[DRONE_RACE_MAX_GATES] = {
         "ordered_gate0_right", "ordered_gate1_right",
         "ordered_gate2_right", "ordered_gate3_right",
         "ordered_gate4_right", "ordered_gate5_right",
+        "ordered_gate6_right", "ordered_gate7_right",
+        "ordered_gate8_right", "ordered_gate9_right",
+        "ordered_gate10_right", "ordered_gate11_right",
+        "ordered_gate12_right", "ordered_gate13_right",
+        "ordered_gate14_right", "ordered_gate15_right",
     };
-    static const char* ordered_vertical_keys[6] = {
+    static const char* ordered_vertical_keys[DRONE_RACE_MAX_GATES] = {
         "ordered_gate0_vertical", "ordered_gate1_vertical",
         "ordered_gate2_vertical", "ordered_gate3_vertical",
         "ordered_gate4_vertical", "ordered_gate5_vertical",
+        "ordered_gate6_vertical", "ordered_gate7_vertical",
+        "ordered_gate8_vertical", "ordered_gate9_vertical",
+        "ordered_gate10_vertical", "ordered_gate11_vertical",
+        "ordered_gate12_vertical", "ordered_gate13_vertical",
+        "ordered_gate14_vertical", "ordered_gate15_vertical",
     };
-    for (int gate = 0; gate < 6; gate++) {
+    for (int gate = 0; gate < DRONE_RACE_MAX_GATES; gate++) {
         dict_set(out, ordered_sampled_keys[gate], log->ordered_gate_sampled[gate]);
         dict_set(out, ordered_radial_keys[gate], log->ordered_gate_radial[gate]);
         dict_set(out, ordered_right_keys[gate], log->ordered_gate_right[gate]);

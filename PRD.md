@@ -9787,3 +9787,33 @@ For each training/eval block, record:
   teacher blend in admission, unique tags with SHA-256 evidence, no unchanged
   retries. Repository checkpoint for the handoff is commit `508286e`.
   FlightSim remains frozen after N522 and Submission remains forbidden.
+
+### VQ2 variable-gate environment — VG001/VG001B, 2026-07-29
+
+- VG001 extends the existing native random-course machinery without changing
+  its default path. Each vector environment may now select one fixed episode
+  count in `5..12`; 512 instance indices assign exactly 64 of every count,
+  and resets preserve that assignment. Optional bounded validation requires
+  finite ordered planes, non-overlap, an `8 m` minimum forward gap, and a
+  `40 m` maximum adjacent-center distance.
+- The fixed public phase contract is now
+  `clamp(active_gate_index, 0, 16) / 16`, held at the official `4 Hz` update
+  cadence. Total gate count is never exposed. A count-agnostic native fixture
+  proves the complete `4096` mask plus `22`-value legal tail is byte-identical
+  for five- and twelve-gate courses when the visible state is identical.
+- Both native regression suites pass, including `4096` randomized course
+  constructions spanning every count `5..12`; all `32` focused Python tests
+  pass. Existing SF012 collection now intentionally fails its frozen source
+  lock rather than silently relabeling the old six-gate corpus.
+- The first compiled-binding distribution report passed but used the default
+  bf16 extension and is superseded; preserve report SHA-256 `0f67ff81...` as
+  rejected ABI evidence. VG001B rebuilt `drone_race_vision` explicitly as
+  float32 (extension SHA-256 `847d77ee...`) and passes 128 forced episodes:
+  exactly `0.125` episode mass at every count `5..12`, unchanged across reset,
+  with zero off-range mass. Accepted report SHA-256 is `0845ea46...`.
+- VG002 is preregistered but not yet executed: four independent `512`-episode
+  oracle screens at counts `{5,8,11,12}`, true `0.75 m` aperture, at least
+  `99%` success for each count, and zero collision. No variable-gate corpus or
+  policy training is admitted until it passes. FlightSim received no packet,
+  N712's consumed sealed test was not accessed, and Submission remains
+  forbidden.

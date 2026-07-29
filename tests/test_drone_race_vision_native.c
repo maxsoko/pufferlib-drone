@@ -91,6 +91,52 @@ static int test_visual_schema_and_mask(void) {
     return 0;
 }
 
+static int test_legal_visual_observation_is_count_agnostic(void) {
+    DroneRace five = make_visual_env();
+    DroneRace twelve = make_visual_env();
+    five.num_gates = 5;
+    twelve.num_gates = 12;
+    for (int gate = 2; gate < 12; gate++) {
+        Target hidden = {
+            .pos = {-100.0f - (float)gate, 0.0f, 0.0f},
+            .orientation = {1.0f, 0.0f, 0.0f, 0.0f},
+            .normal = {1.0f, 0.0f, 0.0f},
+            .radius = 1.0f,
+        };
+        twelve.gates[gate] = hidden;
+        if (gate < 5) five.gates[gate] = hidden;
+    }
+    five.agents[0].visual_rng = 12345u;
+    twelve.agents[0].visual_rng = 12345u;
+    five.agents[0].current_gate = 1;
+    twelve.agents[0].current_gate = 1;
+    five.agents[0].step_count = 0;
+    twelve.agents[0].step_count = 0;
+    memset(five.observations, 0, DRONE_RACE_OBS_SIZE * sizeof(float));
+    memset(twelve.observations, 0, DRONE_RACE_OBS_SIZE * sizeof(float));
+    compute_one_observation(&five, 0);
+    compute_one_observation(&twelve, 0);
+
+    CHECK(memcmp(
+            five.observations,
+            twelve.observations,
+            DRONE_RACE_VISUAL_MASK_SIZE * sizeof(float)) == 0,
+        "mask geometry must be byte-identical for a shared visible fixture");
+    CHECK(memcmp(
+            five.observations + DRONE_RACE_VISUAL_BODY_RATE_OFFSET,
+            twelve.observations + DRONE_RACE_VISUAL_BODY_RATE_OFFSET,
+            (DRONE_RACE_VISUAL_LEGAL_OBS_SIZE
+                - DRONE_RACE_VISUAL_BODY_RATE_OFFSET) * sizeof(float)) == 0,
+        "22-value legal sensor/history tail must not expose total gate count");
+    CHECK(five.observations[DRONE_RACE_VISUAL_PRIVILEGED_OFFSET + 32]
+            != twelve.observations[DRONE_RACE_VISUAL_PRIVILEGED_OFFSET + 32],
+        "training-only native progress may still depend on episode length");
+
+    free_visual_env(&five);
+    free_visual_env(&twelve);
+    return 0;
+}
+
 static int test_asynchronous_camera_and_action_history(void) {
     DroneRace env = make_visual_env();
     float reset_mask[DRONE_RACE_VISUAL_MASK_SIZE];
@@ -319,6 +365,7 @@ static int test_skydreamer_body_rate_penalty(void) {
 
 int main(void) {
     if (test_visual_schema_and_mask()) return 1;
+    if (test_legal_visual_observation_is_count_agnostic()) return 1;
     if (test_asynchronous_camera_and_action_history()) return 1;
     if (test_privileged_intervention_cannot_change_legal_slice()) return 1;
     if (test_ctbr_privileged_targets_follow_effective_plant()) return 1;

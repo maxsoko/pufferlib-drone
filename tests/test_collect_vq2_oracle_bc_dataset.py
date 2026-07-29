@@ -49,11 +49,13 @@ def test_legal_storage_excludes_privilege_and_bounds_mask_quantization() -> None
     assert np.array_equal(tail, changed_tail)
 
 
-def test_sf011_oracle_inputs_remain_source_locked() -> None:
-    observed = verify_frozen_sources()
-    assert observed["ocean/drone_race/drone_race.c"] == (
-        "47f5c40d0cd04e59caf0e3aad604847a8273deb7c4e64f6f683c2a813b2ab5b4"
-    )
+def test_sf012_frozen_collector_rejects_variable_gate_sources() -> None:
+    # The admitted SF012 artifact remains frozen evidence. VG001 deliberately
+    # changes default-off native infrastructure, so the old collector must
+    # fail closed rather than silently blessing a new extension under old
+    # source hashes. The variable-gate corpus gets a new collector and tag.
+    with pytest.raises(RuntimeError, match="source-lock mismatch"):
+        verify_frozen_sources()
 
 
 def test_legal_storage_rejects_wrong_abi_and_invalid_values() -> None:

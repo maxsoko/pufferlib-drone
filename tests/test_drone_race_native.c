@@ -81,6 +81,97 @@ static void free_test_env(DroneRace* env) {
     free(env->terminals);
 }
 
+static int test_variable_gate_count_is_fixed_and_uniform_per_env(void) {
+    CHECK(select_num_gates_for_env(6, 0, 5, 12, 511u, 99u) == 6,
+        "disabled variable counts must preserve configured six-gate behavior");
+
+    int counts[DRONE_RACE_MAX_GATES + 1] = {0};
+    int rotated[DRONE_RACE_MAX_GATES + 1] = {0};
+    for (unsigned int env_index = 0; env_index < 512u; env_index++) {
+        int count = select_num_gates_for_env(
+            6, 1, 5, 12, env_index, 0u);
+        int seeded = select_num_gates_for_env(
+            6, 1, 5, 12, env_index, 42001u);
+        CHECK(count >= 5 && count <= 12 && seeded >= 5 && seeded <= 12,
+            "variable count selection escaped the preregistered range");
+        counts[count] += 1;
+        rotated[seeded] += 1;
+    }
+    for (int count = 5; count <= 12; count++) {
+        CHECK(counts[count] == 64 && rotated[count] == 64,
+            "512 vector instances must assign exactly 64 of every gate count");
+    }
+    CHECK(select_num_gates_for_env(6, 1, 12, 5, 0u, 0u) == 5,
+        "reversed variable-count bounds must be normalized");
+    return 0;
+}
+
+static int test_variable_gate_randomized_courses_are_valid(void) {
+    for (int count = 5; count <= 12; count++) {
+        DroneRace env = {0};
+        env.num_gates = count;
+        env.gate_spacing = 22.0f;
+        env.gate_radius = 0.75f;
+        env.gate_altitude = 1.5f;
+        env.gate_lateral_amplitude = 4.0f;
+        env.course_geometry_scale_randomize = 1;
+        env.course_geometry_scale_min = 0.35f;
+        env.course_geometry_scale_max = 1.0f;
+        env.gate_position_domain_randomize = 1;
+        env.gate_position_domain_randomize_probability = 1.0f;
+        env.gate_position_randomize_from_index = 0;
+        env.gate_position_jitter_x = 3.0f;
+        env.gate_position_jitter_y = 5.0f;
+        env.gate_position_jitter_z = 0.5f;
+        env.gate_position_require_valid_course = 1;
+        env.gate_position_min_forward_gap_m = 8.0f;
+        env.gate_position_max_segment_distance_m = 40.0f;
+        env.gate_position_resample_attempts = 64;
+        build_course(&env);
+
+        for (unsigned int seed = 0; seed < 512u; seed++) {
+            DroneRaceAgent agent = {0};
+            env.rng = 1009u * seed + (unsigned int)count;
+            build_randomized_agent_course(&env, &agent);
+            for (int gate = 0; gate < count; gate++) {
+                Target* current = &agent.randomized_gates[gate];
+                CHECK(isfinite(current->pos.x)
+                        && isfinite(current->pos.y)
+                        && isfinite(current->pos.z),
+                    "randomized gate coordinates must be finite");
+                for (int prior = 0; prior < gate; prior++) {
+                    Target* other = &agent.randomized_gates[prior];
+                    CHECK(race_dist3(current->pos, other->pos)
+                            > current->radius + other->radius,
+                        "randomized gate apertures must not overlap");
+                }
+                if (gate == 0) continue;
+                Target* previous = &agent.randomized_gates[gate - 1];
+                CHECK(current->pos.x - previous->pos.x >= 8.0f,
+                    "randomized gate planes must remain strictly ordered");
+                CHECK(race_dist3(current->pos, previous->pos) <= 40.0f,
+                    "randomized adjacent gates must remain reachable");
+            }
+        }
+    }
+    return 0;
+}
+
+static int test_gate_count_logging_reaches_engine_cap(void) {
+    DroneRace env = {0};
+    DroneRaceAgent agent = {0};
+    env.num_gates = 12;
+    agent.current_gate = 12;
+    agent.valid_run = 1;
+    add_log(&env, &agent, true);
+    CHECK(env.log.gate_count_episode[11] == 1.0f
+            && env.log.gate_count_success[11] == 1.0f,
+        "12-gate completion must be retained in per-count diagnostics");
+    CHECK(env.log.gate_count_episode[5] == 0.0f,
+        "per-count diagnostics must not contaminate the six-gate anchor");
+    return 0;
+}
+
 static int test_gate_crossing_geometry(void) {
     Target gate = {
         .pos = {0.0f, 0.0f, 1.0f},
@@ -2239,6 +2330,9 @@ static int test_vq1_telemetry_teacher_targets_active_gate(void) {
 
 int main(void) {
     if (test_vecenv_dict_grows_without_heap_overflow()) return 1;
+    if (test_variable_gate_count_is_fixed_and_uniform_per_env()) return 1;
+    if (test_variable_gate_randomized_courses_are_valid()) return 1;
+    if (test_gate_count_logging_reaches_engine_cap()) return 1;
     if (test_gate_crossing_geometry()) return 1;
     if (test_terminal_crossing_is_bucketed_by_gate()) return 1;
     if (test_ordered_crossing_and_envelope_diagnostics_are_log_only()) return 1;

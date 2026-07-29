@@ -1,8 +1,10 @@
 """Recurrent VQ2 actor with one public official-progress scalar.
 
 The first 4,118 values retain the frozen legal camera/IMU/actuator/action/timing
-ABI. The final value is held ``active_gate_index / 6`` from public race status.
-No state estimate, gate geometry, or privileged decoder enters this module.
+ABI. For the variable-gate lineage, the final value is held
+``active_gate_index / 16`` from public race status. The fixed denominator is
+the native engine cap and does not reveal or assume the course gate count. No
+state estimate, gate geometry, or privileged decoder enters this module.
 """
 
 from __future__ import annotations
@@ -13,12 +15,13 @@ import torch
 from torch import nn
 
 from pufferlib.vq2_informed import LEGAL_OBS_SIZE, VQ2VisualEncoder
+from pufferlib.vq2_public_phase import ENGINE_GATE_CAP
 from pufferlib.vq2_recurrent import ACTION_SIZE, RecurrentActorOutput
 
 
 PUBLIC_PHASE_SIZE = 1
 PHASE_LEGAL_OBS_SIZE = LEGAL_OBS_SIZE + PUBLIC_PHASE_SIZE
-OFFICIAL_GATE_COUNT = 6
+OFFICIAL_GATE_COUNT = ENGINE_GATE_CAP
 
 
 class VQ2PhaseRecurrentActor(nn.Module):
@@ -119,4 +122,3 @@ class VQ2PhaseRecurrentActor(nn.Module):
             output.pre_tanh_mean[:, 0],
             output.log_std[:, 0],
         ), next_state
-

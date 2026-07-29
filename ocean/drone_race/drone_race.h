@@ -70,6 +70,11 @@ struct Log {
     float valid_run_rate;
     float success_rate;
     float gates_passed;
+    // Diagnostic-only distribution for fixed-per-vector-instance gate counts.
+    // Indexed by num_gates - 1 through the engine cap. Values are aggregated
+    // as episode and success rates and never enter the actor observation.
+    float gate_count_episode[DRONE_RACE_MAX_GATES];
+    float gate_count_success[DRONE_RACE_MAX_GATES];
     float completion_time;
     float final_progress;
     float max_progress;
@@ -315,6 +320,12 @@ typedef struct {
 
     float dt;
     int num_gates;
+    // Default-off variable-course contract. The binding chooses one count at
+    // construction from the vector instance index; resets never resample it.
+    int num_gates_per_env_randomize;
+    int num_gates_per_env_min;
+    int num_gates_per_env_max;
+    unsigned int num_gates_per_env_seed;
     float gate_spacing;
     float gate_radius;
     int gate_radius_randomize;
@@ -522,6 +533,13 @@ typedef struct {
     float gate_position_jitter_x;
     float gate_position_jitter_y;
     float gate_position_jitter_z;
+    // Default-off validation/rejection layer over the existing randomized
+    // course draws. This guarantees ordered, non-overlapping, reachable
+    // segments without changing historical randomization streams.
+    int gate_position_require_valid_course;
+    float gate_position_min_forward_gap_m;
+    float gate_position_max_segment_distance_m;
+    int gate_position_resample_attempts;
     int observable_gate_index;
     float observable_gate_index_denominator;
     // New six-gate policy contract: observation 23 is normalized official

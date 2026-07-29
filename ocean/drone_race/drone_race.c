@@ -255,6 +255,42 @@ static void update_floor_risk_stats(DroneRaceAgent* agent, FloorRisk risk) {
     }
 }
 
+static int select_num_gates_for_env(
+        int configured_num_gates,
+        int randomize_per_env,
+        int minimum,
+        int maximum,
+        unsigned int env_index,
+        unsigned int seed) {
+    configured_num_gates = configured_num_gates < 1
+        ? 1
+        : configured_num_gates;
+    configured_num_gates = configured_num_gates > DRONE_RACE_MAX_GATES
+        ? DRONE_RACE_MAX_GATES
+        : configured_num_gates;
+    if (!randomize_per_env) return configured_num_gates;
+
+    minimum = minimum < 1 ? 1 : minimum;
+    maximum = maximum < 1 ? 1 : maximum;
+    minimum = minimum > DRONE_RACE_MAX_GATES
+        ? DRONE_RACE_MAX_GATES
+        : minimum;
+    maximum = maximum > DRONE_RACE_MAX_GATES
+        ? DRONE_RACE_MAX_GATES
+        : maximum;
+    if (minimum > maximum) {
+        int swap = minimum;
+        minimum = maximum;
+        maximum = swap;
+    }
+    unsigned int span = (unsigned int)(maximum - minimum + 1);
+    // Cyclic stratification is exactly uniform for vectors whose size is a
+    // multiple of span. The independent seed only rotates assignment; it does
+    // not consume or perturb the historical vehicle/course RNG stream.
+    unsigned int slot = (env_index + seed % span) % span;
+    return minimum + (int)slot;
+}
+
 static Vec3 course_gate_position(
         DroneRace* env, int gate_index, float geometry_scale) {
     float x;
@@ -1144,6 +1180,46 @@ static bool telemetry_velocity_teacher_action(
     return true;
 }
 
+static bool randomized_course_gate_valid(
+        const DroneRace* env,
+        const DroneRaceAgent* agent,
+        int gate_index,
+        const Target* candidate) {
+    if (!env->gate_position_require_valid_course) return true;
+    if (!isfinite(candidate->pos.x)
+            || !isfinite(candidate->pos.y)
+            || !isfinite(candidate->pos.z)
+            || !isfinite(candidate->radius)
+            || candidate->radius <= 0.0f) {
+        return false;
+    }
+    if (gate_index <= 0) return true;
+
+    const Target* previous = &agent->randomized_gates[gate_index - 1];
+    float aperture_gap = previous->radius + candidate->radius + 1e-3f;
+    float minimum_forward_gap = env->gate_position_min_forward_gap_m > 0.0f
+        ? env->gate_position_min_forward_gap_m
+        : aperture_gap;
+    float forward_gap = candidate->pos.x - previous->pos.x;
+    float segment_distance = race_dist3(candidate->pos, previous->pos);
+    if (forward_gap < minimum_forward_gap
+            || segment_distance < aperture_gap) {
+        return false;
+    }
+    if (env->gate_position_max_segment_distance_m > 0.0f
+            && segment_distance > env->gate_position_max_segment_distance_m) {
+        return false;
+    }
+    for (int prior_index = 0; prior_index < gate_index - 1; prior_index++) {
+        const Target* prior = &agent->randomized_gates[prior_index];
+        float separation = race_dist3(candidate->pos, prior->pos);
+        if (separation < prior->radius + candidate->radius + 1e-3f) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static void build_randomized_agent_course(DroneRace* env, DroneRaceAgent* agent) {
     if (!agent_course_randomized(env)) {
         return;
@@ -1204,37 +1280,65 @@ static void build_randomized_agent_course(DroneRace* env, DroneRaceAgent* agent)
     agent->gate_positions_randomized = randomize_positions ? 1 : 0;
 
     for (int i = 0; i < env->num_gates; i++) {
-        agent->randomized_gates[i] = env->gates[i];
+        Target base_gate = env->gates[i];
         if (env->gate_radius_randomize
                 && (env->gate_radius_randomize_gate_index < 0
                     || env->gate_radius_randomize_gate_index == i)) {
-            agent->randomized_gates[i].radius = gate_radius;
+            base_gate.radius = gate_radius;
         }
         if (use_target_aperture_profile) {
-            agent->randomized_gates[i].radius = target_aperture_radius;
+            base_gate.radius = target_aperture_radius;
         }
         if (env->course_geometry_scale_randomize) {
-            agent->randomized_gates[i].pos = course_gate_position(
+            base_gate.pos = course_gate_position(
                 env, i, geometry_scale);
         }
-        if (randomize_positions && i >= first) {
-            if (env->gate_position_randomized_radius > 0.0f) {
-                agent->randomized_gates[i].radius =
-                    env->gate_position_randomized_radius;
-            }
-            agent->randomized_gates[i].pos.x += rndf(
-                -fabsf(env->gate_position_jitter_x),
-                fabsf(env->gate_position_jitter_x),
-                &position_rng);
-            agent->randomized_gates[i].pos.y += rndf(
-                -fabsf(env->gate_position_jitter_y),
-                fabsf(env->gate_position_jitter_y),
-                &position_rng);
-            agent->randomized_gates[i].pos.z += rndf(
-                -fabsf(env->gate_position_jitter_z),
-                fabsf(env->gate_position_jitter_z),
-                &position_rng);
+        if (randomize_positions && i >= first
+                && env->gate_position_randomized_radius > 0.0f) {
+            base_gate.radius = env->gate_position_randomized_radius;
         }
+
+        int attempts = env->gate_position_require_valid_course
+            ? env->gate_position_resample_attempts
+            : 1;
+        if (attempts < 1) attempts = 1;
+        bool accepted = false;
+        Target candidate = base_gate;
+        for (int attempt = 0; attempt < attempts; attempt++) {
+            candidate = base_gate;
+            if (randomize_positions && i >= first) {
+                candidate.pos.x += rndf(
+                    -fabsf(env->gate_position_jitter_x),
+                    fabsf(env->gate_position_jitter_x),
+                    &position_rng);
+                candidate.pos.y += rndf(
+                    -fabsf(env->gate_position_jitter_y),
+                    fabsf(env->gate_position_jitter_y),
+                    &position_rng);
+                candidate.pos.z += rndf(
+                    -fabsf(env->gate_position_jitter_z),
+                    fabsf(env->gate_position_jitter_z),
+                    &position_rng);
+            }
+            if (randomized_course_gate_valid(env, agent, i, &candidate)) {
+                accepted = true;
+                break;
+            }
+        }
+        if (!accepted) {
+            fprintf(
+                stderr,
+                "failed to sample a valid randomized course gate %d after %d attempts\n",
+                i,
+                attempts);
+            abort();
+        }
+        agent->randomized_gates[i] = candidate;
+        /*
+         * The default-off path above consumes the same three position draws,
+         * in the same order, as the historical code. Additional draws occur
+         * only after an explicitly enabled validity rejection.
+         */
         agent->randomized_between_gate_distance[i] = 0.0f;
     }
     for (int i = 0; i < env->num_gates - 1; i++) {
@@ -1866,6 +1970,11 @@ static void add_log(DroneRace* env, DroneRaceAgent* agent, bool success) {
     env->log.valid_run_rate += agent->valid_run ? 1.0f : 0.0f;
     env->log.success_rate += success ? 1.0f : 0.0f;
     env->log.gates_passed += (float)agent->current_gate;
+    int gate_count_index = env->num_gates - 1;
+    if (gate_count_index >= 0 && gate_count_index < DRONE_RACE_MAX_GATES) {
+        env->log.gate_count_episode[gate_count_index] += 1.0f;
+        env->log.gate_count_success[gate_count_index] += success ? 1.0f : 0.0f;
+    }
     env->log.completion_time += success ? agent->elapsed_time : 0.0f;
     env->log.final_progress += agent->progress;
     env->log.max_progress += agent->max_progress;
