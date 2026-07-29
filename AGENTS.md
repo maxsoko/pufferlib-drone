@@ -9508,3 +9508,26 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   the smallest `256`-wide legal CNN plus one GRU and one four-channel bounded
   actor head, train with full episode order, then screen teacher-free. No
   checkpoint, shadow, bounded attempt, or Submission action is authorized yet.
+
+### VQ2 variable-gate strategy revision — 2026-07-28
+
+- SF013--SF068 and C001--C014 continued after SF012 in standalone
+  `docs/vq2_sf*.md`/`docs/vq2_c*.md` records. Frontier: SF063/SF064 pass
+  Gate 1 `512/512`, zero crash, but under-turn Gate 2 by `8.19 m`; SF068
+  whole-actor PPO reached the Gate-2 plane only on an unconsolidated sampled
+  trajectory while eroding Gate 1; C014 closed interpolation and recommends
+  phase-local recurrent PPO on the measured true/alias fixture.
+- Superseding corrections: the VQ2 course shows about `11` gates from the
+  start line (all prior screens assumed `6`; engine supports `num_gates` up
+  to `16` per instance), and the corrected mask-gap diagnostic (true `64 Hz`)
+  measures maximum mask-empty gaps of only `359 ms` — the failure mode is
+  post-crossing re-targeting ambiguity, not long blindness.
+- The authoritative execution prompt is now
+  `docs/vq2_variable_gate_solve_first_goal_prompt_2026-07-28.md`: variable
+  `5..12` gate courses with a count-agnostic phase scalar (normalize by the
+  fixed cap `16`), oracle re-admission per count, regenerated legal corpus,
+  `>=256`-step BPTT recurrent BC with transition oversampling, DAgger on
+  visited states, then phase-local PPO only if needed. Offline stages run on
+  rented remote compute; handoff commit is `508286e`. All legality, evidence,
+  and freeze contracts stand: FlightSim frozen after N522, Submission
+  forbidden, N712 sealed test never reopened.

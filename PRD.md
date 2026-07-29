@@ -9754,3 +9754,36 @@ For each training/eval block, record:
 - This is training data, not a solved policy. Implement and source-lock the
   compact legal CNN/GRU behavioral-cloning baseline before any teacher-free
   screen. FlightSim remains frozen and Submission forbidden.
+
+### VQ2 variable-gate strategy revision — 2026-07-28
+
+- Ledger note: the SF013--SF068 and C001--C014 work after SF012 was recorded
+  in standalone `docs/vq2_sf*.md` and `docs/vq2_c*.md` preregistration/result
+  documents rather than appended here. Verified frontier from those records:
+  SF063/SF064 pass Gate 1 `512/512` with zero crash but miss Gate 2 by a
+  consistent `8.19 m` under-turn; SF068's exact two-gate PPO reached the
+  Gate-2 plane only on a sampled trajectory (`0.054 m`) that the
+  deterministic mean never consolidated, while whole-actor updates eroded
+  Gate 1; C014 closed checkpoint interpolation and recommended phase-local
+  recurrent PPO on the measured true/alias fixture.
+- Two corrections supersede prior assumptions. First, the operator observed
+  approximately `11` gates from the VQ2 start line; every SF screen so far
+  trained and evaluated at `num_gates = 6`. The engine already supports up to
+  `DRONE_RACE_MAX_GATES = 16` per instance via the `num_gates` kwarg, fixed
+  per instance. Second, the corrected SF012 mask-gap diagnostic (after fixing
+  `step_dt` normalization; true rate `64 Hz`) measures mask-empty gaps of
+  p50 `62 ms`, p99 `250 ms`, max `359 ms`, killing the long-blind-gap
+  hypothesis; the live failure mode is post-crossing re-targeting ambiguity.
+- The active plan is `docs/vq2_variable_gate_solve_first_goal_prompt_2026-07-28.md`:
+  variable-count course generation (`5..12` gates, count-agnostic phase
+  scalar normalized by the fixed engine cap `16`), an oracle re-admission
+  screen per count, a regenerated legal BC corpus (`>=1.5M` transitions),
+  recurrent BC with `>=256`-step BPTT and `>=3x` transition oversampling,
+  DAgger rounds on visited states, and phase-local PPO only if DAgger
+  plateaus. Offline stages run on rented remote compute (Vast.ai class
+  hardware); local RTX 3070/4-core hardware is the measured bottleneck.
+- All prior constraints stand: one recurrent full-output Puffer actor on the
+  legal mask/tail/phase ABI, teacher and privileged state offline-only, zero
+  teacher blend in admission, unique tags with SHA-256 evidence, no unchanged
+  retries. Repository checkpoint for the handoff is commit `508286e`.
+  FlightSim remains frozen after N522 and Submission remains forbidden.
