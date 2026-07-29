@@ -1,5 +1,7 @@
 import importlib.util
+import socket
 import sys
+import time
 from pathlib import Path
 
 
@@ -74,7 +76,9 @@ def test_reassembles_out_of_order_chunks():
     assert frame.received_chunks == 3
     assert frame.total_chunks == 3
     assert frame.calibration.intrinsics.fx == 320.0
-    assert frame.calibration.extrinsics.camera_uptilt_deg == 20.0
+    # v3379 live calibration: rendered camera is level even though TS-002
+    # documents a 20-degree uptilt.
+    assert frame.calibration.extrinsics.camera_uptilt_deg == 0.0
     assert reassembler.metrics.completed_frames == 1
     assert reassembler.pending_frames == 0
 
@@ -111,6 +115,37 @@ def test_malformed_and_duplicate_packets_update_metrics():
     assert reassembler.metrics.chunks_accepted == 1
 
 
+def test_suppresses_complete_duplicate_frame_copy():
+    jpeg = b"\xff\xd8vq2-complete-frame-copy\xff\xd9"
+    reassembler = camera.JpegFrameReassembler()
+
+    first = ingest_frame(reassembler, 23, jpeg, 4_000_000_000, total_chunks=3)
+    duplicate = ingest_frame(
+        reassembler, 23, jpeg, 4_000_000_000, total_chunks=3
+    )
+
+    assert first is not None
+    assert duplicate is None
+    assert reassembler.metrics.completed_frames == 1
+    assert reassembler.metrics.duplicate_chunks == 3
+    assert reassembler.metrics.duplicate_completed_frame_chunks == 3
+    assert reassembler.metrics.out_of_order_frames == 0
+    assert reassembler.pending_frames == 0
+
+
+def test_completed_identity_cache_is_bounded_and_allows_old_key_reuse():
+    jpeg = b"\xff\xd8bounded-cache\xff\xd9"
+    reassembler = camera.JpegFrameReassembler(recent_completed_capacity=2)
+
+    assert ingest_frame(reassembler, 1, jpeg, 1_000, total_chunks=1) is not None
+    assert ingest_frame(reassembler, 2, jpeg, 2_000, total_chunks=1) is not None
+    assert ingest_frame(reassembler, 3, jpeg, 3_000, total_chunks=1) is not None
+    reused = ingest_frame(reassembler, 1, jpeg, 1_000, total_chunks=1)
+
+    assert reused is not None
+    assert reassembler.metrics.completed_frames == 4
+
+
 def test_frame_fps_jitter_and_stall_metrics():
     reassembler = camera.JpegFrameReassembler()
     jpeg = b"\xff\xd8fps-test\xff\xd9"
@@ -125,3 +160,37 @@ def test_frame_fps_jitter_and_stall_metrics():
     assert reassembler.metrics.average_jitter_ns > 0
     assert reassembler.metrics.frame_stalls == 1
     assert reassembler.metrics.max_frame_gap_ns == camera.EXPECTED_FRAME_INTERVAL_NS * 2
+
+
+def test_latest_frame_receiver_drains_udp_off_loop():
+    receiver = camera.LatestFrameCameraReceiver(host="127.0.0.1", port=0)
+    sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        port = receiver._receiver._socket.getsockname()[1]
+        jpeg = b"\xff\xd8latest-frame-test\xff\xd9"
+        for chunk_id in range(2):
+            sender.sendto(
+                make_packet(1, chunk_id, 2, jpeg, 1_000),
+                ("127.0.0.1", port),
+            )
+        time.sleep(0.08)
+        for chunk_id in range(2):
+            sender.sendto(
+                make_packet(2, chunk_id, 2, jpeg, 2_000),
+                ("127.0.0.1", port),
+            )
+
+        deadline = time.monotonic() + 1.0
+        frames = []
+        while time.monotonic() < deadline:
+            frames = receiver.poll_frames(max_packets=1)
+            if frames and frames[0].frame_id == 2:
+                break
+            time.sleep(0.01)
+
+        assert frames[0].frame_id == 2
+        assert receiver.reassembler.metrics.completed_frames == 2
+        assert receiver.poll_frames(max_packets=1) == []
+    finally:
+        sender.close()
+        receiver.close()

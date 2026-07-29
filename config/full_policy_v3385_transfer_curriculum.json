@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "description": "Progressively match v3385 close-range camera loss and measured course uncertainty without exposing gate coordinates to the policy.",
+  "stages": [
+    {
+      "name": "gate1_commit_dropout_2p50m",
+      "overrides": {
+        "env.num-gates": "2",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "2.50",
+        "env.gate-position-domain-randomize": "0"
+      }
+    },
+    {
+      "name": "gate1_commit_dropout_3p25m",
+      "overrides": {
+        "env.num-gates": "2",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "3.25",
+        "env.gate-position-domain-randomize": "0"
+      }
+    },
+    {
+      "name": "gate1_commit_dropout_4p25m",
+      "overrides": {
+        "env.num-gates": "2",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "4.25",
+        "env.gate-position-domain-randomize": "0"
+      }
+    },
+    {
+      "name": "gate2_commit_dropout_2p50m",
+      "overrides": {
+        "env.num-gates": "3",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "2.50",
+        "env.gate-position-domain-randomize": "0"
+      }
+    },
+    {
+      "name": "gate2_commit_dropout_4p25m",
+      "overrides": {
+        "env.num-gates": "3",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "4.25",
+        "env.gate-position-domain-randomize": "0"
+      }
+    },
+    {
+      "name": "full_commit_dropout_2p50m",
+      "overrides": {
+        "env.num-gates": "4",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "2.50",
+        "env.gate-position-domain-randomize": "0"
+      }
+    },
+    {
+      "name": "full_commit_dropout_4p25m",
+      "overrides": {
+        "env.num-gates": "4",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "4.25",
+        "env.gate-position-domain-randomize": "0"
+      }
+    },
+    {
+      "name": "transfer_jitter_0p50m",
+      "overrides": {
+        "env.num-gates": "4",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "4.25",
+        "env.gate-position-domain-randomize": "1",
+        "env.gate-position-randomize-from-index": "1",
+        "env.gate-position-jitter-x": "0.50",
+        "env.gate-position-jitter-y": "0.50",
+        "env.gate-position-jitter-z": "0.625"
+      }
+    },
+    {
+      "name": "transfer_jitter_1p00m",
+      "overrides": {
+        "env.num-gates": "4",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "4.25",
+        "env.gate-position-domain-randomize": "1",
+        "env.gate-position-randomize-from-index": "1",
+        "env.gate-position-jitter-x": "1.00",
+        "env.gate-position-jitter-y": "1.00",
+        "env.gate-position-jitter-z": "1.25"
+      }
+    },
+    {
+      "name": "transfer_jitter_1p50m",
+      "overrides": {
+        "env.num-gates": "4",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "4.25",
+        "env.gate-position-domain-randomize": "1",
+        "env.gate-position-randomize-from-index": "1",
+        "env.gate-position-jitter-x": "1.50",
+        "env.gate-position-jitter-y": "1.50",
+        "env.gate-position-jitter-z": "1.875"
+      }
+    },
+    {
+      "name": "v3385_transfer_target",
+      "overrides": {
+        "env.num-gates": "4",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "4.25",
+        "env.gate-position-domain-randomize": "1",
+        "env.gate-position-randomize-from-index": "1",
+        "env.gate-position-jitter-x": "2.00",
+        "env.gate-position-jitter-y": "2.00",
+        "env.gate-position-jitter-z": "2.50"
+      }
+    }
+  ]
+}

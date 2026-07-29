@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "smoke_defaults": {
+    "require_telemetry": true,
+    "require_camera": true,
+    "min_gate_passes": 2
+  },
+  "gate_pass": {
+    "confidence_arm_min": 0.35,
+    "confidence_pass_min": 0.4,
+    "arm_range_m": 3.2,
+    "pass_range_m": 2.5,
+    "rearm_range_m": 2.8,
+    "min_consecutive_pass_frames": 1,
+    "max_missed_detection_frames": 5,
+    "pass_cooldown_s": 0.3
+  },
+  "health_thresholds": {
+    "max_command_rate_violations": 0,
+    "min_telemetry_messages": 1,
+    "min_camera_frames": 1,
+    "max_telemetry_dropouts": 2,
+    "min_effective_command_hz": 50.0,
+    "max_telemetry_drain_limit_hits": 0
+  },
+  "promotion": {
+    "n_repeats": 10,
+    "normal_min_valid_runs": 8,
+    "degraded_profile_a_min_valid_runs": 7,
+    "command_hz_min": 50.0,
+    "command_hz_max_exclusive": 100.0,
+    "heartbeat_hz_min": 2.0
+  },
+  "degraded_profile_a": {
+    "loss_rate": 0.02,
+    "reorder_rate": 0.05,
+    "latency_ms": 30.0,
+    "jitter_ms": 10.0,
+    "seed": 20260706
+  }
+}

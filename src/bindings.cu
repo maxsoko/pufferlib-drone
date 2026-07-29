@@ -1,6 +1,7 @@
 // bindings.cpp - Python bindings for pufferlib (torch-free)
 
 #include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 #include "pufferlib.cu"
 
@@ -8,6 +9,33 @@
 #define PUFFER_STRINGIFY(x) _PUFFER_STRINGIFY(x)
 
 namespace py = pybind11;
+
+py::array_t<float> precision_tensor_numpy(const PrecisionTensor& tensor) {
+    int dimensions = ndim(tensor.shape);
+    std::vector<py::ssize_t> shape;
+    shape.reserve(dimensions);
+    for (int i = 0; i < dimensions; i++) {
+        shape.push_back((py::ssize_t)tensor.shape[i]);
+    }
+
+    size_t count = (size_t)numel(tensor.shape);
+    std::vector<precision_t> host(count);
+    cudaError_t error = cudaMemcpy(
+        host.data(), tensor.data, count * sizeof(precision_t),
+        cudaMemcpyDeviceToHost);
+    if (error != cudaSuccess) {
+        throw std::runtime_error(
+            std::string("failed to copy rollout tensor: ")
+            + cudaGetErrorString(error));
+    }
+
+    py::array_t<float> result(shape);
+    float* output = result.mutable_data();
+    for (size_t i = 0; i < count; i++) {
+        output[i] = to_float(host[i]);
+    }
+    return result;
+}
 
 // Wrapper functions for Python bindings
 pybind11::dict puf_log(pybind11::object pufferl_obj) {
@@ -106,7 +134,7 @@ pybind11::dict puf_eval_log(pybind11::object pufferl_obj) {
     pufferl.last_log_step = pufferl.global_step;
  
     pybind11::dict env_dict;
-    Dict* env_out = create_dict(32);
+    Dict* env_out = create_dict(ENV_LOG_DICT_CAPACITY);
     static_vec_eval_log(pufferl.vec, env_out);
     for (int i = 0; i < env_out->size; i++) {
         env_dict[env_out->items[i].key] = env_out->items[i].value;
@@ -134,12 +162,41 @@ void rollouts(pybind11::object pufferl_obj) {
     pybind11::gil_scoped_release no_gil;
     double t0 = wall_clock();
 
-    // Zero state buffers
-    if (pufferl.hypers.reset_state) {
-        for (int i = 0; i < pufferl.hypers.num_buffers; i++) {
-            puf_zero(&pufferl.buffer_states[i], pufferl.default_stream);
+    int agents_per_buffer = pufferl.hypers.total_agents
+        / pufferl.hypers.num_buffers;
+    for (int i = 0; i < pufferl.hypers.num_buffers; i++) {
+        PrecisionTensor state = pufferl.buffer_states[i];
+        int start = i * agents_per_buffer;
+        if (pufferl.hypers.reset_state) {
+            puf_zero(&state, pufferl.default_stream);
+        } else {
+            int state_count = pufferl.hypers.num_layers
+                * agents_per_buffer * pufferl.hypers.hidden_size;
+            reset_terminal_recurrent_states<<<
+                grid_size(state_count), BLOCK_SIZE, 0, pufferl.default_stream>>>(
+                    state.data,
+                    pufferl.env.terminals.data + start,
+                    pufferl.hypers.num_layers,
+                    agents_per_buffer,
+                    pufferl.hypers.hidden_size);
         }
+        size_t source_pitch = (size_t)agents_per_buffer
+            * pufferl.hypers.hidden_size * sizeof(precision_t);
+        size_t destination_pitch = (size_t)pufferl.hypers.total_agents
+            * pufferl.hypers.hidden_size * sizeof(precision_t);
+        precision_t* destination = pufferl.rollout_initial_states.data
+            + (size_t)start * pufferl.hypers.hidden_size;
+        cudaMemcpy2DAsync(
+            destination,
+            destination_pitch,
+            state.data,
+            source_pitch,
+            source_pitch,
+            pufferl.hypers.num_layers,
+            cudaMemcpyDeviceToDevice,
+            pufferl.default_stream);
     }
+    cudaStreamSynchronize(pufferl.default_stream);
 
     static_vec_omp_step(pufferl.vec);
     float sec = (float)(wall_clock() - t0);
@@ -150,6 +207,19 @@ void rollouts(pybind11::object pufferl_obj) {
     pufferl.profile.accum[PROF_EVAL_GPU] += eval_prof[EVAL_GPU];
     pufferl.profile.accum[PROF_EVAL_ENV] += eval_prof[EVAL_ENV_STEP];
     pufferl.global_step += pufferl.hypers.horizon * pufferl.hypers.total_agents;
+}
+
+py::dict rollout_trace(pybind11::object pufferl_obj) {
+    PuffeRL& pufferl = pufferl_obj.cast<PuffeRL&>();
+    py::dict result;
+    result["observations"] = precision_tensor_numpy(
+        pufferl.rollouts.observations);
+    result["actions"] = precision_tensor_numpy(pufferl.rollouts.actions);
+    result["rewards"] = precision_tensor_numpy(pufferl.rollouts.rewards);
+    result["terminals"] = precision_tensor_numpy(pufferl.rollouts.terminals);
+    result["initial_states"] = precision_tensor_numpy(
+        pufferl.rollout_initial_states);
+    return result;
 }
 
 pybind11::dict train(pybind11::object pufferl_obj) {
@@ -318,7 +388,7 @@ void cpu_vec_step_py(VecEnv& ve, long long actions_ptr) {
 }
 
 py::dict vec_log(VecEnv& ve) {
-    Dict* out = create_dict(32);
+    Dict* out = create_dict(ENV_LOG_DICT_CAPACITY);
     static_vec_log(ve.vec, out);
     py::dict result;
     for (int i = 0; i < out->size; i++) {
@@ -376,6 +446,15 @@ std::unique_ptr<PuffeRL> create_pufferl(py::dict args) {
     // Priority
     hypers.prio_alpha = get_config(train_kwargs, "prio_alpha");
     hypers.prio_beta0 = get_config(train_kwargs, "prio_beta0");
+    hypers.phase_prio_obs_index = get_config(train_kwargs, "phase_prio_obs_index");
+    hypers.phase_prio_scale = get_config(train_kwargs, "phase_prio_scale");
+    hypers.phase_prio_max_weight = get_config(train_kwargs, "phase_prio_max_weight");
+    hypers.train_encoder_feature_start = get_config(
+        train_kwargs, "train_encoder_feature_start");
+    hypers.train_encoder_feature_end = get_config(
+        train_kwargs, "train_encoder_feature_end");
+    hypers.reward_scale = get_config(train_kwargs, "reward_scale");
+    hypers.reward_clip = get_config(train_kwargs, "reward_clip");
     hypers.reset_state = get_config(args, "reset_state");
     // Base-level config ([base] section becomes top-level in args)
     hypers.cudagraphs = get_config(args, "cudagraphs");
@@ -461,6 +540,7 @@ PYBIND11_MODULE(_C, m) {
     m.def("eval_log", &puf_eval_log);
     m.def("render", &render);
     m.def("rollouts", &rollouts);
+    m.def("rollout_trace", &rollout_trace);
     m.def("train", &train);
     m.def("close", &puf_close);
     m.def("save_weights", &save_weights);
@@ -499,6 +579,11 @@ PYBIND11_MODULE(_C, m) {
         .def_readwrite("vtrace_c_clip", &HypersT::vtrace_c_clip)
         .def_readwrite("prio_alpha", &HypersT::prio_alpha)
         .def_readwrite("prio_beta0", &HypersT::prio_beta0)
+        .def_readwrite("phase_prio_obs_index", &HypersT::phase_prio_obs_index)
+        .def_readwrite("phase_prio_scale", &HypersT::phase_prio_scale)
+        .def_readwrite("phase_prio_max_weight", &HypersT::phase_prio_max_weight)
+        .def_readwrite("train_encoder_feature_start", &HypersT::train_encoder_feature_start)
+        .def_readwrite("train_encoder_feature_end", &HypersT::train_encoder_feature_end)
         .def_readwrite("cudagraphs", &HypersT::cudagraphs)
         .def_readwrite("profile", &HypersT::profile)
         .def_readwrite("rank", &HypersT::rank)

@@ -208,6 +208,15 @@ if [ -z "$NCCL_LFLAG" ]; then
     NCCL_LFLAG=$(python -c "import nvidia.nccl, os; print('-L' + os.path.join(nvidia.nccl.__path__[0], 'lib'))" 2>/dev/null || echo "")
 fi
 
+NCCL_LINK="-lnccl"
+CUDNN_LINK="-lcudnn"
+if [ -n "$NCCL_LFLAG" ] && [ -f "${NCCL_LFLAG#-L}/libnccl.so.2" ] && [ ! -e "${NCCL_LFLAG#-L}/libnccl.so" ]; then
+    NCCL_LINK="-l:libnccl.so.2"
+fi
+if [ -n "$CUDNN_LFLAG" ] && [ -f "${CUDNN_LFLAG#-L}/libcudnn.so.9" ] && [ ! -e "${CUDNN_LFLAG#-L}/libcudnn.so" ]; then
+    CUDNN_LINK="-l:libcudnn.so.9"
+fi
+
 WHEEL_RPATH_FLAGS=()
 for lib_flag in "$CUDNN_LFLAG" "$NCCL_LFLAG"; do
     if [[ "$lib_flag" == -L* ]]; then
@@ -276,7 +285,7 @@ if [ -z "$MODE" ]; then
         build/bindings.o "$STATIC_LIB" "$RAYLIB_A"
         -L$CUDA_HOME/lib64 $CUDNN_LFLAG $NCCL_LFLAG
         "${WHEEL_RPATH_FLAGS[@]}"
-        -lcudart -lnccl -lnvidia-ml -lcublas -lcusolver -lcurand -lcudnn
+        -lcudart $NCCL_LINK -lnvidia-ml -lcublas -lcusolver -lcurand $CUDNN_LINK
         $OMP_LIB $LINK_OPT
         "${SHARED_LDFLAGS[@]}"
         -o "$OUTPUT"

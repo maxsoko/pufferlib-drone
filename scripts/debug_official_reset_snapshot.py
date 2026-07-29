@@ -39,8 +39,23 @@ def _maybe_send_reset(args) -> bool:
         return False
     adapter = MavlinkSitlAdapter(args.endpoint, dropout_after_s=args.telemetry_dropout_s)
     try:
+        heartbeat_deadline = time.monotonic() + 2.0
+        while (
+            adapter.telemetry.metrics.heartbeats <= 0
+            and time.monotonic() < heartbeat_deadline
+        ):
+            adapter.poll_telemetry(timeout_s=0.05)
+        if adapter.telemetry.metrics.heartbeats <= 0:
+            raise RuntimeError("cannot reset simulator before receiving a MAVLink heartbeat")
         adapter.send_heartbeat()
+        adapter.send_disarm_command()
+        time.sleep(0.1)
         adapter.send_sim_reset_command()
+        time.sleep(0.5)
+        for _ in range(3):
+            adapter.send_heartbeat()
+            adapter.send_disarm_command()
+            time.sleep(0.1)
     finally:
         adapter.close()
     if args.post_reset_sleep_s > 0.0:

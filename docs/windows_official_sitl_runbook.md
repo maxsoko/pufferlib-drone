@@ -1,14 +1,20 @@
 # Windows Official SITL Runbook
 
-Last updated: 2026-06-04
+Last updated: 2026-07-16
 
 Use this path for official simulator validation on the local RTX 3070 workstation.
 Keep native PufferLib training and checkpoint generation separate from this lightweight
 Windows controller runtime unless a policy checkpoint is ready to test.
 
+The installed v1.0.3385 UI currently shows `AI-GP Virtual Qualifier R1`, and
+the user has not completed VQ2. Confirm the real event/update path and
+finish-time lock semantics before attempting a VQ2 finish. The active execution
+mandate is `docs/competitive_lap_execution_prompt.md`.
+
 ## Validated Topology
 
-- Simulator: `C:\Users\anon\Desktop\AI-GP Simulator v1.0.3379\AIGP_3379`
+- Simulator executable:
+  `C:\Users\anon\Desktop\AI-GP Simulator v1.0.3385\AIGP_3385\FlightSim.exe`
 - Simulator process: `DCGame-Win64-Shipping.exe`
 - Controller repo: `C:\Users\anon\code\pufferlib-drone`
 - Controller Python: `C:\Users\anon\code\pufferlib-drone\.venv-win\Scripts\python.exe`
@@ -85,6 +91,8 @@ for `scripts/policy_callable_checkpoint.py`.
 
 ```powershell
 $env:PUFFER_POLICY_CHECKPOINT_PATH = "C:\path\to\checkpoint.bin"
+$env:PUFFER_POLICY_LAYOUT_PRECISION_BYTES = "2" # Use "4" for FP32-trained checkpoints.
+$env:PUFFER_POLICY_NATIVE_BF16 = "0"
 .\scripts\run_windows_official_gate1_validation.ps1 `
   -Tag windows_local_policy_001 `
   -ControlMode policy `
@@ -105,7 +113,7 @@ $env:PUFFER_POLICY_CHECKPOINT_PATH = "C:\path\to\checkpoint.bin"
 
 The simulator ships a Python example at:
 
-`C:\Users\anon\Desktop\AI-GP Simulator v1.0.3379\PyAIPilotExample-v2`
+`C:\Users\anon\Desktop\AI-GP Simulator v1.0.3385\PyAIPilotExample-v2`
 
 Useful confirmed details:
 

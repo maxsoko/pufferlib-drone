@@ -34,7 +34,32 @@ def main():
     parser.add_argument("--num-actions", type=int, default=4)
     args = parser.parse_args()
 
-    weights = np.fromfile(args.input, dtype=np.float32)
+    serialized = np.fromfile(args.input, dtype=np.float32)
+    raw_count = (
+        args.hidden_dim * args.input_dim
+        + (args.num_actions + 1) * args.hidden_dim
+        + args.num_actions
+        + args.num_layers * 3 * args.hidden_dim * args.hidden_dim
+    )
+    if len(serialized) < raw_count:
+        raise ValueError(
+            f"weight file ended early: expected at least {raw_count} floats, "
+            f"got {len(serialized)}"
+        )
+    counts = [
+        args.hidden_dim * args.input_dim,
+        (args.num_actions + 1) * args.hidden_dim,
+        args.num_actions,
+        *([3 * args.hidden_dim * args.hidden_dim] * args.num_layers),
+    ]
+    aligned_count = 0
+    for count in counts:
+        aligned_count = _align8(aligned_count + count)
+    weights = np.pad(
+        serialized,
+        (0, max(0, aligned_count - len(serialized))),
+        mode="constant",
+    )
     idx = 0
     arrays = {}
     manifest = {

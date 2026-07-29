@@ -29,6 +29,11 @@ class GateDetection:
     bounding_height_px: float
     fill_ratio: float
     confidence: float
+    # "aperture" when the inner gate opening was resolved, "frame" when only
+    # the outer red structure was, and "frame_partial" for a dominant near
+    # frame cropped by an image edge. Range estimation must scale the assumed
+    # physical width accordingly or estimates flip ~2x between frames.
+    source: str = "frame"
 
 
 @dataclasses.dataclass
@@ -38,6 +43,8 @@ class GateDetectorMetrics:
     decode_failures: int = 0
     contour_rejections: int = 0
     no_quad_found: int = 0
+    edge_priority_selections: int = 0
+    edge_priority_overrides: int = 0
 
 
 class SquareGateDetector:
@@ -64,7 +71,13 @@ class SquareGateDetector:
         self.metrics = GateDetectorMetrics()
         self.available = cv2 is not None and np is not None
 
-    def detect_jpeg(self, jpeg: bytes) -> GateDetection | None:
+    def detect_jpeg(
+        self,
+        jpeg: bytes,
+        *,
+        prefer_edge_frame: bool = False,
+        prefer_any_edge_frame: bool = False,
+    ) -> GateDetection | None:
         self.metrics.frames_seen += 1
         if not self.available:
             self.metrics.decode_failures += 1
@@ -73,13 +86,27 @@ class SquareGateDetector:
         if image is None:
             self.metrics.decode_failures += 1
             return None
-        return self.detect_bgr(image)
+        return self.detect_bgr(
+            image,
+            prefer_edge_frame=prefer_edge_frame,
+            prefer_any_edge_frame=prefer_any_edge_frame,
+        )
 
-    def detect_bgr(self, image) -> GateDetection | None:
+    def detect_bgr(
+        self,
+        image,
+        *,
+        prefer_edge_frame: bool = False,
+        prefer_any_edge_frame: bool = False,
+    ) -> GateDetection | None:
         if not self.available:
             self.metrics.decode_failures += 1
             return None
-        color_candidate = self._detect_red_gate(image)
+        color_candidate = self._detect_red_gate(
+            image,
+            prefer_edge_frame=prefer_edge_frame,
+            prefer_any_edge_frame=prefer_any_edge_frame,
+        )
         if color_candidate is not None:
             self.metrics.detections += 1
             return color_candidate
@@ -154,7 +181,13 @@ class SquareGateDetector:
         self.metrics.detections += 1
         return candidate
 
-    def _detect_red_gate(self, image) -> GateDetection | None:
+    def _detect_red_gate(
+        self,
+        image,
+        *,
+        prefer_edge_frame: bool = False,
+        prefer_any_edge_frame: bool = False,
+    ) -> GateDetection | None:
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
         hue = hsv[:, :, 0]
         saturation = hsv[:, :, 1]
@@ -172,6 +205,8 @@ class SquareGateDetector:
         aperture_score = -math.inf
         candidate = None
         candidate_score = -math.inf
+        edge_candidate = None
+        edge_candidate_score = -math.inf
         hierarchy_rows = [] if hierarchy is None else hierarchy[0]
         children_by_parent: dict[int, list[int]] = {}
         for idx, row in enumerate(hierarchy_rows):
@@ -193,6 +228,20 @@ class SquareGateDetector:
                 self.metrics.contour_rejections += 1
                 continue
 
+            edge_result = self._edge_partial_frame_candidate(
+                image_shape=image.shape,
+                x=x,
+                y=y,
+                width=width,
+                height=height,
+                area=area,
+            )
+            if edge_result is not None:
+                edge_detection, edge_score = edge_result
+                if edge_score > edge_candidate_score:
+                    edge_candidate = edge_detection
+                    edge_candidate_score = edge_score
+
             aspect_error = abs((width / height) - 1.0)
             if aspect_error > self.max_aspect_error:
                 self.metrics.contour_rejections += 1
@@ -205,15 +254,22 @@ class SquareGateDetector:
 
             squareness = 1.0 - clamp(aspect_error / max(self.max_aspect_error, 1e-6), 0.0, 1.0)
             confidence = clamp(fill_ratio * (0.5 + 0.5 * squareness), 0.0, 1.0)
-            score = (-float(y) * 10000.0) + (confidence * area)
+            # Score by apparent size and shape quality. Never let image position
+            # dominate: tiny distant red blobs near the horizon must not outrank
+            # the actual gate filling the frame.
+            score = confidence * area
             if score > candidate_score:
                 gate_x = float(x)
                 gate_y = float(y)
                 gate_width = float(width)
                 gate_height = float(height)
-                if width > height * 1.25:
+                if height > width * 1.25:
+                    # Red contour includes the support pillar below the gate;
+                    # the square gate frame is the TOP of the structure. Keep
+                    # the top square so the pose center is the aperture, not
+                    # the middle of the tower.
                     gate_height = float(width)
-                elif height > width * 1.25:
+                elif width > height * 1.25:
                     gate_width = float(height)
 
                 max_height, max_width = image.shape[:2]
@@ -235,6 +291,7 @@ class SquareGateDetector:
                     bounding_height_px=float(height),
                     fill_ratio=fill_ratio,
                     confidence=confidence,
+                    source="frame",
                 )
                 candidate_score = score
 
@@ -249,12 +306,90 @@ class SquareGateDetector:
             if aperture is None:
                 continue
             aperture_detection, child_score = aperture
-            combined_score = (-float(y) * 10000.0) + child_score + area * 0.01
+            combined_score = child_score + area * 0.01
             if combined_score > aperture_score:
                 aperture_candidate = aperture_detection
                 aperture_score = combined_score
 
+        if prefer_any_edge_frame and edge_candidate is not None:
+            # Final-course diagnostics can opt into identity-first selection:
+            # once the active near gate is cropped, any usable red edge frame
+            # is better evidence than a centered downstream aperture. Keep
+            # this distinct from the default dominant-edge preference.
+            self.metrics.edge_priority_selections += 1
+            if edge_candidate_score <= candidate_score:
+                self.metrics.edge_priority_overrides += 1
+            return edge_candidate
+        if (
+            prefer_edge_frame
+            and edge_candidate is not None
+            and edge_candidate_score > candidate_score
+        ):
+            self.metrics.edge_priority_selections += 1
+            return edge_candidate
         return aperture_candidate if aperture_candidate is not None else candidate
+
+    def _edge_partial_frame_candidate(
+        self,
+        *,
+        image_shape,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+        area: float,
+    ) -> tuple[GateDetection, float] | None:
+        """Reconstruct a dominant square whose near frame is cropped by an edge."""
+
+        image_height, image_width = image_shape[:2]
+        margin_px = 2
+        touches_left = x <= margin_px
+        touches_top = y <= margin_px
+        touches_right = x + width >= image_width - margin_px
+        touches_bottom = y + height >= image_height - margin_px
+        if not (touches_left or touches_top or touches_right or touches_bottom):
+            return None
+
+        side = float(max(width, height))
+        if side < 12.0:
+            return None
+        original_fill_ratio = area / max(float(width * height), 1.0)
+        if original_fill_ratio < self.min_fill_ratio:
+            return None
+
+        if touches_right and not touches_left:
+            gate_x = float(x)
+        elif touches_left and not touches_right:
+            gate_x = float(x + width) - side
+        else:
+            gate_x = float(x) + 0.5 * (float(width) - side)
+        if touches_bottom and not touches_top:
+            gate_y = float(y)
+        elif touches_top and not touches_bottom:
+            gate_y = float(y + height) - side
+        else:
+            gate_y = float(y) + 0.5 * (float(height) - side)
+
+        points = np.array(
+            [
+                [gate_x, gate_y],
+                [gate_x + side, gate_y],
+                [gate_x + side, gate_y + side],
+                [gate_x, gate_y + side],
+            ],
+            dtype=float,
+        )
+        confidence = clamp(original_fill_ratio * 0.8, 0.0, 0.85)
+        detection = GateDetection(
+            corners=tuple(order_quad_corners(points)),
+            area_px=area,
+            bounding_width_px=side,
+            bounding_height_px=side,
+            fill_ratio=original_fill_ratio,
+            confidence=confidence,
+            source="frame_partial",
+        )
+        return detection, confidence * area
 
     def _best_inner_aperture(
         self,
@@ -319,6 +454,7 @@ class SquareGateDetector:
                 bounding_height_px=float(height),
                 fill_ratio=fill_ratio,
                 confidence=confidence,
+                source="aperture",
             )
             best_score = score
 

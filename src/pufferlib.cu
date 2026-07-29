@@ -95,6 +95,7 @@ struct TrainGraph {
     PrecisionTensor mb_ratio;
     PrecisionTensor mb_newvalue;
     PrecisionTensor mb_prio;        // (B,)
+    PrecisionTensor mb_valid;       // (B, T), valid recurrent prefix mask
 };
 
 void register_train_buffers(TrainGraph& bufs, Allocator* alloc, int B, int T, int input_size,
@@ -110,6 +111,7 @@ void register_train_buffers(TrainGraph& bufs, Allocator* alloc, int B, int T, in
         .mb_ratio =         {.shape = {B, T}},
         .mb_newvalue =      {.shape = {B, T}},
         .mb_prio =          {.shape = {B}},
+        .mb_valid =         {.shape = {B, T}},
     };
     alloc_register(alloc, &bufs.mb_obs);
     alloc_register(alloc, &bufs.mb_state);
@@ -121,6 +123,7 @@ void register_train_buffers(TrainGraph& bufs, Allocator* alloc, int B, int T, in
     alloc_register(alloc, &bufs.mb_returns);
     alloc_register(alloc, &bufs.mb_ratio);
     alloc_register(alloc, &bufs.mb_newvalue);
+    alloc_register(alloc, &bufs.mb_valid);
 }
 
 // PPO buffers + args are quite complex. We do the entire
@@ -134,6 +137,7 @@ struct PPOGraphArgs {
     const precision_t* prio;
     const precision_t* values;
     const precision_t* returns;
+    const precision_t* valid;
 };
 
 struct PPOKernelArgs {
@@ -145,6 +149,7 @@ struct PPOKernelArgs {
     const precision_t* values_pred;
     const float* adv_mean;
     const float* adv_var;
+    const float* valid_count;
     const int* act_sizes;
     int num_atns;
     float clip_coef, vf_clip_coef, vf_coef, ent_coef;
@@ -169,7 +174,7 @@ void register_ppo_buffers(PPOBuffersPuf& bufs, Allocator* alloc, int N, int T, i
         .grad_logits = {.shape = {N, T, A_total}},
         .grad_values = {.shape = {N, T, 1}},
         .grad_logstd = {.shape = {N, T, A_total}},
-        .adv_scratch = {.shape = {2}},
+        .adv_scratch = {.shape = {3}},
     };
     alloc_register(alloc, &bufs.loss_output);
     alloc_register(alloc, &bufs.saved_for_bwd);
@@ -270,6 +275,15 @@ typedef struct {
     // Priority
     float prio_alpha;
     float prio_beta0;
+    int phase_prio_obs_index;
+    float phase_prio_scale;
+    float phase_prio_max_weight;
+    int train_encoder_feature_start;
+    int train_encoder_feature_end;
+    // Scale rewards before clipping; useful for large shaped-reward curricula.
+    float reward_scale;
+    // Reward preprocessing. Values <= 0 disable clipping.
+    float reward_clip;
     // Flags
     bool reset_state;
     int cudagraphs;
@@ -298,6 +312,7 @@ typedef struct {
     bool is_continuous;  // True if all action dimensions are continuous (size==1)
     PrecisionTensor* buffer_states;  // Per-buffer states for contiguous access
     PolicyActivations* buffer_activations;  // Per-buffer inference activations
+    PrecisionTensor rollout_initial_states;  // (layers, total_agents, hidden)
     RolloutBuf rollouts;
     RolloutBuf train_rollouts;  // Pre-allocated transposed copy for train_impl
     EnvBuf env;
@@ -330,7 +345,7 @@ typedef struct {
 } PuffeRL;
 
 Dict* log_environments_impl(PuffeRL& pufferl) {
-    Dict* out = create_dict(32);
+    Dict* out = create_dict(ENV_LOG_DICT_CAPACITY);
     static_vec_log(pufferl.vec, out);
     return out;
 }
@@ -357,6 +372,38 @@ __global__ void rng_init(curandStatePhilox4_32_10_t* states, uint64_t seed, int 
     if (idx < n) {
         curand_init(seed, idx, 0, &states[idx]);
     }
+}
+
+__global__ void reset_terminal_recurrent_states(
+        precision_t* state,
+        const float* terminals,
+        int num_layers,
+        int batch_size,
+        int hidden_size) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int count = num_layers * batch_size * hidden_size;
+    if (idx >= count) return;
+    int agent = (idx / hidden_size) % batch_size;
+    if (terminals[agent] > 0.5f) state[idx] = from_float(0.0f);
+}
+
+__global__ void capture_rollout_initial_states(
+        const precision_t* source,
+        precision_t* destination,
+        int num_layers,
+        int source_agents,
+        int destination_agents,
+        int destination_agent_start,
+        int hidden_size) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int count = num_layers * source_agents * hidden_size;
+    if (idx >= count) return;
+    int hidden = idx % hidden_size;
+    int agent = (idx / hidden_size) % source_agents;
+    int layer = idx / (source_agents * hidden_size);
+    destination[
+        (layer * destination_agents + destination_agent_start + agent)
+        * hidden_size + hidden] = source[idx];
 }
 
 __device__ __forceinline__ float safe_logit(const precision_t* logits,
@@ -530,6 +577,28 @@ extern "C" void net_callback_wrapper(void* ctx, int buf, int t) {
 
     // Policy forward pass for rollouts
     PrecisionTensor state_puf = pufferl->buffer_states[buf];
+    int state_count = hypers.num_layers * block_size * hypers.hidden_size;
+    if (t == 0 && !hypers.reset_state) {
+        // Capture the pre-mask state used to start this rollout segment.
+        // Replay zeroes the selected state for a terminal at t=0 and masks a
+        // suffix beginning at the first later terminal.
+        capture_rollout_initial_states<<<
+            grid_size(state_count), BLOCK_SIZE, 0, stream>>>(
+                state_puf.data,
+                pufferl->rollout_initial_states.data,
+                hypers.num_layers,
+                block_size,
+                hypers.total_agents,
+                start,
+                hypers.hidden_size);
+    }
+    reset_terminal_recurrent_states<<<
+        grid_size(state_count), BLOCK_SIZE, 0, stream>>>(
+            state_puf.data,
+            env.terminals.data + start,
+            hypers.num_layers,
+            block_size,
+            hypers.hidden_size);
     PrecisionTensor dec_puf = policy_forward(&pufferl->policy, pufferl->weights, pufferl->buffer_activations[buf], obs_dst, state_puf, stream);
 
     // Sample actions, logprobs, values into rollout buffer
@@ -556,7 +625,8 @@ extern "C" void net_callback_wrapper(void* ctx, int buf, int t) {
         cudaGraph_t _graph;
         assert(cudaStreamEndCapture(current_stream, &_graph) == cudaSuccess
                 && "cudaStreamEndCapture failed");
-        assert(cudaGraphInstantiate(&pufferl->fused_rollout_cudagraphs[graph], _graph, 0) == cudaSuccess
+        assert(cudaGraphInstantiateWithFlags(
+                    &pufferl->fused_rollout_cudagraphs[graph], _graph, 0) == cudaSuccess
                 && "cudaGraphInstantiate failed");
         assert(cudaGraphDestroy(_graph) == cudaSuccess && "cudaGraphDestroy failed");
         cudaDeviceSynchronize();
@@ -616,7 +686,7 @@ __global__ void ppo_loss_compute(
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int tid = threadIdx.x;
     int total_elements = a.N * a.T_seq;
-    float inv_NT = 1.0f / float(total_elements);
+    float inv_NT = 1.0f / fmaxf(*a.valid_count, 1.0f);
 
     __shared__ float block_losses[LOSS_N][PPO_THREADS];
     for (int c = 0; c < LOSS_N; c++) {
@@ -636,6 +706,19 @@ __global__ void ppo_loss_compute(
     int values_idx = n * a.values_stride_n + t * a.values_stride_t;
     int grad_logits_base = nt * a.A_total;
 
+    if (to_float(g.valid[nt]) <= 0.5f) {
+        g.out_ratio[nt] = from_float(1.0f);
+        g.out_newvalue[nt] = g.values[nt];
+        a.grad_values_pred[nt] = 0.0f;
+        for (int h = 0; h < a.A_total; ++h) {
+            a.grad_logits[grad_logits_base + h] = 0.0f;
+        }
+        if (a.is_continuous) {
+            for (int h = 0; h < a.num_atns; ++h) {
+                a.grad_logstd[nt * a.num_atns + h] = 0.0f;
+            }
+        }
+    } else {
     // Shared computation (used by both forward and backward)
 
     float old_logp = to_float(g.old_logprobs[nt]);
@@ -771,6 +854,7 @@ __global__ void ppo_loss_compute(
     block_losses[LOSS_OLD_APPROX_KL][tid] = (-logratio) * inv_NT;
     block_losses[LOSS_APPROX_KL][tid] = ((ratio - 1.0f) - logratio) * inv_NT;
     block_losses[LOSS_CLIPFRAC][tid] = (fabsf(ratio - 1.0f) > a.clip_coef ? 1.0f : 0.0f) * inv_NT;
+    } // end valid recurrent prefix
     } // end if (idx < total_elements)
 
 // Deterministic aggregation
@@ -823,31 +907,47 @@ __global__ void ppo_loss_reduce(
     }
 }
 
-__global__ void ppo_var_mean(const precision_t* __restrict__ src,
-        float* __restrict__ var_out, float* __restrict__ mean_out, int n) {
+__global__ void ppo_masked_var_mean(
+        const precision_t* __restrict__ src,
+        const precision_t* __restrict__ valid,
+        float* __restrict__ var_out,
+        float* __restrict__ mean_out,
+        float* __restrict__ count_out,
+        int n) {
     __shared__ float sdata[256];
+    __shared__ float cdata[256];
     int tid = threadIdx.x;
     float sum = 0.0f;
+    float count = 0.0f;
     for (int i = tid; i < n; i += blockDim.x) {
-        sum += to_float(src[i]);
+        if (to_float(valid[i]) > 0.5f) {
+            sum += to_float(src[i]);
+            count += 1.0f;
+        }
     }
     sdata[tid] = sum;
+    cdata[tid] = count;
     __syncthreads();
     for (int s = blockDim.x / 2; s > 0; s >>= 1) {
         if (tid < s) {
             sdata[tid] += sdata[tid + s];
+            cdata[tid] += cdata[tid + s];
         }
         __syncthreads();
     }
-    float mean = sdata[0] / (float)n;
+    float valid_count = cdata[0];
+    float mean = sdata[0] / fmaxf(valid_count, 1.0f);
     if (tid == 0) {
         *mean_out = mean;
+        *count_out = valid_count;
     }
     __syncthreads();
     float ss = 0.0f;
     for (int i = tid; i < n; i += blockDim.x) {
-        float d = to_float(src[i]) - mean;
-        ss += d * d;
+        if (to_float(valid[i]) > 0.5f) {
+            float d = to_float(src[i]) - mean;
+            ss += d * d;
+        }
     }
     sdata[tid] = ss;
     __syncthreads();
@@ -858,7 +958,9 @@ __global__ void ppo_var_mean(const precision_t* __restrict__ src,
         __syncthreads();
     }
     if (tid == 0) {
-        *var_out = sdata[0] / (float)(n - 1);
+        *var_out = valid_count > 1.0f
+            ? sdata[0] / (valid_count - 1.0f)
+            : 0.0f;
     }
 }
 
@@ -882,8 +984,11 @@ void ppo_loss_fwd_bwd(
 
     float* adv_var_ptr = bufs.adv_scratch.data;
     float* adv_mean_ptr = adv_var_ptr + 1;
-    ppo_var_mean<<<1, 256, 0, stream>>>(
-        graph.mb_advantages.data, adv_var_ptr, adv_mean_ptr, numel(graph.mb_advantages.shape));
+    float* valid_count_ptr = adv_var_ptr + 2;
+    ppo_masked_var_mean<<<1, 256, 0, stream>>>(
+        graph.mb_advantages.data, graph.mb_valid.data,
+        adv_var_ptr, adv_mean_ptr, valid_count_ptr,
+        numel(graph.mb_advantages.shape));
 
     int ppo_grid = (total + PPO_THREADS - 1) / PPO_THREADS;
 
@@ -907,6 +1012,7 @@ void ppo_loss_fwd_bwd(
         .prio = graph.mb_prio.data,
         .values = graph.mb_values.data,
         .returns = graph.mb_returns.data,
+        .valid = graph.mb_valid.data,
     };
 
     PPOKernelArgs args = {
@@ -918,6 +1024,7 @@ void ppo_loss_fwd_bwd(
         .values_pred = logits_ptr + A_total,
         .adv_mean = adv_mean_ptr,
         .adv_var = adv_var_ptr,
+        .valid_count = valid_count_ptr,
         .act_sizes = act_sizes.data,
         .num_atns = (int)numel(act_sizes.shape),
         .clip_coef = clip_coef, .vf_clip_coef = vf_clip_coef,
@@ -940,21 +1047,54 @@ void ppo_loss_fwd_bwd(
 #define PRIO_NUM_WARPS (PRIO_BLOCK_SIZE / PRIO_WARP_SIZE)
 __global__ void compute_prio_adv_reduction(
         const precision_t* __restrict__ advantages,
-        float* prio_weights, float prio_alpha, int stride) {
+        const precision_t* __restrict__ terminals,
+        const precision_t* __restrict__ observations,
+        float* prio_weights, float prio_alpha, int stride, int obs_size,
+        int phase_obs_index, float phase_scale, float phase_max_weight) {
     int row = blockIdx.x;
     int tx = threadIdx.x;
     int offset = row * stride;
+    __shared__ int valid_steps;
+    if (tx == 0) {
+        // A terminal at t=0 resets inference before action 0; replay handles it
+        // by zeroing the selected initial state. A later terminal starts a new
+        // recurrent sequence that cannot be represented in the same scan, so
+        // only the prefix before that boundary is eligible.
+        valid_steps = stride;
+        for (int t = 1; t < stride; t++) {
+            if (to_float(terminals[offset + t]) > 0.5f) {
+                valid_steps = t;
+                break;
+            }
+        }
+    }
+    __syncthreads();
 
     float local_sum = 0.0f;
-    for (int t = tx; t < stride; t += blockDim.x) {
+    float local_phase = 0.0f;
+    for (int t = tx; t < valid_steps; t += blockDim.x) {
         local_sum += fabsf(to_float(advantages[offset + t]));
+        if (phase_scale > 0.0f && phase_obs_index >= 0 && phase_obs_index < obs_size) {
+            float progress = to_float(
+                observations[((int64_t)row * stride + t) * obs_size + phase_obs_index]);
+            local_phase = fmaxf(local_phase, fminf(fmaxf(progress, 0.0f), 1.0f));
+        }
     }
 
     for (int s = PRIO_WARP_SIZE / 2; s >= 1; s /= 2) {
         local_sum += __shfl_down_sync(PRIO_FULL_MASK, local_sum, s);
+        local_phase = fmaxf(
+            local_phase,
+            __shfl_down_sync(PRIO_FULL_MASK, local_phase, s));
     }
     if (tx == 0) {
         float pw = __powf(local_sum, prio_alpha);
+        if (phase_scale > 0.0f && phase_obs_index >= 0 && phase_obs_index < obs_size) {
+            float phase_weight = fminf(
+                1.0f + phase_scale * local_phase,
+                fmaxf(phase_max_weight, 1.0f));
+            pw *= phase_weight;
+        }
         if (isnan(pw) || isinf(pw)) {
             pw = 0.0f;
         }
@@ -989,13 +1129,15 @@ __global__ void compute_prio_normalize(float* prio_weights, int length) {
             val += __shfl_down_sync(PRIO_FULL_MASK, val, s);
         }
         if (tx == 0) {
-            block_sum = val + eps;
+            block_sum = val;
         }
     }
     __syncthreads();
 
     for (int t = tx; t < length; t += blockDim.x) {
-        prio_weights[t] = (prio_weights[t] + eps) / block_sum;
+        prio_weights[t] = block_sum > eps
+            ? prio_weights[t] / block_sum
+            : 1.0f / (float)length;
     }
 }
 
@@ -1054,12 +1196,17 @@ __global__ void multinomial_sample(int* __restrict__ out_idx, const float* __res
 // It is a major improvement in some complex environments
 // The values of alpha and beta found by sweeps will tell you
 // whether it is important for your task
-void prio_replay_cuda(PrecisionTensor& advantages, float prio_alpha,
+void prio_replay_cuda(PrecisionTensor& advantages, PrecisionTensor& terminals,
+        PrecisionTensor& observations, float prio_alpha,
+        int phase_obs_index, float phase_scale, float phase_max_weight,
         int minibatch_segments, int total_agents, float anneal_beta,
         PrioBuffers& bufs, ulong seed, long* offset_ptr, cudaStream_t stream) {
     int B = advantages.shape[0], T = advantages.shape[1];
+    int obs_size = observations.shape[2];
     compute_prio_adv_reduction<<<B, PRIO_WARP_SIZE, 0, stream>>>(
-        advantages.data, bufs.prio_probs.data, prio_alpha, T);
+        advantages.data, terminals.data, observations.data,
+        bufs.prio_probs.data, prio_alpha, T, obs_size,
+        phase_obs_index, phase_scale, phase_max_weight);
     compute_prio_normalize<<<1, PRIO_BLOCK_SIZE, 0, stream>>>(
         bufs.prio_probs.data, B);
     //int block = fmaxf(((minibatch_segments + 31) / 32) * 32, 32);
@@ -1236,6 +1383,25 @@ __device__ __forceinline__ void copy_values_adv_returns(
     }
 }
 
+__device__ __forceinline__ void copy_recurrent_prefix_mask(
+        const precision_t* __restrict__ src_terminals,
+        precision_t* __restrict__ dst_valid,
+        int src_row, int dst_row, int horizon) {
+    if (threadIdx.x != 0) return;
+    int srh = (int64_t)src_row * horizon;
+    int drh = (int64_t)dst_row * horizon;
+    bool valid = true;
+    for (int t = 0; t < horizon; ++t) {
+        // A terminal at t=0 is handled by a zero selected initial state. Any
+        // later terminal resets inference inside the chunk, so mask that action
+        // and the entire suffix from recurrent training.
+        if (t > 0 && to_float(src_terminals[srh + t]) > 0.5f) {
+            valid = false;
+        }
+        dst_valid[drh + t] = from_float(valid ? 1.0f : 0.0f);
+    }
+}
+
 __global__ void select_copy(RolloutBuf rollouts, TrainGraph graph,
         const int* __restrict__ idx, const precision_t* __restrict__ advantages,
         const float* __restrict__ mb_prio) {
@@ -1269,7 +1435,35 @@ __global__ void select_copy(RolloutBuf rollouts, TrainGraph graph,
             graph.mb_prio.data[mb] = from_float(mb_prio[mb]);
             break;
         }
+    case 5:
+        copy_recurrent_prefix_mask(
+            rollouts.terminals.data, graph.mb_valid.data,
+            src_row, mb, horizon);
+        break;
     }
+}
+
+__global__ void select_recurrent_states(
+        const precision_t* __restrict__ source,
+        precision_t* __restrict__ destination,
+        const int* __restrict__ indices,
+        const precision_t* __restrict__ terminals,
+        int horizon,
+        int num_layers,
+        int source_agents,
+        int selected_agents,
+        int hidden_size) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int count = num_layers * selected_agents * hidden_size;
+    if (idx >= count) return;
+    int hidden = idx % hidden_size;
+    int selected = (idx / hidden_size) % selected_agents;
+    int layer = idx / (selected_agents * hidden_size);
+    int source_agent = indices[selected];
+    bool reset_at_start = to_float(terminals[(int64_t)source_agent * horizon]) > 0.5f;
+    destination[idx] = reset_at_start
+        ? from_float(0.0f)
+        : source[(layer * source_agents + source_agent) * hidden_size + hidden];
 }
 
 inline float cosine_annealing(float lr_base, float lr_min, long t, long T) {
@@ -1277,6 +1471,20 @@ inline float cosine_annealing(float lr_base, float lr_min, long t, long T) {
     float ratio = (double )t / (double) T;
     ratio = std::max(0.0f, std::min(1.0f, ratio));
     return lr_min + 0.5f*(lr_base - lr_min)*(1.0f + std::cos(M_PI * ratio));
+}
+
+__global__ void mask_encoder_feature_gradients(
+        precision_t* gradients, int total_parameters, int input_size,
+        int hidden_size, int first_feature, int last_feature) {
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index >= total_parameters) return;
+    int encoder_parameters = hidden_size * input_size;
+    bool selected = false;
+    if (index < encoder_parameters) {
+        int feature = index % input_size;
+        selected = feature >= first_feature && feature <= last_feature;
+    }
+    if (!selected) gradients[index] = from_float(0.0f);
 }
 
 void train_impl(PuffeRL& pufferl) {
@@ -1310,9 +1518,17 @@ void train_impl(PuffeRL& pufferl) {
     transpose_102<<<grid_size(T*B), BLOCK_SIZE, 0, train_stream>>>(
         rollouts.values.data, src.values.data, T, B, 1);
 
-    // We hard-clamp rewards to -1, 1. Our envs are mostly designed to respect this range
-    clamp_precision_kernel<<<grid_size(numel(rollouts.rewards.shape)), BLOCK_SIZE, 0, train_stream>>>(
-        rollouts.rewards.data, -1.0f, 1.0f, numel(rollouts.rewards.shape));
+    if (hypers.reward_scale != 1.0f) {
+        scale_precision_kernel<<<grid_size(numel(rollouts.rewards.shape)), BLOCK_SIZE, 0, train_stream>>>(
+            rollouts.rewards.data, hypers.reward_scale, numel(rollouts.rewards.shape));
+    }
+    // Preserve the historical [-1, 1] default while allowing reward-shaped
+    // curricula to fit their relative magnitudes inside that stable range.
+    if (hypers.reward_clip > 0.0f) {
+        clamp_precision_kernel<<<grid_size(numel(rollouts.rewards.shape)), BLOCK_SIZE, 0, train_stream>>>(
+            rollouts.rewards.data, -hypers.reward_clip, hypers.reward_clip,
+            numel(rollouts.rewards.shape));
+    }
 
     // Set importance weights to 1.0
     fill_precision_kernel<<<grid_size(numel(rollouts.ratio.shape)), BLOCK_SIZE, 0, train_stream>>>(
@@ -1354,20 +1570,40 @@ void train_impl(PuffeRL& pufferl) {
         profile_begin("compute_prio", hypers.profile);
         // Use the training RNG offset slot (last slot, index num_buffers)
         long* train_rng_offset = pufferl.rng_offset_puf.data + hypers.num_buffers;
-        prio_replay_cuda(advantages_puf, prio_alpha, minibatch_segments,
+        prio_replay_cuda(
+            advantages_puf, rollouts.terminals, rollouts.observations, prio_alpha,
+            hypers.phase_prio_obs_index,
+            hypers.phase_prio_scale,
+            hypers.phase_prio_max_weight,
+            minibatch_segments,
             hypers.total_agents, anneal_beta,
             pufferl.prio_bufs, pufferl.seed, train_rng_offset, train_stream);
         profile_end(hypers.profile);
 
         profile_begin("train_select_and_copy", hypers.profile);
-        if (hypers.reset_state) puf_zero(&graph.mb_state, train_stream);
         {
             RolloutBuf sel_src = rollouts;
             sel_src.values = rollouts.values;
             int mb_segs = pufferl.prio_bufs.idx.shape[0];
-            select_copy<<<dim3(mb_segs, 5), SELECT_COPY_THREADS, 0, train_stream>>>(
+            select_copy<<<dim3(mb_segs, 6), SELECT_COPY_THREADS, 0, train_stream>>>(
                 sel_src, graph, pufferl.prio_bufs.idx.data,
                 advantages_puf.data, pufferl.prio_bufs.mb_prio.data);
+            if (hypers.reset_state) {
+                puf_zero(&graph.mb_state, train_stream);
+            } else {
+                int state_count = hypers.num_layers * mb_segs * hypers.hidden_size;
+                select_recurrent_states<<<
+                    grid_size(state_count), BLOCK_SIZE, 0, train_stream>>>(
+                        pufferl.rollout_initial_states.data,
+                        graph.mb_state.data,
+                        pufferl.prio_bufs.idx.data,
+                        rollouts.terminals.data,
+                        hypers.horizon,
+                        hypers.num_layers,
+                        hypers.total_agents,
+                        mb_segs,
+                        hypers.hidden_size);
+            }
         }
         profile_end(hypers.profile);
 
@@ -1403,6 +1639,18 @@ void train_impl(PuffeRL& pufferl) {
             policy_backward(&pufferl.policy, pufferl.weights, pufferl.train_activations,
                 grad_logits_puf, grad_logstd_puf, grad_values_puf, stream);
 
+            if (hypers.train_encoder_feature_start >= 0) {
+                int parameter_count = numel(pufferl.grad_puf.shape);
+                mask_encoder_feature_gradients<<<
+                    grid_size(parameter_count), BLOCK_SIZE, 0, stream>>>(
+                        pufferl.grad_puf.data,
+                        parameter_count,
+                        pufferl.policy.input_dim,
+                        pufferl.policy.hidden_dim,
+                        hypers.train_encoder_feature_start,
+                        hypers.train_encoder_feature_end);
+            }
+
             muon_step(&pufferl.muon, pufferl.master_weights, pufferl.grad_puf, hypers.max_grad_norm, stream);
             if (USE_BF16) {
                 int n = numel(pufferl.param_puf.shape);
@@ -1413,7 +1661,8 @@ void train_impl(PuffeRL& pufferl) {
                 cudaGraph_t _graph;
                 assert(cudaStreamEndCapture(train_stream, &_graph) == cudaSuccess
                         && "cudaStreamEndCapture failed");
-                assert(cudaGraphInstantiate(&pufferl.train_cudagraph, _graph, 0) == cudaSuccess
+                assert(cudaGraphInstantiateWithFlags(
+                            &pufferl.train_cudagraph, _graph, 0) == cudaSuccess
                         && "cudaGraphInstantiate failed");
                 assert(cudaGraphDestroy(_graph) == cudaSuccess && "cudaGraphDestroy failed");
                 cudaDeviceSynchronize();
@@ -1522,6 +1771,9 @@ std::unique_ptr<PuffeRL> create_pufferl_impl(HypersT& hypers,
 
     // Create policy
     int input_size = pufferl->env.obs.shape[1];
+    assert((hypers.train_encoder_feature_start < 0
+            || hypers.train_encoder_feature_end < input_size)
+        && "train encoder feature range exceeds policy input size");
     int hidden_size = hypers.hidden_size;
     int num_layers = hypers.num_layers;
     bool is_continuous = pufferl->is_continuous;
@@ -1597,6 +1849,10 @@ std::unique_ptr<PuffeRL> create_pufferl_impl(HypersT& hypers,
         };
         alloc_register(acts, &pufferl->buffer_states[i]);
     }
+    pufferl->rollout_initial_states = {
+        .shape = {num_layers, total_agents, hidden_size},
+    };
+    alloc_register(acts, &pufferl->rollout_initial_states);
     register_rollout_buffers(pufferl->rollouts,
         acts, horizon, total_agents, input_size, num_action_heads);
     register_train_buffers(pufferl->train_buf,
@@ -1635,6 +1891,11 @@ std::unique_ptr<PuffeRL> create_pufferl_impl(HypersT& hypers,
     }
     if (alloc_create(acts) != cudaSuccess) {
         return nullptr;
+    }
+
+    puf_zero(&pufferl->rollout_initial_states, pufferl->default_stream);
+    for (int i = 0; i < num_buffers; i++) {
+        puf_zero(&pufferl->buffer_states[i], pufferl->default_stream);
     }
 
     pufferl->grad_puf = {.data = (precision_t*)grads->mem, .shape = {grads->total_elems}};
@@ -1732,6 +1993,14 @@ std::unique_ptr<PuffeRL> create_pufferl_impl(HypersT& hypers,
             rng_init<<<grid_size(agents_per_buf), BLOCK_SIZE>>>(
                 pufferl->rng_states[i], pufferl->seed + i, agents_per_buf);
         }
+        // Graph capture repeatedly executes inference on the initial
+        // observation and therefore advances the persistent recurrent state.
+        // A real rollout must begin from the same zero state as an episode
+        // reset, not from this synthetic warmup history.
+        puf_zero(&pufferl->rollout_initial_states, pufferl->default_stream);
+        for (int i = 0; i < num_buffers; i++) {
+            puf_zero(&pufferl->buffer_states[i], pufferl->default_stream);
+        }
         cudaDeviceSynchronize();
 
         pufferl->epoch = 0;
@@ -1770,9 +2039,15 @@ void close_impl(PuffeRL& pufferl) {
         cudaProfilerStop();
     }
 
-    cudaGraphExecDestroy(pufferl.train_cudagraph);
-    for (int i = 0; i < pufferl.hypers.horizon * pufferl.hypers.num_buffers; i++) {
-        cudaGraphExecDestroy(pufferl.fused_rollout_cudagraphs[i]);
+    if (pufferl.rollout_captured && pufferl.fused_rollout_cudagraphs != NULL) {
+        if (pufferl.train_cudagraph != NULL) {
+            cudaGraphExecDestroy(pufferl.train_cudagraph);
+        }
+        for (int i = 0; i < pufferl.hypers.horizon * pufferl.hypers.num_buffers; i++) {
+            if (pufferl.fused_rollout_cudagraphs[i] != NULL) {
+                cudaGraphExecDestroy(pufferl.fused_rollout_cudagraphs[i]);
+            }
+        }
     }
 
     policy_weights_free(&pufferl.policy, &pufferl.weights);

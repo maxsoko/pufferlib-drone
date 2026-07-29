@@ -36,9 +36,14 @@ struct Weights {
     float* data;
     int size;
     int idx;
+    int alignment_elements;
 };
 
-Weights* load_weights(const char* filename) {
+Weights* load_weights_with_alignment(const char* filename, int alignment_elements) {
+    if (alignment_elements != 4 && alignment_elements != 8) {
+        fprintf(stderr, "weight alignment must be 4 (FP32) or 8 (BF16) floats\n");
+        return NULL;
+    }
     FILE* file = fopen(filename, "rb");
     if (!file) {
         perror("Error opening file");
@@ -48,20 +53,26 @@ Weights* load_weights(const char* filename) {
     long file_size = ftell(file);
     rewind(file);
     size_t num_weights = file_size / sizeof(float);
-    // +7 ensures get_weights_aligned never reads past the buffer: the native
-    // backend uses 16-byte alignment with bf16 params (2 bytes), so each tensor
-    // starts at an 8-float boundary. After the last tensor, up to 7 extra floats
-    // may be addressed before the next 8-aligned boundary.
-    Weights* weights = (Weights*)calloc(1, sizeof(Weights) + (num_weights + 7)*sizeof(float));
+    // Interior tensor padding can move the logical final tensor beyond the raw
+    // file length. Allocate a zero tail through the next selected boundary.
+    int tail = alignment_elements - 1;
+    Weights* weights = (Weights*)calloc(
+        1, sizeof(Weights) + (num_weights + tail)*sizeof(float));
     weights->data = (float*)(weights + 1);
     size_t read_size = fread(weights->data, sizeof(float), num_weights, file);
     fclose(file);
     if (read_size != num_weights) {
         perror("Error reading file");
     }
-    weights->size = num_weights + 7;
+    weights->size = num_weights + tail;
     weights->idx = 0;
+    weights->alignment_elements = alignment_elements;
     return weights;
+}
+
+Weights* load_weights(const char* filename) {
+    // Historical standalone inference consumes BF16-layout checkpoints.
+    return load_weights_with_alignment(filename, 8);
 }
 
 float* get_weights(Weights* weights, int num_weights) {
@@ -71,12 +82,13 @@ float* get_weights(Weights* weights, int num_weights) {
     return data;
 }
 
-// Advances index to next 8-float (16-byte) boundary after reading, matching
-// the native backend's Allocator which aligns to 16 bytes with bf16 params.
+// Advance to the 16-byte boundary selected when the checkpoint was loaded.
+// FP32 arenas align every 4 serialized floats; BF16 arenas align every 8.
 float* get_weights_aligned(Weights* weights, int num_weights) {
     float* data = &weights->data[weights->idx];
     weights->idx += num_weights;
-    weights->idx = (weights->idx + 7) & ~7;
+    int alignment = weights->alignment_elements;
+    weights->idx = (weights->idx + alignment - 1) & ~(alignment - 1);
     assert(weights->idx <= weights->size);
     return data;
 }

@@ -46,6 +46,25 @@ def _entropy(logits):
     p_log_p = logits * logits_to_probs(logits)
     return -p_log_p.sum(-1)
 
+def _phase_priority_multipliers(
+        observations, terminals, observation_index, scale, max_weight):
+    """Compute replay multipliers from observable progress in a valid prefix."""
+    batch = observations.shape[0]
+    if scale <= 0 or observation_index < 0:
+        return torch.ones(batch, device=observations.device)
+    if observation_index >= observations.shape[-1]:
+        raise ValueError(
+            f'phase priority observation index {observation_index} exceeds '
+            f'observation size {observations.shape[-1]}')
+
+    progress = observations[:, :, observation_index].float().clamp(0, 1)
+    valid = torch.ones_like(terminals, dtype=torch.bool)
+    if terminals.shape[1] > 1:
+        valid[:, 1:] = terminals[:, 1:].gt(0.5).cumsum(dim=1).eq(0)
+    progress = progress.masked_fill(~valid, 0)
+    peak_progress = progress.amax(dim=1)
+    return (1.0 + scale * peak_progress).clamp(max=max_weight)
+
 def sample_logits(logits, action=None):
     is_discrete = isinstance(logits, torch.Tensor)
     if isinstance(logits, torch.distributions.Normal):
@@ -285,6 +304,13 @@ class PuffeRL:
 
             adv = advantages.abs().sum(axis=1)
             prio_weights = torch.nan_to_num(adv**a, 0, 0, 0)
+            prio_weights *= _phase_priority_multipliers(
+                obs,
+                ter,
+                config.get('phase_prio_obs_index', -1),
+                config.get('phase_prio_scale', 0.0),
+                config.get('phase_prio_max_weight', 4.0),
+            )
             prio_probs = (prio_weights + 1e-6)/(prio_weights.sum() + 1e-6)
             idx = torch.multinomial(prio_probs,
                 self.minibatch_segments, replacement=True)
@@ -508,4 +534,3 @@ def load_policy(args, vec):
         policy.load_state_dict(state_dict)
 
     return policy
-

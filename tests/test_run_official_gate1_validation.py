@@ -24,7 +24,10 @@ def _args(tmp_path: Path) -> SimpleNamespace:
         race_start_check_s=0.0,
         probe_json_path=str(tmp_path / "probe.json"),
         send_sim_reset=False,
+        policy_ready_reset=False,
         post_reset_sleep_s=0.0,
+        official_reset_start_timeout_s=12.0,
+        official_policy_lead_s=0.05,
         acceptance_config="config/sitl_competition_acceptance.json",
         endpoint="udpin:0.0.0.0:14540",
         control_mode="visual-servo",
@@ -56,7 +59,15 @@ def _args(tmp_path: Path) -> SimpleNamespace:
         attitude_servo_forward_z_tolerance_m=None,
         attitude_servo_uncentered_forward_scale=1.0,
         policy_callable="",
+        policy_state_hz=0.0,
         policy_action_json="[0,0,0,0]",
+        policy_stop_before_gate_index=-1,
+        policy_stop_forward_m=0.0,
+        policy_race_phase_observation=False,
+        policy_race_phase_denominator=3,
+        policy_phase_adapter_observation=False,
+        policy_gate_progress_adapter_observation=False,
+        policy_gate_phase_onehot_adapter_observation=False,
         smoke_duration=1.0,
         heartbeat_hz=2.0,
         command_hz=50.0,
@@ -127,6 +138,192 @@ def test_validation_blocks_when_probe_requirements_fail(monkeypatch, tmp_path):
         payload = json.load(f)
     assert payload["requirements_met"] is False
     assert payload["blockers"] == ["no_mavlink_packets"]
+
+
+def test_smoke_args_defer_gate_requirement_to_acceptance_config(tmp_path):
+    args = _args(tmp_path)
+    args.acceptance_config = "config/sitl_multigate_acceptance.json"
+    args.control_mode = "course-fsm"
+    args.course_controller_config = "config/course_fsm_defaults.json"
+
+    smoke_args = module._build_smoke_args(args)
+
+    assert smoke_args.min_gate_passes is None
+    assert smoke_args.control_mode == "course-fsm"
+    assert smoke_args.course_controller_config.endswith("course_fsm_defaults.json")
+
+
+def test_build_smoke_args_allows_bounded_gate_target_override(tmp_path):
+    args = _args(tmp_path)
+    args.min_gate_passes = 1
+
+    smoke_args = module._build_smoke_args(args)
+
+    assert smoke_args.target_gate_count == 1
+    assert smoke_args.min_gate_passes == 1
+
+
+def test_build_smoke_args_forwards_policy_race_phase(tmp_path):
+    args = _args(tmp_path)
+    args.policy_race_phase_observation = True
+    args.policy_race_phase_denominator = 5
+
+    smoke_args = module._build_smoke_args(args)
+
+    assert smoke_args.policy_race_phase_observation is True
+    assert smoke_args.policy_race_phase_denominator == 5
+
+
+def test_build_smoke_args_forwards_fixed_policy_state_cadence(tmp_path):
+    args = _args(tmp_path)
+    args.policy_state_hz = 60.0
+
+    smoke_args = module._build_smoke_args(args)
+
+    assert smoke_args.policy_state_hz == 60.0
+
+
+def test_build_smoke_args_forwards_policy_phase_adapter(tmp_path):
+    args = _args(tmp_path)
+    args.policy_phase_adapter_observation = True
+
+    smoke_args = module._build_smoke_args(args)
+
+    assert smoke_args.policy_phase_adapter_observation is True
+
+
+def test_build_smoke_args_forwards_policy_gate_progress_adapter(tmp_path):
+    args = _args(tmp_path)
+    args.policy_gate_progress_adapter_observation = True
+    args.policy_race_phase_denominator = 6
+
+    smoke_args = module._build_smoke_args(args)
+
+    assert smoke_args.policy_gate_progress_adapter_observation is True
+    assert smoke_args.policy_race_phase_denominator == 6
+
+
+def test_build_smoke_args_forwards_policy_gate_phase_onehot_adapter(tmp_path):
+    args = _args(tmp_path)
+    args.policy_gate_phase_onehot_adapter_observation = True
+    args.policy_race_phase_denominator = 6
+
+    smoke_args = module._build_smoke_args(args)
+
+    assert smoke_args.policy_gate_phase_onehot_adapter_observation is True
+
+
+def test_build_smoke_args_forwards_hybrid_prefix_confidence(tmp_path):
+    args = _args(tmp_path)
+    args.policy_gate_phase_onehot_adapter_observation = True
+    args.policy_hybrid_prefix_confidence_observation = True
+    args.policy_race_phase_denominator = 6
+
+    smoke_args = module._build_smoke_args(args)
+
+    assert smoke_args.policy_hybrid_prefix_confidence_observation is True
+    assert smoke_args.policy_race_phase_denominator == 6
+
+
+def test_build_smoke_args_forwards_policy_stop_guard(tmp_path):
+    args = _args(tmp_path)
+    args.policy_stop_before_gate_index = 3
+    args.policy_stop_forward_m = 20.0
+
+    smoke_args = module._build_smoke_args(args)
+
+    assert smoke_args.policy_stop_before_gate_index == 3
+    assert smoke_args.policy_stop_forward_m == 20.0
+
+
+def test_build_smoke_args_forwards_official_gate_index_stop(tmp_path):
+    args = _args(tmp_path)
+    args.stop_after_official_gate_index = 4
+
+    smoke_args = module._build_smoke_args(args)
+
+    assert smoke_args.stop_after_official_gate_index == 4
+
+
+def test_build_smoke_args_forwards_policy_ready_reset(tmp_path):
+    args = _args(tmp_path)
+    args.control_mode = "policy-attitude"
+    args.send_sim_reset = True
+    args.policy_ready_reset = True
+
+    smoke_args = module._build_smoke_args(args)
+
+    assert smoke_args.official_reset_on_start is True
+    assert smoke_args.official_reset_start_timeout_s == 12.0
+    assert smoke_args.official_policy_lead_s == 0.05
+
+
+def test_policy_ready_reset_skips_stale_camera_and_race_prechecks(monkeypatch, tmp_path):
+    args = _args(tmp_path)
+    args.control_mode = "policy-attitude"
+    args.send_sim_reset = True
+    args.policy_ready_reset = True
+    probe_report = module.probe.ProbeReport(
+        duration_s=0.1,
+        host="0.0.0.0",
+        mavlink_port=14540,
+        camera_port=5600,
+        mavlink=module.probe.MavlinkProbeStats(packets_seen=1),
+        camera=module.probe.CameraProbeStats(),
+        requirements_met=True,
+        blockers=[],
+    )
+    monkeypatch.setattr(module.probe, "run_probe", lambda **kwargs: probe_report)
+    requirements = {}
+
+    def evaluate(_report, **kwargs):
+        requirements.update(kwargs)
+        return True, []
+
+    monkeypatch.setattr(module.probe, "evaluate_probe_requirements", evaluate)
+    monkeypatch.setattr(
+        module,
+        "_maybe_send_sim_reset",
+        lambda _args: (_ for _ in ()).throw(
+            AssertionError("reset must be delegated to the loaded policy runner")
+        ),
+    )
+    monkeypatch.setattr(
+        module,
+        "_check_race_started",
+        lambda _args: (_ for _ in ()).throw(
+            AssertionError("the policy-owned reset establishes race start")
+        ),
+    )
+    smoke_report = module.smoke.CompetitionSmokeReport(
+        sitl=module.smoke.SitlRunReport(
+            mode="competition-smoke",
+            endpoint=args.endpoint,
+            heartbeat_hz=2.0,
+            command_hz=60.0,
+            command_kind="body_rates_policy_attitude_target",
+            heartbeats_sent=2,
+            commands_sent=60,
+            duration_s=1.0,
+        ),
+        control_mode="policy-attitude",
+        policy_source="checkpoint",
+        control_inputs={
+            "official_reset_start": {"reset_sent": True, "reset_detected": True}
+        },
+        ordered_gate_passes=1,
+        acceptance_passed=True,
+    )
+    monkeypatch.setattr(module.smoke, "run_smoke", lambda _args: smoke_report)
+
+    summary = module.run_validation(args)
+
+    assert requirements["require_mavlink"] is True
+    assert requirements["require_camera"] is False
+    assert requirements["require_ts002_header"] is False
+    assert summary.reset_sent is True
+    assert summary.status == "smoke_passed"
+    assert summary.race_start_check["reason"] == "policy_ready_reset_owns_race_start"
 
 
 def test_validation_runs_smoke_when_probe_passes(monkeypatch, tmp_path):

@@ -161,10 +161,38 @@ def validate_config(args):
     minibatch_size = args['train']['minibatch_size']
     horizon = args['train']['horizon']
     total_agents = args['vec']['total_agents']
+    learning_start_timesteps = args['train'].get('learning_start_timesteps', 0)
+    phase_prio_obs_index = args['train'].get('phase_prio_obs_index', -1)
+    phase_prio_scale = args['train'].get('phase_prio_scale', 0.0)
+    phase_prio_max_weight = args['train'].get('phase_prio_max_weight', 4.0)
+    train_encoder_feature_start = args['train'].get(
+        'train_encoder_feature_start', -1)
+    train_encoder_feature_end = args['train'].get(
+        'train_encoder_feature_end', -1)
     assert (minibatch_size % horizon) == 0, \
         f'minibatch_size {minibatch_size} must be divisible by horizon {horizon}'
     assert minibatch_size <= horizon * total_agents, \
         f'minibatch_size {minibatch_size} > total_agents {total_agents} * horizon {horizon}'
+    assert learning_start_timesteps >= 0, \
+        f'learning_start_timesteps {learning_start_timesteps} must be nonnegative'
+    assert phase_prio_obs_index >= -1, \
+        f'phase_prio_obs_index {phase_prio_obs_index} must be -1 or nonnegative'
+    assert phase_prio_scale >= 0, \
+        f'phase_prio_scale {phase_prio_scale} must be nonnegative'
+    assert phase_prio_max_weight >= 1, \
+        f'phase_prio_max_weight {phase_prio_max_weight} must be at least 1'
+    assert (train_encoder_feature_start == -1) == (train_encoder_feature_end == -1), \
+        'encoder feature bounds must both be -1 or both be enabled'
+    assert train_encoder_feature_start >= -1 and train_encoder_feature_end >= -1, \
+        'encoder feature bounds must be -1 or nonnegative'
+    assert train_encoder_feature_start <= train_encoder_feature_end, \
+        'train_encoder_feature_start must not exceed train_encoder_feature_end'
+    assert not (args.get('slowly') and train_encoder_feature_start >= 0), \
+        'encoder-column-only optimization currently requires the CUDA backend'
+
+def _optimizer_update_ready(train_args, global_step):
+    """Return whether the just-collected rollout may update the policy."""
+    return global_step >= train_args.get('learning_start_timesteps', 0)
 
 def _resolve_backend(args):
     compiled_env = getattr(_C, 'env_name', None)
@@ -182,7 +210,8 @@ def _train_worker(args):
     args.pop('nccl_id', None)
     while pufferl.global_step < args['train']['total_timesteps']:
         backend.rollouts(pufferl)
-        backend.train(pufferl)
+        if _optimizer_update_ready(args['train'], pufferl.global_step):
+            backend.train(pufferl)
 
     backend.close(pufferl)
 
@@ -242,8 +271,11 @@ def _train(env_name, args, sweep_obj=None, result_queue=None, verbose=False):
     for epoch in range(train_epochs + eval_epochs):
         backend.rollouts(pufferl)
 
-        if epoch < train_epochs:
+        trained_this_epoch = False
+        if (epoch < train_epochs
+                and _optimizer_update_ready(args['train'], pufferl.global_step)):
             backend.train(pufferl)
+            trained_this_epoch = True
 
         if (epoch % args['checkpoint_interval'] == 0 or epoch == train_epochs - 1) and sweep_obj is None:
             model_path = os.path.join(checkpoint_dir, f'{pufferl.global_step:016d}.bin')
@@ -266,12 +298,13 @@ def _train(env_name, args, sweep_obj=None, result_queue=None, verbose=False):
             wandb.log(flat_logs, step=flat_logs['agent_steps'])
 
         if epoch < train_epochs:
-            all_logs.append(flat_logs)
+            if trained_this_epoch:
+                all_logs.append(flat_logs)
 
-            if (sweep_obj is not None
-                    and pufferl.global_step > min(0.20*total_timesteps, 100_000_000) and
-                    sweep_obj.early_stop(logs, target_key)):
-                break
+                if (sweep_obj is not None
+                        and pufferl.global_step > min(0.20*total_timesteps, 100_000_000) and
+                        sweep_obj.early_stop(logs, target_key)):
+                    break
         elif flat_logs['env/n'] > args['eval_episodes']:
             break
 

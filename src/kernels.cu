@@ -202,6 +202,13 @@ __global__ void clamp_precision_kernel(precision_t* __restrict__ dst, float lo, 
     }
 }
 
+__global__ void scale_precision_kernel(precision_t* __restrict__ dst, float scale, int n) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < n) {
+        dst[idx] = from_float(to_float(dst[idx]) * scale);
+    }
+}
+
 __global__ void add_kernel(float* __restrict__ dst, const precision_t* __restrict__ src, int n) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < n) {

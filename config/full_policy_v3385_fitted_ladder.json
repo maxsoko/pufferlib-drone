@@ -1,0 +1,112 @@
+{
+  "version": 1,
+  "description": "Single-policy curriculum for the trace-fitted v3385 plant. Advance fixed full-course geometry with 0.0125 nominal steps and evidence-driven midpoint bridges near discontinuities, then shrink every aperture, then add measured camera loss. Each harder stage trains and evaluates at its target geometry and promotes only by deterministic exact evaluation.",
+  "training_defaults": {
+    "timesteps": 1048576,
+    "max_attempts": 3,
+    "learning_rate": 0.0001,
+    "reward_scale": 0.005,
+    "reward_clip": 1.0,
+    "ent_coef": 0.0,
+    "exploration_log_std": -3.0
+  },
+  "ladders": [
+    {
+      "name_prefix": "fitted_geometry_r10",
+      "parameter": "env.course-geometry-scale",
+      "values": [
+        "0.675", "0.6875", "0.7000", "0.7125", "0.7250", "0.7375",
+        "0.7500", "0.753125", "0.75625", "0.759375", "0.7625", "0.76875", "0.771875", "0.7734375", "0.7750", "0.7875", "0.79375", "0.796875", "0.8000", "0.803125", "0.80625", "0.8125",
+        "0.8250", "0.828125", "0.83125", "0.8375", "0.84375", "0.8500", "0.85625", "0.8625", "0.86875", "0.8750", "0.8875",
+        "0.89375", "0.9000", "0.90625", "0.909375", "0.9125", "0.91875", "0.9250", "0.93125", "0.9375", "0.94375", "0.9453125", "0.945703125", "0.94609375", "0.946875", "0.9500", "0.95625", "0.9625",
+        "0.9750", "0.9875", "1.0000"
+      ],
+      "train_on_previous_value": false,
+      "training": {
+        "learning_rate": 0.000001
+      },
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale-randomize": "0",
+        "env.gate-radius": "10.00",
+        "env.gate-radius-randomize": "0",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.w-cross-track": "50.0",
+        "env.cross-track-vertical-weight": "4.0",
+        "env.cross-track-from-gate-index": "0",
+        "env.w-gate-crossing-error": "0.25",
+        "env.gate-crossing-error-from-gate-index": "0",
+        "env.w-gate-exit-lateral-velocity": "50.0",
+        "env.w-gate-exit-velocity": "5.0",
+        "env.w-forward-speed-excess": "20.0",
+        "env.target-forward-speed": "10.0",
+        "env.w-action-teacher": "0.0"
+      }
+    },
+    {
+      "name_prefix": "fitted_aperture_geometry1",
+      "parameter": "env.gate-radius",
+      "values": [
+        "10.00", "9.00", "8.00", "7.00", "6.00", "5.50", "5.375", "5.3125", "5.25", "5.1875", "5.00", "4.00",
+        "3.50", "3.00", "2.75", "2.50", "2.25", "2.00", "1.75",
+        "1.50", "1.25", "1.00", "0.875", "0.75"
+      ],
+      "train_on_previous_value": false,
+      "training": {
+        "learning_rate": 0.00001,
+        "exploration_log_std": -4.0
+      },
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.course-geometry-scale-randomize": "0",
+        "env.gate-radius-randomize": "0",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.w-cross-track": "50.0",
+        "env.cross-track-vertical-weight": "4.0",
+        "env.cross-track-from-gate-index": "0",
+        "env.w-gate-crossing-error": "0.25",
+        "env.gate-crossing-error-from-gate-index": "0",
+        "env.w-gate-exit-lateral-velocity": "50.0",
+        "env.w-gate-exit-velocity": "5.0",
+        "env.w-forward-speed-excess": "20.0",
+        "env.target-forward-speed": "10.0",
+        "env.w-action-teacher": "0.0"
+      }
+    },
+    {
+      "name_prefix": "fitted_dropout_r075",
+      "parameter": "env.sitl-gate-obs-dropout-range-m",
+      "values": ["0.00", "2.50", "3.25", "4.25"],
+      "train_on_previous_value": false,
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.course-geometry-scale-randomize": "0",
+        "env.gate-radius": "0.75",
+        "env.gate-radius-randomize": "0",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.w-cross-track": "50.0",
+        "env.cross-track-from-gate-index": "0",
+        "env.w-gate-crossing-error": "0.25",
+        "env.gate-crossing-error-from-gate-index": "0",
+        "env.w-gate-exit-lateral-velocity": "50.0",
+        "env.w-gate-exit-velocity": "5.0",
+        "env.w-forward-speed-excess": "20.0",
+        "env.target-forward-speed": "10.0",
+        "env.w-action-teacher": "0.0"
+      }
+    }
+  ]
+}

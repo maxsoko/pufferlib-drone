@@ -1,0 +1,66 @@
+{
+  "sources": [
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_gate3_bc_composite_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_gate3_latest_r135_dropout_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_gate3_obsmatch_r086_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_gate3_obsmatch_r086_trackhold_002_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_gate3_v6c_roll060_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_gate3_visual_p035_r050_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_gate4_gate1_anchor100_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_gate4_lastgru_bf16_e130_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_gate4_live_dagger_g2g3_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_gate4_livefeedback_c10r10_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_gate4_pd_dagger_decoder_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_gate4_phase_heads_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_gate4_phase_heads_conf040_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_gate4_phase_heads_lowexperts_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_gate4_phase_heads_ridge10_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_gate4_prebank005_dagger_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_gate4_prebank0075_dagger_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_gate4_prebank010_midpoint_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_gate4_prebank020_paired_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_observable_teacher_gate2_003_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_observable_teacher_v2_gate2_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_observable_teacher_v3a_filtered_motion_gate2_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_observable_teacher_v3a_gate2_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_observable_teacher_v3a_tracked_pose_filtered_motion_gate2_002_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_observable_teacher_v4a_gate2_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_observable_teacher_v4a_initial_association_gate2_002_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_observable_teacher_v4d_gate2_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_rl_stage_c_2m_gate2_001_attempt_001.json",
+    "/mnt/c/Users/anon/code/pufferlib-drone/logs/sitl/competition_smoke_policy_full_policy_rl_stage_c_v6c_gate2_001_attempt_001.json"
+  ],
+  "segments": 64,
+  "acceleration_windows": 2202,
+  "axis_fits": [
+    {
+      "axis": "x",
+      "thrust_accel_per_unit": -85.5543768529003,
+      "linear_drag_per_s": -0.19974179465653022,
+      "gravity_intercept_m_s2": 0.0,
+      "rmse_m_s2": 10.107688952200661
+    },
+    {
+      "axis": "y",
+      "thrust_accel_per_unit": 3.5262853238243945,
+      "linear_drag_per_s": 0.14071102960489246,
+      "gravity_intercept_m_s2": 0.0,
+      "rmse_m_s2": 2.0846692226661316
+    },
+    {
+      "axis": "z",
+      "thrust_accel_per_unit": 32.80540823624514,
+      "linear_drag_per_s": 0.4076822360704302,
+      "gravity_intercept_m_s2": -8.686276195489494,
+      "rmse_m_s2": 3.3054704172759073
+    }
+  ],
+  "attitude_tau_s": {
+    "roll": 0.5674279260302642,
+    "pitch": 0.4681590892872817
+  },
+  "notes": [
+    "Fits use only official-observable quaternion and relative gate pose.",
+    "Gravity intercept is expected to be negative in the native world-z convention."
+  ]
+}

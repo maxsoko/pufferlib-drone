@@ -239,6 +239,7 @@ def test_dry_run_writes_report(tmp_path):
 
 
 class FakeMavlinkConstants:
+    MAV_CMD_COMPONENT_ARM_DISARM = 400
     ATTITUDE_TARGET_TYPEMASK_BODY_ROLL_RATE_IGNORE = 1
     ATTITUDE_TARGET_TYPEMASK_BODY_PITCH_RATE_IGNORE = 2
     ATTITUDE_TARGET_TYPEMASK_BODY_YAW_RATE_IGNORE = 4
@@ -248,6 +249,14 @@ class FakeMavlinkConstants:
 class FakeMav:
     def __init__(self):
         self.attitude_calls = []
+        self.command_long_calls = []
+        self.timesync_calls = []
+
+    def command_long_send(self, *args):
+        self.command_long_calls.append(args)
+
+    def timesync_send(self, tc1, ts1):
+        self.timesync_calls.append((tc1, ts1))
 
     def set_attitude_target_send(
         self,
@@ -339,3 +348,60 @@ def test_send_attitude_setpoint_rejects_unknown_mode():
 
     with pytest.raises(ValueError):
         adapter.send_attitude_setpoint(sitl.AttitudeSetpoint(), mode="wat")
+
+
+def test_send_disarm_command_uses_component_command_with_zero_arm_param():
+    adapter = make_fake_adapter()
+
+    adapter.send_disarm_command()
+
+    call = adapter.master.mav.command_long_calls[0]
+    assert call[0:3] == (9, 3, FakeMavlinkConstants.MAV_CMD_COMPONENT_ARM_DISARM)
+    assert call[3] == 0
+    assert call[4] == 0
+
+
+def test_target_component_zero_is_preserved_for_simulator_commands():
+    adapter = make_fake_adapter()
+    adapter.master.target_component = 0
+
+    adapter.send_disarm_command()
+
+    assert adapter.master.mav.command_long_calls[0][1] == 0
+
+
+def test_timesync_request_uses_zero_tc1_and_local_timestamp_in_ts1(monkeypatch):
+    adapter = make_fake_adapter()
+    monkeypatch.setattr(sitl.time, "time_ns", lambda: 123456789)
+
+    adapter.send_timesync_request()
+
+    assert adapter.master.mav.timesync_calls == [(0, 123456789)]
+
+
+def test_drain_telemetry_consumes_backlog_and_keeps_latest_state():
+    adapter = make_fake_adapter()
+    adapter.telemetry = sitl.MavlinkTelemetryParser(dropout_after_s=1.0)
+    queued = [
+        FakeMavlinkMessage(
+            "HIGHRES_IMU",
+            time_usec=time_usec,
+            xacc=0.0,
+            yacc=0.0,
+            zacc=-9.81,
+            xgyro=0.0,
+            ygyro=0.0,
+            zgyro=zgyro,
+        )
+        for time_usec, zgyro in ((100, 0.1), (200, 0.2), (300, 0.3))
+    ]
+
+    def recv_match(*, blocking, timeout):
+        return queued.pop(0) if queued else None
+
+    adapter.master.recv_match = recv_match
+
+    assert adapter.drain_telemetry(max_messages=10) == 3
+    assert adapter.telemetry.metrics.highres_imus == 3
+    assert adapter.telemetry.state.imu_time_usec == 300
+    assert adapter.telemetry.state.zgyro == pytest.approx(0.3)

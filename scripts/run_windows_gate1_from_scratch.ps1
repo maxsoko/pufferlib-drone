@@ -1,7 +1,7 @@
 param(
     [string]$Python = ".\.venv-win\Scripts\python.exe",
     [string]$Tag = "windows_gate1_auto",
-    [string]$SimRoot = "$env:USERPROFILE\Desktop\AI-GP Simulator v1.0.3379\AIGP_3379",
+    [string]$SimRoot = "",
     [string]$SmokeTag = "",
     [int]$SmokeDuration = 45,
     [double]$ProbeDuration = 8.0,
@@ -14,6 +14,7 @@ param(
     [int]$RaceCheckS = 10,
     [int]$RaceAttempts = 4,
     [switch]$NoRelaunch,
+    [switch]$ForceRelaunch,
     [switch]$NoUiClicks
 )
 
@@ -30,36 +31,37 @@ if (-not (Test-Path $Python)) {
 }
 
 Write-Host "Starting simulator/race reset flow..."
-$startArgs = @(
-    "-Python", $Python,
-    "-SimRoot", $SimRoot,
-    "-Tag", "${Tag}_start",
-    "-RaceCheckS", "$RaceCheckS",
-    "-UiAttempts", "$RaceAttempts"
-)
-if ($NoRelaunch) { $startArgs += "-NoRelaunch" }
-if ($NoUiClicks) { $startArgs += "-NoUiClicks" }
+$startArgs = @{
+    Python = $Python
+    SimRoot = $SimRoot
+    Tag = "${Tag}_start"
+    RaceCheckS = $RaceCheckS
+    UiAttempts = $RaceAttempts
+}
+if ($NoRelaunch) { $startArgs.NoRelaunch = $true }
+if ($ForceRelaunch) { $startArgs.ForceRelaunch = $true }
+if ($NoUiClicks) { $startArgs.NoUiClicks = $true }
 
 & "$RepoRoot\scripts\start_windows_aigp_race.ps1" @startArgs
 Write-Host "Race start confirmed."
 
 Write-Host "Launching strict official gate-1 validation..."
-$valArgs = @(
-    "-Python", $Python,
-    "-Tag", $SmokeTag,
-    "-ProbeDuration", "$ProbeDuration",
-    "-SmokeDuration", "$SmokeDuration",
-    "-ControlMode", $ControlMode,
-    "-CommandFrame", $CommandFrame,
-    "-CommandYawMode", $CommandYawMode,
-    "-PolicyActionJson", $PolicyActionJson
-)
+$valArgs = @{
+    Python = $Python
+    Tag = $SmokeTag
+    ProbeDuration = $ProbeDuration
+    SmokeDuration = $SmokeDuration
+    ControlMode = $ControlMode
+    CommandFrame = $CommandFrame
+    CommandYawMode = $CommandYawMode
+    PolicyActionJson = $PolicyActionJson
+}
 
 if ($RequireOfficialRaceProgress.IsPresent) {
-    $valArgs += "-RequireOfficialRaceProgress"
+    $valArgs.RequireOfficialRaceProgress = $true
 }
 if ($PolicyCallable -ne "") {
-    $valArgs += @("-PolicyCallable", $PolicyCallable)
+    $valArgs.PolicyCallable = $PolicyCallable
 }
 
 & "$RepoRoot\scripts\run_windows_official_gate1_validation.ps1" @valArgs

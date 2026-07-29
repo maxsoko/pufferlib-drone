@@ -172,3 +172,6 @@ pufferlib/ocean/impulse_wars/benchmark/
 # Data
 resources/drive/data/*
 resources/drive/binaries/*
+
+# Downloaded package installers
+*.deb

@@ -1,0 +1,69 @@
+{
+  "mechanism": "jacobian_guided_constrained_cma_es",
+  "created_date": "2026-07-16",
+  "parent_checkpoint": "logs/drone_race_full_policy_official_fit/official_speed_curriculum/ppo_r075_v4_fp32_floor4p1875_best_mixed_calibration/rollrel0p99975.bin",
+  "parent_sha256": "39e51c90d71775bf1f2986236f500e27a430755b56063f806d3a1c28f15bdaf3",
+  "checkpoint_layout_precision_bytes": 4,
+  "native_precision_bytes": 4,
+  "policy": {
+    "input_dim": 32,
+    "hidden_dim": 128,
+    "num_layers": 3,
+    "num_actions": 4,
+    "excluded": [
+      "log_std",
+      "decoder_value_row"
+    ]
+  },
+  "curriculum": {
+    "gate_radius": 0.75,
+    "anchor_floor": 4.0,
+    "target_floor": 4.5,
+    "transition_from_gate_index": 2,
+    "transition_max_accel_m_s2": 0.0,
+    "preserve_velocity_direction": 0,
+    "transition_delay_steps": 0,
+    "gate_observation_dropout_range_m": 0.0,
+    "gate_position_domain_randomize": 0
+  },
+  "subspace": {
+    "method": "matrix_free_failure_jacobian_with_diagonal_anchor_whitening",
+    "dimension": 12,
+    "maximum_dimension": 24,
+    "maximum_expansions": 1,
+    "seed": 3385,
+    "anchor_hutchinson_probes": 8,
+    "failure_range_probes": 24,
+    "damping_fraction": 0.001
+  },
+  "cma_es": {
+    "dimension": 12,
+    "population_size": 24,
+    "parent_count": 12,
+    "maximum_generations": 8,
+    "seed": 3385,
+    "antithetic": true,
+    "full_covariance": true,
+    "development_episodes": 128,
+    "development_episode_offset": 0,
+    "validation_episodes": 128,
+    "validation_episode_offset": 1,
+    "top_anchor_evaluations_per_generation": 4,
+    "authoritative_evaluation_episodes": 1024,
+    "minimum_radial_improvement_m": 0.1,
+    "target_success_rate": 0.9,
+    "maximum_crash_rate": 0.1,
+    "minimum_anchor_success_rate": 0.9
+  },
+  "initial_step_calibration": {
+    "target_failure_action_rms": 0.005,
+    "maximum_anchor_action_rms": 0.001,
+    "maximum_anchor_action_max": 0.01
+  },
+  "stop_rules": {
+    "early_audit_generation": 3,
+    "forbid_seed_retry": true,
+    "forbid_sigma_grid": true,
+    "forbid_fitness_weight_tuning": true
+  }
+}

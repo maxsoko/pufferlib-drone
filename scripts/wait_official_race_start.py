@@ -52,7 +52,12 @@ def wait_for_race_start(
             timeout_s = min(args.poll_timeout_s, max(0.0, deadline_s - monotonic()))
             adapter.poll_telemetry(timeout_s=timeout_s)
             race_status = adapter.telemetry.state.race_status
-            if race_status is not None and int(race_status.race_start_boot_time_ms) >= 0:
+            if (
+                race_status is not None
+                and int(race_status.race_start_boot_time_ms) >= 0
+                and adapter.telemetry.state.base_mode is not None
+                and adapter.telemetry.state.system_status is not None
+            ):
                 break
     finally:
         adapter.close()

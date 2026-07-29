@@ -18,7 +18,11 @@ from collections.abc import Sequence
 
 
 TS002_GATE_INNER_WIDTH_M = 1.5
-TS002_CAMERA_UPTILT_DEG = 20.0
+# TS-002 documents a 20 deg camera uptilt, but the v3379 renderer is level:
+# measured from the pad (probe_camera_tilt.py, July 2026), gate 1 straight
+# ahead at ~23 m appears at image center (+0.98 deg elevation). Assuming 20 deg
+# placed the gate 8.8 m above the pad and drove every approach into a climb.
+TS002_CAMERA_UPTILT_DEG = 0.0
 
 
 @dataclasses.dataclass(frozen=True)

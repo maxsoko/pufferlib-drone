@@ -1,0 +1,932 @@
+{
+  "version": 6,
+  "description": "Full-course geometry curriculum. Every trajectory keeps the official start, four ordered gates, recurrent history, and observable policy contract. A straight/level narrow course is morphed into nominal v3385 geometry before aperture, camera dropout, and position jitter are tightened.",
+  "training_defaults": {
+    "timesteps": 500000,
+    "max_attempts": 4,
+    "learning_rate": 0.00003,
+    "reward_scale": 0.005,
+    "reward_clip": 1.0,
+    "exploration_log_std": -4.0
+  },
+  "stages": [
+    {
+      "name": "coursewide_radius_18p00",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.gate-radius": "18.00",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.w-cross-track": "10.0",
+        "env.cross-track-from-gate-index": "0",
+        "env.w-gate-exit-velocity": "10.0"
+      },
+      "training": {
+        "timesteps": 4000000,
+        "max_attempts": 3,
+        "learning_rate": 0.0003,
+        "exploration_log_std": null
+      }
+    },
+    {
+      "name": "course_shape_0p00_radius_4p00",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "0.00",
+        "env.gate-radius": "4.00",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.w-cross-track": "10.0",
+        "env.cross-track-from-gate-index": "0",
+        "env.w-gate-crossing-error": "0.25",
+        "env.gate-crossing-error-from-gate-index": "0",
+        "env.w-gate-exit-velocity": "10.0"
+      },
+      "training": {
+        "learning_rate": 0.0001,
+        "exploration_log_std": -2.0
+      }
+    },
+    {
+      "name": "course_shape_0p25_radius_4p00",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "0.25",
+        "env.gate-radius": "4.00",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.course-geometry-scale": "0.20",
+        "env.w-cross-track": "10.0",
+        "env.cross-track-from-gate-index": "0",
+        "env.w-gate-crossing-error": "0.25",
+        "env.gate-crossing-error-from-gate-index": "0",
+        "env.w-gate-exit-velocity": "10.0"
+      },
+      "training": {
+        "learning_rate": 0.0001,
+        "exploration_log_std": -2.0
+      }
+    },
+    {
+      "name": "course_shape_0p35_radius_4p00",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "0.35",
+        "env.gate-radius": "4.00",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.course-geometry-scale": "0.30",
+        "env.w-cross-track": "12.5",
+        "env.cross-track-from-gate-index": "0",
+        "env.w-gate-crossing-error": "0.25",
+        "env.gate-crossing-error-from-gate-index": "0",
+        "env.w-gate-exit-velocity": "10.0"
+      },
+      "training": {
+        "learning_rate": 0.0001,
+        "exploration_log_std": -2.0
+      }
+    },
+    {
+      "name": "course_shape_0p35_center_radius_3p00",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "0.35",
+        "env.gate-radius": "3.00",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.gate-radius": "4.00",
+        "env.w-cross-track": "12.5",
+        "env.cross-track-from-gate-index": "0",
+        "env.w-gate-crossing-error": "5.0",
+        "env.gate-crossing-error-from-gate-index": "0",
+        "env.w-gate-exit-velocity": "10.0"
+      },
+      "training": {
+        "timesteps": 1000000,
+        "learning_rate": 0.0003,
+        "exploration_log_std": -2.0
+      }
+    },
+    {
+      "name": "course_shape_0p45_radius_3p25",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "0.45",
+        "env.gate-radius": "3.25",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.course-geometry-scale": "0.40",
+        "env.gate-radius": "4.00",
+        "env.w-cross-track": "12.5",
+        "env.cross-track-from-gate-index": "0",
+        "env.w-gate-crossing-error": "5.0",
+        "env.gate-crossing-error-from-gate-index": "0",
+        "env.w-gate-exit-velocity": "10.0"
+      },
+      "training": {
+        "timesteps": 1000000,
+        "learning_rate": 0.0003,
+        "exploration_log_std": -2.0
+      }
+    },
+    {
+      "name": "course_shape_0p50_radius_3p25",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "0.50",
+        "env.course-geometry-scale-randomize": "0",
+        "env.gate-radius": "3.25",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.course-geometry-scale": "0.50",
+        "env.course-geometry-scale-randomize": "1",
+        "env.course-geometry-scale-min": "0.45",
+        "env.course-geometry-scale-max": "0.50",
+        "env.gate-radius": "4.00",
+        "env.w-cross-track": "25.0",
+        "env.cross-track-from-gate-index": "3",
+        "env.w-gate-crossing-error": "25.0",
+        "env.gate-crossing-error-from-gate-index": "3",
+        "env.w-gate-exit-velocity": "0.0",
+        "env.w-action-teacher": "100000.0",
+        "env.teacher-pitch-from-gate-index": "16",
+        "env.teacher-roll-from-gate-index": "16",
+        "env.teacher-thrust-from-gate-index": "3",
+        "env.teacher-thrust-bias": "-0.40",
+        "env.teacher-thrust-per-m": "0.00",
+        "env.teacher-thrust-weight": "1.0"
+      },
+      "training": {
+        "timesteps": 500000,
+        "learning_rate": 0.0003,
+        "exploration_log_std": -2.0
+      }
+    },
+    {
+      "name": "course_shape_0p55_radius_3p25",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "0.55",
+        "env.course-geometry-scale-randomize": "0",
+        "env.gate-radius": "3.25",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.course-geometry-scale": "0.55",
+        "env.course-geometry-scale-randomize": "1",
+        "env.course-geometry-scale-min": "0.50",
+        "env.course-geometry-scale-max": "0.55",
+        "env.gate-radius": "4.00",
+        "env.w-cross-track": "25.0",
+        "env.cross-track-from-gate-index": "3",
+        "env.w-gate-crossing-error": "25.0",
+        "env.gate-crossing-error-from-gate-index": "3",
+        "env.w-gate-exit-velocity": "0.0",
+        "env.w-action-teacher": "100000.0",
+        "env.teacher-pitch-from-gate-index": "16",
+        "env.teacher-roll-from-gate-index": "16",
+        "env.teacher-thrust-from-gate-index": "3",
+        "env.teacher-thrust-bias": "-0.40",
+        "env.teacher-thrust-per-m": "0.00",
+        "env.teacher-thrust-weight": "1.0"
+      },
+      "training": {
+        "timesteps": 500000,
+        "learning_rate": 0.0003,
+        "exploration_log_std": -2.0
+      }
+    },
+    {
+      "name": "course_shape_0p65_radius_3p25",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "0.65",
+        "env.course-geometry-scale-randomize": "0",
+        "env.gate-radius": "3.25",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.course-geometry-scale": "0.65",
+        "env.course-geometry-scale-randomize": "1",
+        "env.course-geometry-scale-min": "0.55",
+        "env.course-geometry-scale-max": "0.65",
+        "env.gate-radius": "4.00",
+        "env.w-cross-track": "25.0",
+        "env.cross-track-from-gate-index": "2",
+        "env.w-gate-crossing-error": "25.0",
+        "env.gate-crossing-error-from-gate-index": "2",
+        "env.w-gate-exit-velocity": "0.0",
+        "env.w-action-teacher": "100000.0",
+        "env.teacher-pitch-from-gate-index": "16",
+        "env.teacher-roll-from-gate-index": "2",
+        "env.teacher-thrust-from-gate-index": "2",
+        "env.teacher-roll-per-m": "0.10",
+        "env.teacher-thrust-bias": "-0.40",
+        "env.teacher-thrust-per-m": "0.00",
+        "env.teacher-thrust-weight": "1.0"
+      },
+      "training": {
+        "timesteps": 500000,
+        "learning_rate": 0.0003,
+        "exploration_log_std": -2.0
+      }
+    },
+    {
+      "name": "course_shape_0p75_radius_3p25",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "0.75",
+        "env.course-geometry-scale-randomize": "0",
+        "env.gate-radius": "3.25",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.course-geometry-scale": "0.75",
+        "env.course-geometry-scale-randomize": "1",
+        "env.course-geometry-scale-min": "0.65",
+        "env.course-geometry-scale-max": "0.75",
+        "env.gate-radius": "4.00",
+        "env.w-cross-track": "25.0",
+        "env.cross-track-from-gate-index": "2",
+        "env.w-gate-crossing-error": "25.0",
+        "env.gate-crossing-error-from-gate-index": "2",
+        "env.w-gate-exit-velocity": "0.0",
+        "env.w-action-teacher": "100000.0",
+        "env.teacher-pitch-from-gate-index": "16",
+        "env.teacher-roll-from-gate-index": "2",
+        "env.teacher-thrust-from-gate-index": "2",
+        "env.teacher-roll-per-m": "-0.20",
+        "env.teacher-thrust-bias": "-0.40",
+        "env.teacher-thrust-per-m": "0.00",
+        "env.teacher-thrust-weight": "1.0"
+      },
+      "training": {
+        "timesteps": 500000,
+        "learning_rate": 0.0003,
+        "exploration_log_std": -2.0
+      }
+    },
+    {
+      "name": "course_shape_0p80_radius_3p25",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "0.80",
+        "env.course-geometry-scale-randomize": "0",
+        "env.gate-radius": "3.25",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.course-geometry-scale": "0.80",
+        "env.course-geometry-scale-randomize": "1",
+        "env.course-geometry-scale-min": "0.75",
+        "env.course-geometry-scale-max": "0.80",
+        "env.gate-radius": "4.00",
+        "env.w-cross-track": "50.0",
+        "env.cross-track-from-gate-index": "2",
+        "env.w-gate-crossing-error": "50.0",
+        "env.gate-crossing-error-from-gate-index": "2",
+        "env.w-gate-exit-velocity": "0.0",
+        "env.w-action-teacher": "0.0",
+        "env.teacher-pitch-from-gate-index": "16",
+        "env.teacher-roll-from-gate-index": "2",
+        "env.teacher-thrust-from-gate-index": "16",
+        "env.teacher-roll-per-m": "-0.50",
+        "env.teacher-thrust-bias": "-0.40",
+        "env.teacher-thrust-per-m": "0.00",
+        "env.teacher-thrust-weight": "0.0"
+      },
+      "training": {
+        "timesteps": 250000,
+        "learning_rate": 0.0001,
+        "exploration_log_std": -2.5
+      }
+    },
+    {
+      "name": "course_shape_0p85_radius_3p25",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "0.85",
+        "env.course-geometry-scale-randomize": "0",
+        "env.gate-radius": "3.25",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.course-geometry-scale": "0.85",
+        "env.course-geometry-scale-randomize": "1",
+        "env.course-geometry-scale-min": "0.80",
+        "env.course-geometry-scale-max": "0.85",
+        "env.gate-radius": "4.00",
+        "env.w-cross-track": "75.0",
+        "env.cross-track-from-gate-index": "2",
+        "env.cross-track-vertical-weight": "0.0",
+        "env.w-gate-crossing-error": "50.0",
+        "env.gate-crossing-error-from-gate-index": "2",
+        "env.w-gate-exit-velocity": "0.0",
+        "env.w-action-teacher": "0.0",
+        "env.teacher-pitch-from-gate-index": "16",
+        "env.teacher-roll-from-gate-index": "16",
+        "env.teacher-thrust-from-gate-index": "16"
+      },
+      "training": {
+        "timesteps": 250000,
+        "learning_rate": 0.00005,
+        "exploration_log_std": -3.0
+      }
+    },
+    {
+      "name": "course_shape_0p90_radius_3p25",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "0.90",
+        "env.course-geometry-scale-randomize": "0",
+        "env.gate-radius": "3.25",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.course-geometry-scale": "0.90",
+        "env.course-geometry-scale-randomize": "1",
+        "env.course-geometry-scale-min": "0.85",
+        "env.course-geometry-scale-max": "0.90",
+        "env.gate-radius": "4.00",
+        "env.w-cross-track": "75.0",
+        "env.cross-track-from-gate-index": "2",
+        "env.w-gate-crossing-error": "50.0",
+        "env.gate-crossing-error-from-gate-index": "2",
+        "env.w-gate-exit-velocity": "0.0",
+        "env.w-action-teacher": "0.0"
+      },
+      "training": {
+        "timesteps": 250000,
+        "learning_rate": 0.00005,
+        "exploration_log_std": -3.0
+      }
+    },
+    {
+      "name": "course_shape_0p95_radius_3p25",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "0.95",
+        "env.course-geometry-scale-randomize": "0",
+        "env.gate-radius": "3.25",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.course-geometry-scale": "0.95",
+        "env.course-geometry-scale-randomize": "1",
+        "env.course-geometry-scale-min": "0.90",
+        "env.course-geometry-scale-max": "0.95",
+        "env.gate-radius": "4.00",
+        "env.w-cross-track": "75.0",
+        "env.cross-track-from-gate-index": "2",
+        "env.w-gate-crossing-error": "50.0",
+        "env.gate-crossing-error-from-gate-index": "2",
+        "env.w-gate-exit-velocity": "0.0",
+        "env.w-action-teacher": "0.0"
+      },
+      "training": {
+        "timesteps": 250000,
+        "learning_rate": 0.00005,
+        "exploration_log_std": -3.0
+      }
+    },
+    {
+      "name": "course_shape_1p00_radius_3p25",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.course-geometry-scale-randomize": "0",
+        "env.gate-radius": "3.25",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.course-geometry-scale": "1.00",
+        "env.course-geometry-scale-randomize": "1",
+        "env.course-geometry-scale-min": "0.95",
+        "env.course-geometry-scale-max": "1.00",
+        "env.gate-radius": "4.00",
+        "env.w-cross-track": "75.0",
+        "env.cross-track-from-gate-index": "2",
+        "env.w-gate-crossing-error": "50.0",
+        "env.gate-crossing-error-from-gate-index": "2",
+        "env.w-gate-exit-velocity": "0.0",
+        "env.w-action-teacher": "0.0"
+      },
+      "training": {
+        "timesteps": 250000,
+        "learning_rate": 0.00005,
+        "exploration_log_std": -3.0
+      }
+    },
+    {
+      "name": "coursewide_radius_3p00",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.course-geometry-scale-randomize": "0",
+        "env.gate-radius": "3.00",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.gate-radius": "3.25",
+        "env.w-cross-track": "100.0",
+        "env.cross-track-from-gate-index": "2",
+        "env.w-gate-crossing-error": "50.0",
+        "env.gate-crossing-error-from-gate-index": "2",
+        "env.w-gate-exit-velocity": "0.0",
+        "env.w-action-teacher": "0.0"
+      },
+      "training": {
+        "timesteps": 250000,
+        "learning_rate": 0.00005,
+        "exploration_log_std": -3.0
+      }
+    },
+    {
+      "name": "coursewide_radius_2p95",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.course-geometry-scale-randomize": "0",
+        "env.gate-radius": "2.95",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.gate-radius": "3.00",
+        "env.w-cross-track": "100.0",
+        "env.cross-track-from-gate-index": "2",
+        "env.w-gate-crossing-error": "50.0",
+        "env.gate-crossing-error-from-gate-index": "2",
+        "env.w-gate-exit-velocity": "0.0",
+        "env.w-action-teacher": "0.0"
+      },
+      "training": {
+        "timesteps": 250000,
+        "learning_rate": 0.00005,
+        "exploration_log_std": -3.0
+      }
+    },
+    {
+      "name": "coursewide_radius_2p90",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.course-geometry-scale-randomize": "0",
+        "env.gate-radius": "2.90",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.gate-radius": "2.90",
+        "env.w-cross-track": "100.0",
+        "env.cross-track-from-gate-index": "2",
+        "env.w-gate-crossing-error": "50.0",
+        "env.gate-crossing-error-from-gate-index": "2",
+        "env.w-gate-exit-velocity": "0.0",
+        "env.w-action-teacher": "0.0"
+      },
+      "training": {
+        "timesteps": 1000000,
+        "learning_rate": 0.00005,
+        "exploration_log_std": -3.0
+      }
+    },
+    {
+      "name": "coursewide_radius_2p89",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.course-geometry-scale-randomize": "0",
+        "env.gate-radius": "2.89",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.gate-radius": "2.89",
+        "env.w-cross-track": "100.0",
+        "env.cross-track-from-gate-index": "2",
+        "env.w-gate-crossing-error": "50.0",
+        "env.gate-crossing-error-from-gate-index": "2",
+        "env.w-gate-exit-velocity": "0.0",
+        "env.w-action-teacher": "0.0"
+      },
+      "training": {
+        "timesteps": 1000000,
+        "learning_rate": 0.00005,
+        "exploration_log_std": -3.0
+      }
+    },
+    {
+      "name": "coursewide_radius_2p85625",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.course-geometry-scale-randomize": "0",
+        "env.gate-radius": "2.85625",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.gate-radius": "2.85625",
+        "env.w-cross-track": "100.0",
+        "env.cross-track-from-gate-index": "2",
+        "env.w-gate-crossing-error": "50.0",
+        "env.gate-crossing-error-from-gate-index": "2",
+        "env.w-gate-exit-velocity": "0.0",
+        "env.w-action-teacher": "0.0"
+      },
+      "training": {
+        "timesteps": 65536,
+        "learning_rate": 0.000001,
+        "exploration_log_std": -3.0
+      }
+    },
+    {
+      "name": "coursewide_radius_2p85",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.course-geometry-scale-randomize": "0",
+        "env.gate-radius": "2.85",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.gate-radius": "2.85",
+        "env.w-cross-track": "100.0",
+        "env.cross-track-from-gate-index": "2",
+        "env.w-gate-crossing-error": "50.0",
+        "env.gate-crossing-error-from-gate-index": "2",
+        "env.w-gate-exit-velocity": "0.0",
+        "env.w-action-teacher": "0.0"
+      },
+      "training": {
+        "timesteps": 65536,
+        "learning_rate": 0.000001,
+        "exploration_log_std": -3.0
+      }
+    },
+    {
+      "name": "coursewide_radius_2p84625",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.course-geometry-scale-randomize": "0",
+        "env.gate-radius": "2.84625",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.gate-radius": "2.84625",
+        "env.w-cross-track": "100.0",
+        "env.cross-track-from-gate-index": "2",
+        "env.w-gate-crossing-error": "50.0",
+        "env.gate-crossing-error-from-gate-index": "2",
+        "env.w-gate-exit-velocity": "0.0",
+        "env.w-action-teacher": "0.0"
+      },
+      "training": {
+        "timesteps": 65536,
+        "learning_rate": 0.000001,
+        "exploration_log_std": -3.0
+      }
+    },
+    {
+      "name": "coursewide_radius_2p84",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.course-geometry-scale-randomize": "0",
+        "env.gate-radius": "2.84",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.gate-radius": "2.84",
+        "env.w-cross-track": "100.0",
+        "env.cross-track-from-gate-index": "2",
+        "env.w-gate-crossing-error": "50.0",
+        "env.gate-crossing-error-from-gate-index": "2",
+        "env.w-gate-exit-velocity": "0.0",
+        "env.w-action-teacher": "0.0"
+      },
+      "training": {
+        "timesteps": 65536,
+        "learning_rate": 0.000001,
+        "exploration_log_std": -3.0
+      }
+    },
+    {
+      "name": "coursewide_radius_2p80",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.course-geometry-scale-randomize": "0",
+        "env.gate-radius": "2.80",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.gate-radius": "2.80",
+        "env.w-cross-track": "100.0",
+        "env.cross-track-from-gate-index": "2",
+        "env.w-gate-crossing-error": "50.0",
+        "env.gate-crossing-error-from-gate-index": "2",
+        "env.w-gate-exit-velocity": "0.0",
+        "env.w-action-teacher": "0.0"
+      },
+      "training": {
+        "timesteps": 1000000,
+        "learning_rate": 0.00005,
+        "exploration_log_std": -3.0
+      }
+    },
+    {
+      "name": "coursewide_radius_2p75",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.course-geometry-scale-randomize": "0",
+        "env.gate-radius": "2.75",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.gate-radius": "2.75",
+        "env.w-cross-track": "100.0",
+        "env.cross-track-from-gate-index": "2",
+        "env.w-gate-crossing-error": "50.0",
+        "env.gate-crossing-error-from-gate-index": "2",
+        "env.w-gate-exit-velocity": "0.0",
+        "env.w-action-teacher": "0.0"
+      },
+      "training": {
+        "timesteps": 1000000,
+        "learning_rate": 0.00005,
+        "exploration_log_std": -3.0
+      }
+    },
+    {
+      "name": "coursewide_radius_2p00",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.gate-radius": "2.00",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.gate-radius": "2.50",
+        "env.w-cross-track": "20.0",
+        "env.cross-track-from-gate-index": "0",
+        "env.w-gate-crossing-error": "0.25",
+        "env.gate-crossing-error-from-gate-index": "0",
+        "env.w-gate-exit-velocity": "10.0"
+      },
+      "training": {
+        "learning_rate": 0.00003,
+        "exploration_log_std": -2.0
+      }
+    },
+    {
+      "name": "coursewide_radius_1p25",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.gate-radius": "1.25",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.gate-radius": "1.75",
+        "env.w-cross-track": "25.0",
+        "env.cross-track-from-gate-index": "0",
+        "env.w-gate-crossing-error": "0.25",
+        "env.gate-crossing-error-from-gate-index": "0",
+        "env.w-gate-exit-velocity": "10.0"
+      },
+      "training": {
+        "learning_rate": 0.00001,
+        "exploration_log_std": -3.0
+      }
+    },
+    {
+      "name": "coursewide_true_radius_no_dropout",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.gate-radius": "0.75",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "0.00",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.gate-radius": "1.00",
+        "env.w-cross-track": "30.0",
+        "env.cross-track-from-gate-index": "0",
+        "env.w-gate-crossing-error": "0.25",
+        "env.gate-crossing-error-from-gate-index": "0",
+        "env.w-gate-exit-velocity": "10.0"
+      },
+      "training": {
+        "learning_rate": 0.00001,
+        "exploration_log_std": -4.0
+      }
+    },
+    {
+      "name": "coursewide_dropout_2p50",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.gate-radius": "0.75",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "2.50",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.w-cross-track": "30.0",
+        "env.cross-track-from-gate-index": "0",
+        "env.w-gate-crossing-error": "0.25",
+        "env.gate-crossing-error-from-gate-index": "0",
+        "env.w-gate-exit-velocity": "10.0"
+      },
+      "training": {
+        "learning_rate": 0.00001,
+        "exploration_log_std": -4.0
+      }
+    },
+    {
+      "name": "coursewide_dropout_3p25",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.gate-radius": "0.75",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "3.25",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.sitl-gate-obs-dropout-range-m": "2.75",
+        "env.w-cross-track": "30.0",
+        "env.cross-track-from-gate-index": "0",
+        "env.w-gate-crossing-error": "0.25",
+        "env.gate-crossing-error-from-gate-index": "0",
+        "env.w-gate-exit-velocity": "10.0"
+      },
+      "training": {
+        "learning_rate": 0.00001,
+        "exploration_log_std": -4.0
+      }
+    },
+    {
+      "name": "coursewide_dropout_4p25",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.gate-radius": "0.75",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "4.25",
+        "env.gate-position-domain-randomize": "0"
+      },
+      "training_overrides": {
+        "env.sitl-gate-obs-dropout-range-m": "3.75",
+        "env.w-cross-track": "30.0",
+        "env.cross-track-from-gate-index": "0",
+        "env.w-gate-crossing-error": "0.25",
+        "env.gate-crossing-error-from-gate-index": "0",
+        "env.w-gate-exit-velocity": "10.0"
+      },
+      "training": {
+        "learning_rate": 0.00001,
+        "exploration_log_std": -4.0
+      }
+    },
+    {
+      "name": "coursewide_jitter_0p50",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.gate-radius": "0.75",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "4.25",
+        "env.gate-position-domain-randomize": "1",
+        "env.gate-position-randomize-from-index": "1",
+        "env.gate-position-jitter-x": "0.50",
+        "env.gate-position-jitter-y": "0.50",
+        "env.gate-position-jitter-z": "0.625"
+      },
+      "training": {
+        "learning_rate": 0.000003,
+        "exploration_log_std": -4.0
+      }
+    },
+    {
+      "name": "coursewide_jitter_1p00",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.gate-radius": "0.75",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "4.25",
+        "env.gate-position-domain-randomize": "1",
+        "env.gate-position-randomize-from-index": "1",
+        "env.gate-position-jitter-x": "1.00",
+        "env.gate-position-jitter-y": "1.00",
+        "env.gate-position-jitter-z": "1.25"
+      },
+      "training": {
+        "learning_rate": 0.000003,
+        "exploration_log_std": -4.0
+      }
+    },
+    {
+      "name": "coursewide_jitter_1p50",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.gate-radius": "0.75",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "4.25",
+        "env.gate-position-domain-randomize": "1",
+        "env.gate-position-randomize-from-index": "1",
+        "env.gate-position-jitter-x": "1.50",
+        "env.gate-position-jitter-y": "1.50",
+        "env.gate-position-jitter-z": "1.875"
+      },
+      "training": {
+        "learning_rate": 0.000003,
+        "exploration_log_std": -4.0
+      }
+    },
+    {
+      "name": "v3385_full_policy_target",
+      "exact_overrides": {
+        "env.num-gates": "4",
+        "env.course-geometry-scale": "1.00",
+        "env.gate-radius": "0.75",
+        "env.sitl-gate-obs-dropout-from-index": "1",
+        "env.sitl-gate-obs-dropout-range-m": "4.25",
+        "env.gate-position-domain-randomize": "1",
+        "env.gate-position-randomize-from-index": "1",
+        "env.gate-position-jitter-x": "2.00",
+        "env.gate-position-jitter-y": "2.00",
+        "env.gate-position-jitter-z": "2.50"
+      },
+      "training": {
+        "learning_rate": 0.000003,
+        "exploration_log_std": -4.0
+      }
+    }
+  ]
+}

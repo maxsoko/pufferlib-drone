@@ -125,3 +125,69 @@ def test_colored_detector_prefers_front_gate_over_square_rear_gate():
     assert detection is not None
     ys = [point[1] for point in detection.corners]
     assert sum(ys) / len(ys) < 205.0
+
+
+@pytest.mark.skipif(cv2 is None or np is None, reason="opencv/numpy unavailable")
+def test_final_phase_can_prefer_dominant_gate_frame_cropped_at_right_edge():
+    image = np.zeros((360, 640, 3), dtype=np.uint8)
+    cv2.rectangle(image, (374, 176), (397, 200), color=(20, 20, 255), thickness=-1)
+    cv2.rectangle(image, (381, 183), (390, 196), color=(0, 0, 0), thickness=-1)
+    cv2.rectangle(image, (625, 150), (639, 211), color=(20, 20, 255), thickness=-1)
+    ok, jpeg = cv2.imencode(".jpg", image)
+    assert ok
+
+    detector = detector_module.SquareGateDetector(
+        min_area_px=1200.0,
+        max_aspect_error=0.5,
+        min_fill_ratio=0.15,
+        allow_grayscale_fallback=False,
+    )
+    default = detector.detect_jpeg(jpeg.tobytes())
+    preferred = detector.detect_jpeg(
+        jpeg.tobytes(), prefer_edge_frame=True
+    )
+
+    assert default is not None
+    assert default.source == "aperture"
+    assert preferred is not None
+    assert preferred.source == "frame_partial"
+    xs = [point[0] for point in preferred.corners]
+    assert min(xs) >= 620.0
+    assert max(xs) > 640.0
+    assert preferred.bounding_width_px == pytest.approx(
+        preferred.bounding_height_px
+    )
+
+
+@pytest.mark.skipif(cv2 is None or np is None, reason="opencv/numpy unavailable")
+def test_final_phase_can_prioritize_available_edge_frame_over_larger_aperture():
+    image = np.zeros((360, 640, 3), dtype=np.uint8)
+    cv2.rectangle(image, (290, 145), (350, 205), color=(20, 20, 255), thickness=-1)
+    cv2.rectangle(image, (306, 161), (334, 189), color=(0, 0, 0), thickness=-1)
+    cv2.rectangle(image, (635, 165), (639, 199), color=(20, 20, 255), thickness=-1)
+    ok, jpeg = cv2.imencode(".jpg", image)
+    assert ok
+
+    detector = detector_module.SquareGateDetector(
+        min_area_px=300.0,
+        max_aspect_error=0.5,
+        min_fill_ratio=0.15,
+        allow_grayscale_fallback=False,
+    )
+    dominant_only = detector.detect_jpeg(
+        jpeg.tobytes(), prefer_edge_frame=True
+    )
+    any_edge = detector.detect_jpeg(
+        jpeg.tobytes(),
+        prefer_edge_frame=True,
+        prefer_any_edge_frame=True,
+    )
+
+    assert dominant_only is not None
+    assert dominant_only.source == "aperture"
+    assert any_edge is not None
+    assert any_edge.source == "frame_partial"
+    assert detector.metrics.edge_priority_overrides == 1
+    xs = [point[0] for point in any_edge.corners]
+    assert min(xs) >= 630.0
+    assert max(xs) > 640.0

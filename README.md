@@ -12,22 +12,40 @@ This is not considered complete when a native checkpoint scores well. Completion
 
 ## Current Direction
 
-- Native PufferLib v4 `_C` is the required training and evaluation path.
-- `--slowly` / PyTorch backend runs are debug-only and do not count as acceptance.
-- `ocean/drone` is the hover/control-prior environment.
-- `ocean/drone_race` is the race environment, now using representative quadrotor motor/RK4 dynamics instead of direct velocity/yaw-rate actions.
-- `drone_race` has two training interfaces: legacy native motor/privileged observations by default, and `interface_mode = 1` for TS-002-shaped telemetry/vision observations plus normalized body velocity/yaw-rate policy actions.
-- Race timing targets the qualifier spec: `120 Hz` physics and `480s` maximum run duration.
-- Final competition integration should go through MAVLink v2 over UDP via a MAVSDK-compatible SITL boundary.
-- Edge inference work starts with quantized mixed-precision PufferNet, not Transformers.
+- The active submission path is one recurrent policy controlling pitch, roll,
+  yaw, and thrust from the timed start through the finish.
+- Deterministic code owns startup, arming, heartbeat, command-rate safety,
+  collision abort, evidence capture, and MAVLink reset `31000`; it does not
+  arbitrate flight commands during a promoted run.
+- Native PufferLib is the high-throughput parallel training loop. Official v3385
+  is used only after deterministic native promotion.
+- The official `1.5 m` gate value is the inner width; native target radius is
+  `0.75 m` on every gate.
+- Absolute gate coordinates remain internal environment/reward state. The
+  deployed policy uses only official-observable active-gate pose/motion,
+  attitude/rates, race phase, previous action, and elapsed time.
+- Official `active_gate_index` is the only gate-pass authority.
+- The course FSM is a teacher, diagnostic, and fallback baseline only; there is
+  no FSM-to-policy handoff in the target architecture.
+- Use `docs/full_policy_execution_prompt.md` for the current executable goal and
+  `docs/course_completion_strategy.md` for the short strategy.
 
 ## Key Files
 
 - `PRD.md`: active program requirements and status.
+- `docs/skydreamer_paper_review_2026-07-27.md`: detailed extraction of the
+  SkyDreamer paper, including architecture, training, visual randomization,
+  results, limitations, and the VQ2 adopt/adapt/exclude matrix.
+- `docs/vq2_paper_guided_puffer_goal_prompt.md`: authoritative recurring
+  paper-audit, local-hardware training, and VQ2-solve execution prompt.
+- `docs/vq2_informed_dreamer_implementation_2026-07-27.md`: current
+  Puffer-native Informed-Dreamer implementation contract and evidence.
 - `docs/gpu_setup_ubuntu_22_04.md`: Linux GPU setup and native training runbook.
 - `config/drone.ini`: native hover/control-prior config.
 - `config/drone_race.ini`: native race config.
 - `config/drone_race_competition.ini`: competition-shaped training profile over the compiled `drone_race` backend.
+- `config/drone_race_full_policy_stage_d_gate4.ini`: current full-start,
+  true-aperture v3385-calibrated native policy environment.
 - `config/sitl_competition_acceptance.json`: frozen SITL acceptance/promotion thresholds and robust gate-pass defaults.
 - `config/detector_stress_thresholds.json`: deterministic detector stress-suite thresholds.
 - `ocean/drone/`: representative hover drone dynamics and native binding.
@@ -36,15 +54,25 @@ This is not considered complete when a native checkpoint scores well. Completion
 - `scripts/eval_drone_race_native.py`: native race eval smoke.
 - `scripts/validate_native_drone_gpu.sh`: Linux CUDA/NCCL native validation runner.
 - `scripts/drone_sitl_adapter.py`: MAVLink/SITL scaffold.
-- `scripts/drone_policy_contract.py`: shared 23-float observation and 4-action velocity/yaw-rate contract for native training and SITL setpoint decoding.
+- `scripts/drone_policy_contract.py`: shared official-observable gate/IMU
+  contract and hover-centered attitude-action decoding.
 - `scripts/drone_camera_receiver.py`: TS-002 JPEG-over-UDP camera packet parser/reassembler.
 - `scripts/drone_gate_detector.py`: first-pass square-gate detector over TS-002 camera frames.
 - `scripts/drone_visual_servo.py`: TS-002 gate-corner pose and visual-servo command helper.
 - `scripts/drone_sitl_competition_smoke.py`: integrated SITL smoke loop that connects telemetry, camera, gate detection, visual-servo/policy control, and JSON/CSV report output.
+- `scripts/drone_course_controller.py`: minimal guidance/align/approach/commit/brake course FSM.
+- `scripts/eval_course_guidance.py`: offline cyan-guidance preflight over saved frames.
+- `config/course_fsm_defaults.json`: single course speed/reliability tuning surface.
 - `scripts/sitl_stream_probe.py`: fast UDP preflight probe for MAVLink (`14540`) and camera (`5600`) traffic presence.
 - `scripts/mock_ts002_stream.py`: local TS-002 mock telemetry/camera stream generator for offline integration tests.
 - `scripts/policy_callable_gate_pid.py`: deterministic competition-shaped policy callable for `--control-mode policy`.
 - `scripts/policy_callable_checkpoint.py`: checkpoint-backed policy callable for `--policy-callable`.
+- `scripts/train_full_policy_radius_curriculum.py`: resumable retained-parent
+  aperture curriculum with bounded PPO children and deterministic screens.
+- `scripts/finish_full_policy_native_curriculum.py`: passive exact 4096-episode
+  all-gate promotion watcher; it never launches a trainer or simulator.
+- `scripts/run_windows_full_policy.ps1`: official v3385 full-policy runner that
+  preserves the simulator process and uses MAVLink `31000` for normal resets.
 - `scripts/sitl_udp_capture.py`: captures MAVLink/camera UDP packets into deterministic JSONL replay events.
 - `scripts/sitl_udp_replay.py`: replays captured JSONL MAVLink/camera events with deterministic impairment injection.
 - `scripts/sitl_replay_regression.py`: deterministic replay runner with baseline-vs-policy comparison and locked acceptance.
@@ -165,6 +193,13 @@ python scripts/export_puffernet_q8.py \
 
 ## Current Status
 
+- Official gate 1 passed in 3/4 attempts; post-pass collision remains the immediate blocker.
+- `course-fsm` and its unit tests are implemented; live validation is pending.
+- Track B training is paused by default and catastrophic native runs fail fast.
+- The concise active strategy is `docs/course_completion_strategy.md`.
+
+### Historical status (superseded detail)
+
 - Native hover CPU build and eval smoke pass locally.
 - Native race CPU build, eval smoke, and gate-crossing/physics/timing regressions pass locally.
 - Race physics now use quadrotor motor/RK4 dynamics.
@@ -194,14 +229,15 @@ python scripts/export_puffernet_q8.py \
 
 ## Next Required Work
 
-1. Validate strict acceptance against official simulator telemetry/camera traffic (not just local mock/replay) and reproduce first-gate proof there.
-2. Keep frozen acceptance config stable and rerun `N=30` normal/degraded replay after perception/controller changes.
-3. Retrain/extend `drone_race_competition` on Linux GPU and verify policy remains non-inferior on the same replay set.
-4. Run detector stress suite before changing detector parameters, and keep threshold config frozen across commits.
-5. Use metadata-verified capture/replay artifacts for regression and promotion evidence.
-6. Continue R3 native stabilization and Q8 work as support tracks after official SITL validation is in place.
+1. Complete the retained-parent Gate-3 anneal while gates 0-2 remain fixed at
+   the true `0.75 m` aperture.
+2. Pass exact 4096-episode deterministic native promotion with all four radii
+   at `0.75 m`, success `>=0.90`, and crash `<=0.10`.
+3. Achieve one official v3385 full-policy ordered course finish.
+4. Reach at least 8/10 valid collision-free official completions.
+5. Only then optimize median valid completion time; Q8 remains secondary.
 
-Official-traffic gate-1 validation (single command):
+Legacy official-traffic gate-1 validation (single command):
 
 ```bash
 python scripts/run_official_gate1_validation.py \

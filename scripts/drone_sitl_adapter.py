@@ -126,6 +126,10 @@ class TelemetryMetrics:
     encapsulated_data: int = 0
     receive_timeouts: int = 0
     telemetry_dropouts: int = 0
+    drain_calls: int = 0
+    messages_drained: int = 0
+    max_drain_batch: int = 0
+    drain_limit_hits: int = 0
     last_message_age_s: float | None = None
     last_attitude_age_s: float | None = None
     last_imu_age_s: float | None = None
@@ -143,6 +147,8 @@ class SitlRunReport:
     heartbeats_sent: int = 0
     commands_sent: int = 0
     command_rate_violations: int = 0
+    effective_command_hz: float = 0.0
+    command_publication_duration_s: float = 0.0
     telemetry: TelemetryMetrics = dataclasses.field(default_factory=TelemetryMetrics)
     latest_telemetry: TelemetryState = dataclasses.field(default_factory=TelemetryState)
 
@@ -413,6 +419,15 @@ class MavlinkSitlAdapter:
         )
         self.telemetry = MavlinkTelemetryParser(dropout_after_s=dropout_after_s)
 
+    def _target_ids(self) -> tuple[int, int]:
+        """Return learned target IDs while preserving valid component zero."""
+        target_system = self.master.target_system
+        target_component = self.master.target_component
+        return (
+            1 if target_system is None or int(target_system) == 0 else int(target_system),
+            0 if target_component is None else int(target_component),
+        )
+
     def send_heartbeat(self):
         self.master.mav.heartbeat_send(
             self.mavutil.mavlink.MAV_TYPE_ONBOARD_CONTROLLER,
@@ -423,9 +438,10 @@ class MavlinkSitlAdapter:
         )
 
     def send_arm_command(self):
+        target_system, target_component = self._target_ids()
         self.master.mav.command_long_send(
-            self.master.target_system or 1,
-            self.master.target_component or 1,
+            target_system,
+            target_component,
             self.mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
             0,
             1,
@@ -437,10 +453,27 @@ class MavlinkSitlAdapter:
             0,
         )
 
-    def send_sim_reset_command(self):
+    def send_disarm_command(self):
+        target_system, target_component = self._target_ids()
         self.master.mav.command_long_send(
-            self.master.target_system or 1,
-            self.master.target_component or 1,
+            target_system,
+            target_component,
+            self.mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
+
+    def send_sim_reset_command(self):
+        target_system, target_component = self._target_ids()
+        self.master.mav.command_long_send(
+            target_system,
+            target_component,
             MAVLINK_CMD_SIM_RESET,
             0,
             0,
@@ -453,7 +486,9 @@ class MavlinkSitlAdapter:
         )
 
     def send_timesync_request(self):
-        self.master.mav.timesync_send(time.time_ns(), 0)
+        # MAVLink TIMESYNC requests put the requesting clock in ts1 and use
+        # tc1 == 0 to distinguish the packet from a response.
+        self.master.mav.timesync_send(0, time.time_ns())
 
     def close(self):
         close_fn = getattr(self.master, "close", None)
@@ -484,10 +519,11 @@ class MavlinkSitlAdapter:
                 | self.mavutil.mavlink.POSITION_TARGET_TYPEMASK_YAW_IGNORE
                 | self.mavutil.mavlink.POSITION_TARGET_TYPEMASK_YAW_RATE_IGNORE
             )
+        target_system, target_component = self._target_ids()
         self.master.mav.set_position_target_local_ned_send(
             int(time.monotonic() * 1000) & 0xFFFFFFFF,
-            1,
-            1,
+            target_system,
+            target_component,
             mav_frame,
             type_mask,
             target.x,
@@ -525,10 +561,11 @@ class MavlinkSitlAdapter:
             target.pitch,
             target.yaw,
         )
+        target_system, target_component = self._target_ids()
         self.master.mav.set_attitude_target_send(
             int(time.monotonic() * 1000) & 0xFFFFFFFF,
-            self.master.target_system or 1,
-            self.master.target_component or 1,
+            target_system,
+            target_component,
             type_mask,
             q,
             target.body_roll_rate,
@@ -537,16 +574,48 @@ class MavlinkSitlAdapter:
             max(0.0, min(1.0, target.thrust)),
         )
 
+    def _ingest_telemetry_message(self, message, *, reply_timesync=True):
+        msg_type = self.telemetry.ingest(message)
+        if reply_timesync and msg_type == "TIMESYNC" and get_message_attr(message, "tc1") == 0:
+            self.master.mav.timesync_send(time.time_ns(), get_message_attr(message, "ts1") or 0)
+        return msg_type
+
     def poll_telemetry(self, *, timeout_s=0.0, reply_timesync=True):
         message = self.master.recv_match(blocking=timeout_s > 0.0, timeout=timeout_s)
         if message is None:
             self.telemetry.note_receive_timeout()
             return None
+        return self._ingest_telemetry_message(message, reply_timesync=reply_timesync)
 
-        msg_type = self.telemetry.ingest(message)
-        if reply_timesync and msg_type == "TIMESYNC" and get_message_attr(message, "tc1") == 0:
-            self.master.mav.timesync_send(time.time_ns(), get_message_attr(message, "ts1") or 0)
-        return msg_type
+    def drain_telemetry(self, *, timeout_s=0.0, max_messages=512, reply_timesync=True):
+        """Consume the receive backlog and leave state at the newest sample.
+
+        The simulator publishes several hundred telemetry messages per second.
+        Reading only one message per controller tick makes attitude feedback
+        seconds old even though UDP itself is healthy.  The first receive may
+        block for ``timeout_s``; all remaining receives are non-blocking.
+        """
+        if max_messages <= 0:
+            raise ValueError("max_messages must be positive")
+
+        message = self.master.recv_match(blocking=timeout_s > 0.0, timeout=timeout_s)
+        if message is None:
+            self.telemetry.note_receive_timeout()
+            return 0
+
+        consumed = 0
+        while message is not None and consumed < max_messages:
+            self._ingest_telemetry_message(message, reply_timesync=reply_timesync)
+            consumed += 1
+            if consumed < max_messages:
+                message = self.master.recv_match(blocking=False, timeout=0.0)
+        metrics = self.telemetry.metrics
+        metrics.drain_calls += 1
+        metrics.messages_drained += consumed
+        metrics.max_drain_batch = max(metrics.max_drain_batch, consumed)
+        if consumed >= max_messages:
+            metrics.drain_limit_hits += 1
+        return consumed
 
 
 def euler_to_quaternion(roll, pitch, yaw):

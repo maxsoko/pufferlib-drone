@@ -1,0 +1,21 @@
+{
+  "simulator_version": "v1.0.3379",
+  "source": "config/sitl_plant_defaults.json",
+  "rate_gain_roll": 2.46,
+  "rate_gain_pitch": -2.42,
+  "rate_gain_yaw": 2.213,
+  "hover_thrust": 0.17,
+  "thrust_climb_onset": 0.19,
+  "vertical_accel_per_thrust": 57.69,
+  "linear_drag_coeff": 0.05,
+  "rate_lag_tau_s": 0.12,
+  "gravity_m_s2": 9.80665,
+  "sitl_max_roll_rad": 0.5,
+  "sitl_max_pitch_rad": 0.5,
+  "sitl_max_yaw_rad": 3.1415926535,
+  "notes": [
+    "Canonical v3379 plant from July 2026 live probes (probe_pitch_sign, probe_thrust_step).",
+    "linear_drag_coeff is decel/speed (1/s) for native sitl_linear_drag; refine with --smoke-json.",
+    "rate_lag_tau_s is first-order rate lag; refine from step-response transients offline."
+  ]
+}

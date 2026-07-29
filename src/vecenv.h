@@ -28,6 +28,10 @@ typedef struct {
     int capacity;
 } Dict;
 
+#ifndef ENV_LOG_DICT_CAPACITY
+#define ENV_LOG_DICT_CAPACITY 96
+#endif
+
 static inline Dict* create_dict(int capacity) {
     Dict* dict = (Dict*)calloc(1, sizeof(Dict));
     dict->capacity = capacity;
@@ -52,11 +56,26 @@ static inline DictItem* dict_get(Dict* dict, const char* key) {
 }
 
 static inline void dict_set(Dict* dict, const char* key, double value) {
-    assert(dict->size < dict->capacity);
     DictItem* item = dict_get_unsafe(dict, key);
     if (item != NULL) {
         item->value = value;
         return;
+    }
+    if (dict->size >= dict->capacity) {
+        int old_capacity = dict->capacity;
+        int new_capacity = old_capacity > 0 ? old_capacity * 2 : 16;
+        DictItem* resized = (DictItem*)realloc(
+            dict->items, (size_t)new_capacity * sizeof(DictItem));
+        if (resized == NULL) {
+            fprintf(stderr, "dict_set failed to grow dictionary to %d items\n", new_capacity);
+            abort();
+        }
+        memset(
+            resized + old_capacity,
+            0,
+            (size_t)(new_capacity - old_capacity) * sizeof(DictItem));
+        dict->items = resized;
+        dict->capacity = new_capacity;
     }
     dict->items[dict->size].key = key;
     dict->items[dict->size].value = value;
@@ -534,6 +553,13 @@ static inline float static_vec_aggregate_logs(StaticVec* vec, Log* out) {
     for (int i = 0; i < vec->size; i++) {
         Env* env = &envs[i];
         if (env->log.n == 0) {
+#ifdef STATIC_VEC_LOG_RESET_COUNTERS
+            // These diagnostics describe reset draws, not completed episodes.
+            // Preserve draws from still-running environments while retaining
+            // the historical completed-episode contract for every other key.
+            out->gate_local_reset_count += env->log.gate_local_reset_count;
+            out->reset_count += env->log.reset_count;
+#endif
             continue;
         }
         for (int j = 0; j < num_keys; j++) {
