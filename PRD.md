@@ -9899,3 +9899,21 @@ For each training/eval block, record:
   dataset, actor, 256-step BPTT, 3x transition exposure, split, epochs, and
   optimizer remain unchanged. Count this as Stage 2 failure one; after any
   second failure with a distinct cause, stop variations and record diagnosis.
+
+### VQ2 variable-gate recurrent BC — VG005, 2026-07-29
+
+- Commit `25121c6b...` passes `16/16` focused tests and performs a complete
+  pre-update phase-layout audit: all `1,920` valid increments, zero `/16`
+  encoding error, and `1,511,189` invalid padding rows deliberately excluded.
+- The 12-epoch fit completes in `636.501 s` with `38,622` updates. All epochs
+  prove minimum transition-window exposure `3.0` across `1,680` affected
+  agent-windows. Fixed held-out selection chooses epoch 12 at weighted MSE
+  `5.7281488e-5`; transition-only mean MSE is `0.00492927` over 240 rows.
+- The 778,184-parameter checkpoint contains the sole legal 4,119-input CNN +
+  one 256-wide GRU + joint action head. Checkpoint/report/state hashes are
+  `f686a35d...`/`bdcd2b38...`/`8d0d5908...`; all artifacts load and their
+  source/runtime/history/exposure/safety chain independently verifies.
+- VG005 is numerically complete but not deployment-admitted. VG006 is the one
+  preregistered teacher-free closed-loop screen: 256 unseen courses, 64 each
+  at 5/8/11/12 gates, at least 90% aggregate success, zero crash and clean
+  transport. FlightSim and Submission remain forbidden.

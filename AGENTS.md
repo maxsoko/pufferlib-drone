@@ -9637,3 +9637,23 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   split, seed, and optimizer choices remain fixed. This is the first distinct
   Stage-2 failure. A second distinct failure requires diagnosis before another
   training variation.
+
+### VQ2 variable-gate recurrent BC — VG005, 2026-07-29
+
+- Corrected commit `25121c6b...` passed `16/16` tests and audited the entire
+  VG003 layout before epoch zero: `1,920` valid held-phase increments, zero
+  encoding error, and `1,511,189` invalid padding rows explicitly excluded.
+- VG005 completed all 12 preregistered epochs in `636.501 s`, with `38,622`
+  optimizer updates. Every epoch proves exactly `3.0x` exposure for all
+  `1,680` transition agent-windows. The fixed validation selector chooses
+  epoch 12 at weighted MSE `5.7281488e-5`; its 240 transition rows have mean
+  four-channel MSE `0.00492927`.
+- Checkpoint/report/completed-state SHA-256 values are `f686a35d...`/
+  `bdcd2b38...`/`8d0d5908...`; the checkpoint has `778,184` parameters and
+  one 256-wide GRU. Independent local loading verifies model/source/runtime,
+  best epoch, history, dataset phase audit, exposure, optimizer counts, and
+  zero actor privilege/teacher/FlightSim/N712/Submission safety fields.
+- VG005 is the only Stage-2 candidate. Preregister one teacher-free exact
+  VG006 screen over 256 new courses: 64 each at counts 5/8/11/12, at least
+  90% aggregate full-course success and zero crash. It is not authorized for
+  live or Submission use.
