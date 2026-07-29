@@ -9620,3 +9620,20 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   GRU student with recurrent windows at least 256 steps and at least 3x
   transition-window exposure, then run one teacher-free 256-course held-out
   variable-count screen. FlightSim remains frozen and Submission forbidden.
+
+### VQ2 recurrent BC padding-audit rejection — VG004, 2026-07-29
+
+- VG004 source commit `3416a5fe...` passed its `14/14` focused tests and wrote
+  source/runtime-locked epoch-zero state, then failed during epoch 1. The
+  phase audit treated the required zero-filled invalid rows after a shorter
+  episode as a public-phase decrease. This is an audit bug, not corpus
+  corruption; VG003 already proved zero decreases on every valid prefix.
+- Reject VG004 permanently. State/log SHA-256 values are `a078b441...` and
+  `9adaabf1...`. Persisted completed epoch and optimizer updates are zero,
+  though unpersisted first-epoch updates may have occurred in process memory.
+- VG005 is authorized as one new tag with no reused state. It changes only
+  decrease auditing to mask the current invalid row and adds a regression for
+  phase `[0,1/16,0]`, valid `[1,1,0]`; all model, data, BPTT, oversampling,
+  split, seed, and optimizer choices remain fixed. This is the first distinct
+  Stage-2 failure. A second distinct failure requires diagnosis before another
+  training variation.

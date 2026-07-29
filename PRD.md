@@ -9882,3 +9882,20 @@ For each training/eval block, record:
   256 steps, and transition-window exposure at least 3x, followed by a single
   teacher-free held-out screen totaling 256 courses over counts 5/8/11/12.
   No FlightSim, N712, shadow, bounded run, or Submission action is authorized.
+
+### VQ2 recurrent BC padding-audit rejection — VG004, 2026-07-29
+
+- Commit `3416a5fe...` passed all 14 preflight tests and wrote immutable
+  epoch-zero training state. Epoch 1 then failed because the monotonicity
+  helper compared zero-filled invalid padding after short episodes against
+  the last valid held phase and called it a decrease. Valid VG003 prefixes
+  remain monotonic; the trainer audit was overbroad.
+- VG004 is rejected without resume. Synced state/log hashes are
+  `a078b441...`/`9adaabf1...`. The state has completed epoch `0` and persisted
+  optimizer updates `0`; possible in-memory updates died with the process and
+  are not reusable.
+- VG005 is a newly preregistered attempt. It masks phase-decrease checks by
+  current-row validity and adds the exact invalid-padding regression. Seed,
+  dataset, actor, 256-step BPTT, 3x transition exposure, split, epochs, and
+  optimizer remain unchanged. Count this as Stage 2 failure one; after any
+  second failure with a distinct cause, stop variations and record diagnosis.

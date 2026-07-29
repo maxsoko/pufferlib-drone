@@ -16,13 +16,14 @@ from scripts.train_vq2_variable_gate_recurrent_bc import (
     TrainConfig,
     VariableGateBCDataset,
     actor_agent_split,
+    audit_public_phase_layout,
     phase_increment_rows,
     reconstruct_phase_batch,
     sha256_path,
 )
 
 
-def test_vg004_contract_uses_256_step_bptt_and_3x_transition_exposure() -> None:
+def test_vg005_contract_uses_256_step_bptt_and_3x_transition_exposure() -> None:
     config = TrainConfig()
     assert PHASE_LEGAL_OBS_SIZE == 4119
     assert config.hidden_size == 256
@@ -77,6 +78,31 @@ def test_phase_increment_rows_rejects_decrease_or_misalignment() -> None:
             np.ones((2, 1), dtype=np.uint8),
             np.zeros(2, dtype=np.float32),
         )
+
+
+def test_phase_increment_rows_ignores_zeroed_invalid_padding() -> None:
+    increments = phase_increment_rows(
+        np.asarray([[0.0], [1.0 / 16.0], [0.0]], dtype=np.float32),
+        np.asarray([[1], [1], [0]], dtype=np.uint8),
+        np.zeros(1, dtype=np.float32),
+    )
+    assert increments.tolist() == [[False], [True], [False]]
+
+
+def test_full_phase_audit_excludes_padding_but_rejects_valid_decrease() -> None:
+    tail = np.zeros((4, 2, PHASE_LEGAL_OBS_SIZE - MASK_SIZE), dtype=np.float32)
+    tail[:3, 0, PHASE_TAIL_INDEX] = [0.0, 1.0 / 16.0, 1.0 / 16.0]
+    tail[:, 1, PHASE_TAIL_INDEX] = [0.0, 1.0 / 16.0, 2.0 / 16.0, 2.0 / 16.0]
+    valid = np.asarray([[1, 1], [1, 1], [1, 1], [0, 1]], dtype=np.uint8)
+    audit = audit_public_phase_layout(tail, valid, np.asarray([3, 4]))
+    assert audit == {
+        "increments": 3,
+        "encoding_max_error": 0.0,
+        "invalid_padding_rows_excluded": 1,
+    }
+    tail[2, 1, PHASE_TAIL_INDEX] = 0.0
+    with pytest.raises(RuntimeError, match="valid-row decrease"):
+        audit_public_phase_layout(tail, valid, np.asarray([3, 4]))
 
 
 def test_agent_split_reserves_final_exact_uniform_block() -> None:
@@ -136,6 +162,7 @@ def test_dataset_chunk_reconstructs_phase_and_finds_boundary_increment(
         expected_report_sha256=sha256_path(root / "report.json"),
         expected_metadata_sha256=sha256_path(root / "metadata.json"),
     )
+    assert dataset.phase_audit["increments"] == 3
     observation, targets, selected, transition = dataset.chunk(
         np.asarray([0, 1]), 2, 4, device=torch.device("cpu")
     )

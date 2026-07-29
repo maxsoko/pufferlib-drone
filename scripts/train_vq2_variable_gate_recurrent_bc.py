@@ -37,7 +37,7 @@ from scripts.train_vq2_recurrent_bc import (
 )
 
 
-TAG = "vq2_vg004_variable_gate_recurrent_bc_001"
+TAG = "vq2_vg005_variable_gate_recurrent_bc_001"
 SCHEMA = "vq2_variable_gate_recurrent_bc_checkpoint_v1"
 DATASET = (
     ROOT
@@ -51,7 +51,7 @@ DATASET_METADATA_SHA256 = (
     "7a5d6359641c3e01f838e6fcdb57d32ddc18cc71ddbf1f8b3d0025309cabfe64"
 )
 PREREGISTRATION = (
-    ROOT / "docs/vq2_vg004_variable_gate_recurrent_bc_preregistration_2026-07-29.md"
+    ROOT / "docs/vq2_vg005_variable_gate_recurrent_bc_preregistration_2026-07-29.md"
 )
 DEFAULT_OUTPUT = (
     ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
@@ -144,7 +144,7 @@ def phase_increment_rows(
         raise ValueError("previous phase must align with the agent batch")
     prior = np.concatenate((previous[None], values[:-1]), axis=0)
     increments = (values > prior + 1e-7) & (valid_values != 0)
-    if np.any(values + 1e-7 < prior):
+    if np.any((values + 1e-7 < prior) & (valid_values != 0)):
         raise RuntimeError("public phase decreased inside the BC dataset")
     return increments
 
@@ -161,6 +161,55 @@ def actor_agent_split(
     return np.arange(boundary, dtype=np.int64), np.arange(
         boundary, agents, dtype=np.int64
     )
+
+
+def audit_public_phase_layout(
+    tail: np.ndarray,
+    valid: np.ndarray,
+    lengths: np.ndarray,
+) -> dict[str, int | float]:
+    """Audit every valid phase prefix while explicitly excluding padding."""
+
+    if tail.ndim != 3 or tail.shape[-1] <= PHASE_TAIL_INDEX:
+        raise ValueError("phase audit tail has the wrong ABI")
+    if valid.shape != tail.shape[:2] or lengths.shape != (tail.shape[1],):
+        raise ValueError("phase audit layout does not align")
+    increments = 0
+    encoding_error = 0.0
+    invalid_padding_rows = 0
+    for agent, raw_length in enumerate(lengths):
+        length = int(raw_length)
+        if length <= 0 or length > tail.shape[0]:
+            raise RuntimeError("phase audit episode length escaped storage")
+        agent_valid = np.asarray(valid[:, agent], dtype=np.uint8)
+        if not np.all(agent_valid[:length] == 1) or np.any(
+            agent_valid[length:] != 0
+        ):
+            raise RuntimeError("phase audit found a non-contiguous valid prefix")
+        phase = np.asarray(
+            tail[:length, agent, PHASE_TAIL_INDEX], dtype=np.float32
+        )
+        if not np.isfinite(phase).all():
+            raise RuntimeError("phase audit found a non-finite value")
+        scaled = phase.astype(np.float64) * 16.0
+        encoding_error = max(
+            encoding_error,
+            float(np.max(np.abs(scaled - np.rint(scaled)), initial=0.0)),
+        )
+        delta = np.diff(np.concatenate((np.zeros(1, dtype=np.float32), phase)))
+        if np.any(delta < -1e-7):
+            raise RuntimeError("phase audit found a valid-row decrease")
+        if np.any(delta > 1.0 / 16.0 + 1e-7):
+            raise RuntimeError("phase audit found a skipped public index")
+        increments += int((delta > 1e-7).sum())
+        invalid_padding_rows += int(tail.shape[0] - length)
+    if encoding_error > 1e-6:
+        raise RuntimeError("phase audit found a non-/16 encoding")
+    return {
+        "increments": increments,
+        "encoding_max_error": encoding_error,
+        "invalid_padding_rows_excluded": invalid_padding_rows,
+    }
 
 
 def _agent_batches(order: np.ndarray, size: int) -> Iterable[np.ndarray]:
@@ -229,6 +278,17 @@ class VariableGateBCDataset:
                 raise RuntimeError(f"VG003 {name} shape changed")
         if self.lengths.shape != (self.agents,):
             raise RuntimeError("VG003 episode lengths do not align with agents")
+        self.phase_audit = audit_public_phase_layout(
+            self.tail, self.valid, self.lengths
+        )
+        expected_increments = self.report.get("dataset", {}).get(
+            "phase_increments"
+        )
+        if (
+            expected_increments is not None
+            and self.phase_audit["increments"] != expected_increments
+        ):
+            raise RuntimeError("VG003 phase audit differs from collection report")
 
     def chunk(
         self,
@@ -358,13 +418,13 @@ def train(
     resume: bool = False,
 ) -> dict[str, Any]:
     if config.sequence_chunk < 256:
-        raise RuntimeError("VG004 requires BPTT windows of at least 256 steps")
+        raise RuntimeError("VG005 requires BPTT windows of at least 256 steps")
     if config.transition_window_exposure < 3:
-        raise RuntimeError("VG004 requires at least 3x transition-window exposure")
+        raise RuntimeError("VG005 requires at least 3x transition-window exposure")
     if not PREREGISTRATION.is_file():
-        raise RuntimeError("VG004 preregistration is missing")
+        raise RuntimeError("VG005 preregistration is missing")
     if device_name == "cuda" and not torch.cuda.is_available():
-        raise RuntimeError("VG004 preregisters CUDA training")
+        raise RuntimeError("VG005 preregisters CUDA training")
     report_path = output / "report.json"
     state_path = output / "training_state.pt"
     existing_report: dict[str, Any] | None = None
@@ -373,9 +433,9 @@ def train(
             raise FileExistsError(f"refusing to overwrite {output}")
         existing_report = json.loads(report_path.read_text())
         if existing_report.get("completed") is not True:
-            raise RuntimeError("existing VG004 report is not completed")
+            raise RuntimeError("existing VG005 report is not completed")
     if output.exists() and not state_path.is_file():
-        raise RuntimeError("VG004 output exists without resumable state")
+        raise RuntimeError("VG005 output exists without resumable state")
 
     device = torch.device(device_name)
     random.seed(config.seed)
@@ -393,7 +453,7 @@ def train(
         ROOT / "pufferlib/vq2_recurrent.py",
         ROOT / "pufferlib/vq2_recurrent_phase.py",
         ROOT / "scripts/train_vq2_recurrent_bc.py",
-        ROOT / "scripts/run_vq2_vg004_vast.sh",
+        ROOT / "scripts/run_vq2_vg005_vast.sh",
         DATASET / "report.json",
         DATASET / "metadata.json",
     ]
@@ -407,6 +467,12 @@ def train(
         capture_output=True,
         text=True,
     ).stdout.strip()
+    dataset = VariableGateBCDataset(
+        DATASET,
+        verify_hashes=True,
+        expected_report_sha256=DATASET_REPORT_SHA256,
+        expected_metadata_sha256=DATASET_METADATA_SHA256,
+    )
     identity = {
         "schema": "vq2_variable_gate_recurrent_bc_state_v1",
         "tag": TAG,
@@ -416,6 +482,7 @@ def train(
         "train_config": asdict(config),
         "dataset_report_sha256": DATASET_REPORT_SHA256,
         "dataset_metadata_sha256": DATASET_METADATA_SHA256,
+        "dataset_phase_audit": dataset.phase_audit,
         "safety": {
             "actor_input_privileged_values": 0,
             "teacher_blend": 0.0,
@@ -433,18 +500,13 @@ def train(
             "train_config": asdict(config),
             "dataset_report_sha256": DATASET_REPORT_SHA256,
             "dataset_metadata_sha256": DATASET_METADATA_SHA256,
+            "dataset_phase_audit": dataset.phase_audit,
         }
         for key, expected in expected_report_values.items():
             if existing_report.get(key) != expected:
-                raise RuntimeError(f"VG004 completed report mismatch for {key}")
+                raise RuntimeError(f"VG005 completed report mismatch for {key}")
         return existing_report
 
-    dataset = VariableGateBCDataset(
-        DATASET,
-        verify_hashes=True,
-        expected_report_sha256=DATASET_REPORT_SHA256,
-        expected_metadata_sha256=DATASET_METADATA_SHA256,
-    )
     train_agents, validation_agents = actor_agent_split(
         dataset.agents, config.validation_agents
     )
@@ -468,13 +530,13 @@ def train(
 
     if state_path.is_file():
         if not resume:
-            raise FileExistsError(f"VG004 state already exists at {state_path}")
+            raise FileExistsError(f"VG005 state already exists at {state_path}")
         saved = torch.load(state_path, map_location=device, weights_only=False)
         for key, expected in identity.items():
             if saved.get(key) != expected:
-                raise RuntimeError(f"VG004 resume mismatch for {key}")
+                raise RuntimeError(f"VG005 resume mismatch for {key}")
         if saved.get("status") != "training":
-            raise RuntimeError("VG004 can resume only active training state")
+            raise RuntimeError("VG005 can resume only active training state")
         model.load_state_dict(saved["model_state"])
         optimizer.load_state_dict(saved["optimizer_state"])
         scaler.load_state_dict(saved["scaler_state"])
@@ -491,7 +553,7 @@ def train(
         completed_epoch = int(saved["completed_epoch"])
     else:
         if resume:
-            raise RuntimeError("VG004 --resume requested without run state")
+            raise RuntimeError("VG005 --resume requested without run state")
         output.mkdir(parents=True)
         atomic_torch_save(
             state_path,
@@ -584,7 +646,7 @@ def train(
                     final_output = output_value
                     final_state = next_state
                 if final_output is None or final_state is None:
-                    raise RuntimeError("VG004 emitted no training update")
+                    raise RuntimeError("VG005 emitted no training update")
                 metrics.add(final_output.mean, target, valid)
                 state = final_state.detach()
                 previous_prediction = final_output.mean[:, -1].detach()
@@ -640,12 +702,12 @@ def train(
         )
 
     if best_state is None:
-        raise RuntimeError("VG004 produced no finite checkpoint")
+        raise RuntimeError("VG005 produced no finite checkpoint")
     minimum_exposure = min(
         float(epoch["minimum_transition_window_exposure"]) for epoch in history
     )
     if minimum_exposure + 1e-12 < config.transition_window_exposure:
-        raise RuntimeError("VG004 did not meet transition-window exposure")
+        raise RuntimeError("VG005 did not meet transition-window exposure")
 
     checkpoint = {
         "schema": SCHEMA,
@@ -667,6 +729,7 @@ def train(
         "validation_agents": validation_agents.tolist(),
         "dataset_report_sha256": DATASET_REPORT_SHA256,
         "dataset_metadata_sha256": DATASET_METADATA_SHA256,
+        "dataset_phase_audit": dataset.phase_audit,
         "best_epoch": best_epoch,
         "best_validation_weighted_mse": best_validation,
         "history": history,
@@ -693,6 +756,7 @@ def train(
         "train_config": asdict(config),
         "dataset_report_sha256": DATASET_REPORT_SHA256,
         "dataset_metadata_sha256": DATASET_METADATA_SHA256,
+        "dataset_phase_audit": dataset.phase_audit,
         "source_commit": source_commit,
         "source_sha256": source_sha256,
         "runtime": identity["runtime"],
