@@ -9592,3 +9592,31 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   `/16` phase plus executed actions only, at least 1.5 million transitions.
   FlightSim remains frozen after N522, N712 remains permanently closed, and
   Submission is forbidden.
+
+### VQ2 variable-gate legal corpus — VG003, 2026-07-29
+
+- Source commit `cb63c138...` preregisters exactly one 256-agent/episode
+  mixed-count collection at seed `429030`. Bootstrap 001 supplied an incorrect
+  full expected-commit string and exited before state, extension build, test,
+  or episode; its preserved log SHA is `7a0f7e18...`. Bootstrap 002 used the
+  actual commit, passed both native suites and `43/43` Python tests, and built
+  float32 `sm_89` extension SHA `52d60c20...`.
+- VG003 is admitted: all `256/256` randomized courses finish with zero crash,
+  timeout, missed/out-of-order gate, or crossing/action/wire/thrust-envelope
+  violation. Each count `5..12` contributes exactly `32` episodes and
+  successes; mean gates passed is `8.5`.
+- The corpus contains `2,396,907` causal records (`15,266` maximum vector
+  steps; episode min/mean/max `4,396/9,362.918/15,266`). Executed-action
+  history alignment error is exactly zero. Held `/16` progress has zero
+  off-tick change/decrease or encoding error and exactly `1,920` expected
+  nonterminal increments.
+- Final storage is `16,437,452,416` bytes: mask/action/tail/terminal/valid
+  SHA-256 values are `463e0028...`/`c76fee3c...`/`fd28285d...`/
+  `17c11ae...`/`c7e70a84...`. Stored training-only privilege and total-count
+  values are both zero. Metadata/report/state SHA-256 values are
+  `7a5d6359...`/`b8069d05...`/`27ef6b72...`; an independent local verifier
+  accepts the full manifest, report/state chain, metrics, phase, and safety.
+- Stage 1 is admitted. Stage 2 may train one 4,119-input CNN + single 256-wide
+  GRU student with recurrent windows at least 256 steps and at least 3x
+  transition-window exposure, then run one teacher-free 256-course held-out
+  variable-count screen. FlightSim remains frozen and Submission forbidden.

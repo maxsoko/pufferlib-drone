@@ -9852,3 +9852,33 @@ For each training/eval block, record:
   SF012-lineage legal corpus with at least 1.5 million transitions. VG002 sent
   zero FlightSim packets, performed zero student update, never accessed N712,
   and cannot authorize Submission.
+
+### VQ2 variable-gate legal corpus — VG003, 2026-07-29
+
+- Commit `cb63c138...` freezes seed `429030`, 256 fixed instances/episodes,
+  exact-uniform counts 5 through 12, a 360-second bound, causal held `/16`
+  phase at 4 Hz, and the SF012 executed-action/storage invariants. A mistyped
+  expected full commit made bootstrap 001 fail before run state or executable
+  work; log SHA `7a0f7e18...` is preserved. Corrected bootstrap 002 is the
+  accepted launch, passing native suites, `43/43` tests, and the float32
+  `sm_89` backend check (extension SHA `52d60c20...`).
+- VG003 finishes `256/256`, with exactly 32 episodes and successes at each
+  count 5--12. Crash, timeout, missed gate, out-of-order, crossing margin,
+  action, wire-rate, and thrust violations are all zero; mean gates passed is
+  `8.5`.
+- The admitted time-major corpus holds `2,396,907` labels over episode lengths
+  `4,396` to `15,266` steps (mean `9,362.918`). It proves exact zero
+  action-history shift error, one terminal contiguous prefix per episode,
+  zero held-phase off-tick changes/decreases/encoding error, and all `1,920`
+  expected nonterminal phase increments.
+- The five finalized arrays total `16,437,452,416` bytes. Their mask/action/
+  tail/terminal/valid SHA-256 values are `463e0028...`/`c76fee3c...`/
+  `fd28285d...`/`17c11ae...`/`c7e70a84...`; stored privileged and total-count
+  values are both zero. Metadata/report/state SHA-256 values are
+  `7a5d6359...`/`b8069d05...`/`27ef6b72...`, independently verified after
+  sync.
+- Stage 1 is admitted. The next source-locked run is recurrent variable-gate
+  BC with 4,119 legal/public inputs, one 256-wide GRU, BPTT windows at least
+  256 steps, and transition-window exposure at least 3x, followed by a single
+  teacher-free held-out screen totaling 256 courses over counts 5/8/11/12.
+  No FlightSim, N712, shadow, bounded run, or Submission action is authorized.
