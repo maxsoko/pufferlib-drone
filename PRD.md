@@ -9825,3 +9825,30 @@ For each training/eval block, record:
   apt, pip, tests, and rebuilds after state exists. A separate one-shot sync
   command copies state, reports, and the runner log and is invoked repeatedly
   while the rental is active.
+
+### VQ2 variable-gate oracle admission — VG002, 2026-07-29
+
+- Vast instance `46201898` is an on-demand RTX 4090 host with 32 effective
+  CPUs, 65,547,376 KiB RAM, and 100 GB disk at `$0.334444/hour` including
+  storage. The first wrapper launch stopped before `state.json` or any oracle
+  episode because one committed regression helper lacked its executable bit.
+  Preserve bootstrap log SHA-256 `40478684...`; mode-only recovery commit
+  `84f4f080...` is not an experiment retry.
+- The recovered source-locked bootstrap passes both native suites, builds the
+  float32 CUDA backend for `sm_89`, proves `precision_bytes == 4`, and passes
+  `34/34` remote focused tests. Runtime is Python `3.12.3`, NGC Torch
+  `2.10.0a0`/CUDA `13.1`; compiled extension SHA-256 is `ce5f1eac...`.
+- VG002 passes all four independent `512`-episode admissions. Counts
+  `5/8/11/12` each score `512/512`, zero crash, out-of-order, crossing-margin,
+  action, wire-rate, or thrust-envelope violation. Mean completion times are
+  `79.078003/136.792145/194.592773/213.846924 s`; worst mean ordered crossing
+  error is `0.042401 m` at every count.
+- Count report SHA-256 values are `23e5bab7...` (5), `c8b6b3e7...` (8),
+  `bc785ff8...` (11), and `36df6587...` (12). Aggregate/state SHA-256 values
+  are `e649a20a...`/`e8060b45...`; the immutable hash chain and every source,
+  runtime, seed, metric, and safety field verify independently after local
+  sync.
+- Stage 0 is admitted. Stage 1 may now build a newly tagged variable-count
+  SF012-lineage legal corpus with at least 1.5 million transitions. VG002 sent
+  zero FlightSim packets, performed zero student update, never accessed N712,
+  and cannot authorize Submission.

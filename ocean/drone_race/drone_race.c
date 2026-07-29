@@ -1133,8 +1133,15 @@ static void compute_visual_observation(DroneRace* env, int agent_index) {
         obs[idx++] = visual_log_ratio(agent->drone.params.gravity, BASE_GRAVITY);
         obs[idx++] = tanhf(agent->drone.params.b_drag);
     }
+    // Training-only progress follows the same fixed-denominator contract as
+    // the public runtime scalar when explicitly configured. The historical
+    // count-normalized decoder target remains byte-exact by default.
+    float visual_gate_phase_denominator =
+        env->observable_gate_index_denominator > 0.0f
+            ? env->observable_gate_index_denominator
+            : (float)fmaxf(env->num_gates, 1);
     obs[idx++] = clampf(
-        (float)agent->current_gate / (float)fmaxf(env->num_gates, 1),
+        (float)agent->current_gate / visual_gate_phase_denominator,
         0.0f,
         1.0f);
     obs[idx++] = clampf(active_gate->radius / 3.0f, 0.0f, 1.0f);

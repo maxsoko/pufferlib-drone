@@ -9568,3 +9568,27 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   runs its first missing count. Once state exists, the Vast wrapper must not
   apt-install, pip-install, test, or rebuild. Sync state, reports, and runner
   log back after every count and before stopping/destroying the instance.
+
+### VQ2 variable-gate oracle admission — VG002, 2026-07-29
+
+- On-demand Vast instance `46201898` supplies one RTX 4090, 32 effective CPUs,
+  65,547,376 KiB RAM, and 100 GB disk at `$0.334444/hour`. Bootstrap 001 failed
+  closed before `state.json` or an oracle episode on a missing executable bit;
+  preserve log SHA `40478684...`. Commit `84f4f080...` changes only the two
+  executable modes and is the accepted recovery source.
+- Remote preflight passes both native suites, float32 `sm_89` CUDA build,
+  backend/precision assertions, and `34/34` tests. Extension SHA-256 is
+  `ce5f1eac...`; runtime is Python `3.12.3`, Torch `2.10.0a0`, CUDA `13.1`.
+- VG002 passes `512/512` independently at counts `5`, `8`, `11`, and `12`.
+  Every safety/envelope count is zero. Mean completion is
+  `79.078003/136.792145/194.592773/213.846924 s`; worst mean crossing radial is
+  `0.042401 m`, below the preregistered `0.10 m` limit.
+- Count report SHA-256 values are `23e5bab7...`/`c8b6b3e7...`/
+  `bc785ff8...`/`36df6587...`. Aggregate/state SHA-256 values are
+  `e649a20a...`/`e8060b45...`; local independent verification passes the full
+  report hash chain, sources, runtime, seeds, metrics, and safety fields.
+- Stage 0 is admitted. Proceed to one newly tagged 256-episode mixed-count
+  SF012-lineage corpus, fixed per-instance counts `5..12`, legal mask/tail/held
+  `/16` phase plus executed actions only, at least 1.5 million transitions.
+  FlightSim remains frozen after N522, N712 remains permanently closed, and
+  Submission is forbidden.

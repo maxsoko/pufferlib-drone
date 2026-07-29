@@ -96,6 +96,8 @@ static int test_legal_visual_observation_is_count_agnostic(void) {
     DroneRace twelve = make_visual_env();
     five.num_gates = 5;
     twelve.num_gates = 12;
+    five.observable_gate_index_denominator = 16.0f;
+    twelve.observable_gate_index_denominator = 16.0f;
     for (int gate = 2; gate < 12; gate++) {
         Target hidden = {
             .pos = {-100.0f - (float)gate, 0.0f, 0.0f},
@@ -128,9 +130,19 @@ static int test_legal_visual_observation_is_count_agnostic(void) {
             (DRONE_RACE_VISUAL_LEGAL_OBS_SIZE
                 - DRONE_RACE_VISUAL_BODY_RATE_OFFSET) * sizeof(float)) == 0,
         "22-value legal sensor/history tail must not expose total gate count");
-    CHECK(five.observations[DRONE_RACE_VISUAL_PRIVILEGED_OFFSET + 32]
-            != twelve.observations[DRONE_RACE_VISUAL_PRIVILEGED_OFFSET + 32],
-        "training-only native progress may still depend on episode length");
+    CHECK(five.observations[DRONE_RACE_VISUAL_PRIVILEGED_OFFSET + 32] == 1.0f / 16.0f
+            && twelve.observations[DRONE_RACE_VISUAL_PRIVILEGED_OFFSET + 32]
+                == 1.0f / 16.0f,
+        "configured training-only progress must use the fixed engine cap");
+
+    five.observable_gate_index_denominator = 0.0f;
+    twelve.observable_gate_index_denominator = 0.0f;
+    compute_one_observation(&five, 0);
+    compute_one_observation(&twelve, 0);
+    CHECK(five.observations[DRONE_RACE_VISUAL_PRIVILEGED_OFFSET + 32] == 1.0f / 5.0f
+            && twelve.observations[DRONE_RACE_VISUAL_PRIVILEGED_OFFSET + 32]
+                == 1.0f / 12.0f,
+        "default training-only progress must preserve count normalization");
 
     free_visual_env(&five);
     free_visual_env(&twelve);
