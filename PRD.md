@@ -10219,3 +10219,18 @@ For each training/eval block, record:
   instances are stopped.
 - VG014 authorizes only one newly preregistered fresh teacher-free screen.
   It does not authorize shadow, VQ2 Training, or Submission.
+
+### VQ2 fresh teacher-free screen — VG015, 2026-07-30
+
+- Screen only VG014 epoch 8 SHA `60d69a1f...` under tag
+  `vq2_vg015_variable_gate_recurrent_teacher_free_256`: 64 new courses each at
+  counts 5/8/11/12 with seeds `429071/429074/429077/429078`.
+- Require at least 231/256 ordered finishes, zero crash/out-of-order and hard
+  action/wire/thrust/phase transport faults. Keep the native `0.50 m`
+  crossing-margin flag diagnostic; true aperture remains `0.75 m`.
+- The actor remains one teacher-free recurrent 4,119-input/full-output Puffer
+  policy. State locks candidate, evidence, source, compiled extension,
+  runtime, seeds, and admission contract before count 5.
+- Base/wrapper/runner/test/preregistration hashes are `dc91107e...`/
+  `261eaee1...`/`762ddc6c...`/`463fcc39...`/`234bb8ef...`; tests pass `27/27`.
+  No live action is authorized by this screen.

@@ -10046,3 +10046,24 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   evidence only and authorizes one separately preregistered fresh teacher-free
   deterministic screen. FlightSim, shadow, Training, and Submission remain
   forbidden.
+
+### VQ2 fresh teacher-free screen preregistration — VG015, 2026-07-30
+
+- Preregister exactly one resumable screen tagged
+  `vq2_vg015_variable_gate_recurrent_teacher_free_256` for VG014 epoch 8,
+  checkpoint SHA `60d69a1f...`, report SHA `067d9c19...`, and admission SHA
+  `073fc31e...`. Run 64 fresh terminal episodes independently at counts
+  5/8/11/12, seeds `429071/429074/429077/429078`, for 256 courses total.
+- VG014 emits every complete four-channel action as its deterministic recurrent
+  mean. Teacher blend/control, sampling, clipping, phase switch, scheduling,
+  and fallback remain absent. Actor input stays the legal 4,119-value ABI with
+  causal 4 Hz held official progress and zero total-count/native state.
+- Admission requires at least 231/256 ordered full-course successes, zero
+  crash/out-of-order/action/wire/thrust violation, finite enveloped actions,
+  executed-action error at most `5e-5`, and exact held-phase transport.
+  Crossing margin remains diagnostic-only at radius `0.50 m`; the unchanged
+  true aperture is `0.75 m`.
+- Base/wrapper/runner/test/preregistration SHA-256 values are `dc91107e...`/
+  `261eaee1...`/`762ddc6c...`/`463fcc39...`/`234bb8ef...`. Focused and adjacent
+  tests pass `27/27`; direct CLI invocation and runner shell syntax pass.
+  VG015 is offline-only and authorizes no live activity.
