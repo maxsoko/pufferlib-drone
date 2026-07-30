@@ -1,20 +1,54 @@
 # VQ2 variable-gate solve-first goal prompt — 2026-07-28
 
-This is the authoritative execution prompt for the next agent session. It
-supersedes the fixed-six-gate assumption embedded in the SF001–SF068 and
-C001–C014 lineages. Read `AGENTS.md` and the tail of `PRD.md` before acting.
-Repository state at handoff is commit `508286e` ("Checkpoint July VQ1
-promotion and complete VQ2 solve-first lineage"); the tree was clean.
+This is the authoritative persistent execution prompt. It supersedes the
+fixed-six-gate assumption embedded in the SF001–SF068 and C001–C014 lineages
+and, as of 2026-07-29, supersedes its original two-failure stop rule. Read
+`AGENTS.md` and the tail of `PRD.md` before acting. Treat the latest clean,
+pushed commit and source-locked evidence as the handoff state; do not reset to
+the historical `508286e` starting commit.
 
 ## Mission
 
-Produce a single recurrent PufferLib policy that completes the official
+Produce and submit a single recurrent PufferLib policy that completes the official
 `AI-GP Virtual Qualifier R2` course — camera/IMU runtime only — with a valid,
 collision-free, ordered full-course finish. The competition scores fastest
 valid lap; a lap that finishes slowly beats any lap that does not finish.
-Deadline: the submission window closes in approximately five days
-(target: offline-admitted checkpoint within 3 days, Windows shadow and one
-bounded Training attempt within 5).
+
+This is a persistent terminal-condition mission. Continue through diagnosis,
+new source-locked offline variations, parity, Windows shadow, bounded VQ2
+Training validation, promotion, and VQ2 R2 Submission until a competition-
+legal valid Submission finish is executed and verified. Do not redefine
+success as a checkpoint, partial course, Training finish, diagnosis, handback,
+or readiness recommendation. Those are milestones only.
+
+## Persistence and submission authority — 2026-07-29
+
+- The user explicitly supersedes the former rule that stopped a stage after
+  two distinct failures. Diagnose every failure before the next variation,
+  preserve it as immutable evidence, change the causal factor, assign a new
+  tag/seed, and continue. There is no fixed DAgger/PPO round cap and no
+  automatic stop merely because several hypotheses fail.
+- Never retry a rejected configuration unchanged, reopen N712, weaken
+  competition legality, or silently discard a failure distribution. Persistence
+  means evidence-driven new variations, not repetition.
+- Restart, stop, or replace rented offline compute as required. Sync irreplaceable
+  evidence continuously and stop idle GPU compute; resource discipline remains
+  part of the mission, but cost or inconvenience alone is not a completion
+  condition.
+- This prompt is standing authorization to perform command-free Windows
+  shadows and uniquely tagged bounded VQ2 **Training** attempts after their
+  respective offline/source-lock gates pass.
+- This prompt is also standing authorization to select VQ2 R2 **Submission**
+  and execute the promoted autonomous controller only after the Submission
+  gates below pass. It does not authorize premature Submission probing,
+  submission with a partially admitted controller, human intervention during
+  a timed flight, or use of privileged/disabled interfaces.
+- If a tooling or infrastructure failure occurs before an experiment begins,
+  repair it and continue under the evidence/resume contract. If an experiment
+  itself rejects, preserve it and preregister a causally distinct successor.
+  Stop only for a genuine external blocker that cannot be resolved without new
+  user credentials, unavailable official infrastructure, or a new material
+  authority outside this prompt.
 
 ## Two corrections that drive this revision
 
@@ -38,7 +72,7 @@ bounded Training attempt within 5).
    BPTT windows of 256 steps comfortably span every real gap; do not build
    long-horizon memory machinery for multi-second blindness.
 
-## Verified frontier at handoff (do not re-derive)
+## Verified historical frontier (do not re-derive)
 
 - **Oracle (SF009/SF011)**: training-only alignment governor passes
   `4096/4096` randomized six-gate courses, mean completion `98.08 s`, worst
@@ -70,6 +104,28 @@ bounded Training attempt within 5).
   transition evidence is the N295/N399/N483 public traces. FlightSim has been
   frozen since N522.
 
+## Current execution frontier — VG001–VG008, 2026-07-29
+
+- VG002 admits the variable-count environment/oracle at counts 5/8/11/12;
+  VG003 admits 2,396,907 legal causal records; VG005 is the retained 4,119-input
+  CNN + one-GRU behavioral-cloning checkpoint, SHA-256 `f686a35d...`.
+- VG006 rejects VG005 at `0/256` full courses but localizes useful behavior:
+  244/256 Gate-1 and 20/256 Gate-2 passes, only two crashes, none reach Gate 3.
+- VG007 is quarantined after its 60,887 records missed an arbitrary 100,000
+  floor. VG008 is also quarantined: it stages 127,886 legal query labels and
+  passes retained layout/phase/reach/volume checks, but admission evaluated
+  false and its rejection report hit an `output`/actor-result name-shadow bug.
+- Diagnosis report SHA-256 `f9d99a43...` identifies the strongest admission
+  error: DAgger incorrectly rejected `crossing_margin_violation`, which marks
+  accepted `0.50–0.75 m` crossings inside the actual `0.75 m` aperture. A
+  failure-state corpus must record that quality diagnostic without treating it
+  alone as unsafe transport.
+- Resume with a new VG009 tag/seed. Fix path shadowing, commit the complete
+  predicate map before raising, retain 512 episodes and the 100,000-record
+  floor, retain crash/count/transport/layout/phase gates, and demote crossing
+  margin from dataset rejection to a recorded diagnostic. Never train on
+  VG007/VG008 arrays.
+
 ## Non-negotiable constraints (unchanged)
 
 - Deployed control is **one recurrent full-output Puffer policy**: official
@@ -82,9 +138,11 @@ bounded Training attempt within 5).
   input; detector geometry and privileged native state are not.
 - The classical teacher/oracle, privileged state, and critics are
   **training-only**. Zero teacher blend in any admission screen.
-- **No FlightSim packet of any kind** until the offline gates below pass and
-  a zero-command Windows shadow is separately preregistered. **VQ2 Submission
-  is forbidden.**
+- **No FlightSim packet of any kind** until the applicable offline gate below
+  passes and a zero-command Windows shadow is separately preregistered. Use VQ2
+  Training only for bounded validation. VQ2 Submission remains forbidden until
+  every explicit Submission gate below passes; it becomes authorized exactly
+  then under the standing authority above.
 - Evidence discipline: every run gets a unique tag, preregistration doc,
   JSON report, and SHA-256 hashes recorded in `PRD.md`/`AGENTS.md`. Rejected
   configurations are never retried unchanged. The consumed N712 sealed test
@@ -147,7 +205,12 @@ roll out the current student, query the oracle on visited states, aggregate
 with all prior anchors (never replace a failure distribution — SF064's
 explicit instruction), refit, rescreen. Keep source-balanced record counts
 per SF060's audit finding (clean sequences must not dilute failure
-distributions). Budget 3–5 rounds.
+distributions). The historical `3–5` value is a planning estimate, not a stop
+condition. Continue source-balanced DAgger rounds while they improve the
+localized teacher-free frontier. After each rejection, identify the causal
+failure and change it under a unique preregistered tag; never rerun the same
+configuration. VG009 is the first authorized continuation after the
+VG007/VG008 diagnosis.
 
 ### Stage 4 — only if DAgger plateaus: phase-local recurrent PPO
 
@@ -159,27 +222,67 @@ data so PPO cannot erode the solved approach, and evaluate the deterministic
 mean (a sampled success that the mean does not consolidate is not progress —
 SF068 already proved that trap).
 
-### Stage 5 — admission and handback
+### Stage 5 — offline admission, export, and Windows shadow
 
 - Exact + perturbed (start/gate/plant jitter) full-course screens at the
   `0.75 m` aperture, teacher blend zero, across gate counts, zero crash.
 - Composite replay parity and export parity (Linux vs. Windows controller
   Python), per the N388/N520 precedent.
-- Hand back: checkpoint(s) + SHA-256, all screen reports, dataset manifests,
-  and updated `PRD.md`/`AGENTS.md` sections. The operator runs the Windows
-  zero-command shadow and any bounded Training attempt locally; do not
-  attempt them from the remote box.
+- Produce checkpoint(s) + SHA-256, all screen reports, dataset manifests,
+  deployment callable/manifest, and updated `PRD.md`/`AGENTS.md` sections.
+- Preregister and execute a Windows zero-command shadow in VQ2 Training. It
+  must reproduce Linux/export actions within the established parity tolerance,
+  run the full recurrent preprocessing/inference cadence, and send zero reset,
+  arm/disarm, TIMESYNC, metadata, or setpoint packets.
+
+### Stage 6 — bounded VQ2 Training promotion
+
+- After shadow admission, preregister one uniquely tagged bounded Training
+  attempt with exact reset/arm/rate/timeout/index-stop/collision/dropout/disarm
+  rules. Use only the complete deterministic output of the candidate recurrent
+  Puffer actor.
+- A failed bounded attempt is immutable evidence, not a terminal stop. Diagnose
+  its legal camera/IMU/public-status trace offline, train a causally distinct
+  new candidate, repeat offline/parity/shadow gates, and then run a new tag.
+- Submission promotion requires at least three consecutive valid, collision-
+  free, telemetry-clean official VQ2 Training full-course finishes by the exact
+  source-locked deployment artifact. Require nonnegative official finish time,
+  monotonically ordered official gate progress through the actual unknown
+  course length, command rate below 100 Hz, exact lifecycle accounting, and
+  passive post-run disarm proof. Optimize elapsed time only after reliable
+  completion is established.
+
+### Stage 7 — VQ2 R2 Submission terminal condition
+
+- Freeze and hash the promoted checkpoint, callable, controller/wrapper,
+  configuration, Windows Python environment, parity/shadow evidence, and the
+  three-run Training promotion aggregate. Record the exact intended event row
+  and lifecycle in a Submission preregistration.
+- Confirm the UI selection is `AI-GP Virtual Qualifier R2 - Submission`, not
+  R1 or Training. Execute the exact promoted autonomous stack with no human
+  interaction during the timed flight. Abort immediately on collision,
+  invalid state, transport/rate fault, or telemetry dropout.
+- Success requires the official runtime to report ordered completion of the
+  full unknown-length course and a nonnegative official finish time, with zero
+  collision/invalid reason, clean command/lifecycle evidence, final disarm,
+  passive disarm proof, and a source-hashed Submission report synced locally.
+- If Submission does not produce a valid finish and the official event still
+  permits another attempt, preserve the failure, return to offline/Training
+  diagnosis, promote a causally distinct controller, and continue. The mission
+  ends only on a verified valid VQ2 R2 Submission finish or a genuine external
+  event closure that makes further authorized attempts impossible.
 
 ## Compute
 
 Local hardware (RTX 3070 8 GB, 4 cores, 7.7 GB RAM) is the bottleneck, not
 the method. The offline pipeline is FlightSim-independent: rent one Vast.ai
 Linux instance — RTX 4090 (or A100/A6000), `>= 32` vCPU, `>= 64 GB` RAM,
-`>= 100 GB` disk. Clone this repository at commit `508286e`; regenerate
-datasets remotely rather than uploading `logs/` (they are gitignored and
-reproducible from seeds). Use the CPU cores for vectorized native rollouts
-(the C env is CPU-bound) and the GPU for BPTT/PPO updates. Keep every run
-resumable; sync reports and checkpoints back continuously.
+`>= 100 GB` disk. Resume the preserved Vast workspace or clone the latest
+pushed source-locked commit; never reset to historical `508286e`. Regenerate
+datasets remotely rather than uploading reproducible bulk arrays. Use the CPU
+cores for vectorized native rollouts (the C env is CPU-bound) and the GPU for
+BPTT/PPO updates. Keep every run resumable; sync reports and checkpoints back
+continuously, and stop idle instances while retaining required evidence.
 
 ## Do not repeat (closed branches)
 
@@ -194,8 +297,10 @@ count.
 ## Reporting
 
 Append every experiment to `PRD.md` with its tag, seeds, hashes, and verdict
-the moment it completes. If a stage acceptance fails twice with distinct
-causes, stop and write a diagnosis section instead of a third variation —
-the deadline does not permit unbounded retries. The single most valuable
-deliverable is a checkpoint that finishes variable-count courses offline;
-everything else is secondary.
+the moment it completes. Multiple failures require a diagnosis section, not a
+halt: write the diagnosis, source-lock the causal change, assign a new tag and
+seed, and continue. Rejected data/checkpoints remain quarantined and unchanged
+retries remain forbidden. Keep the plan and goal active across turns. The
+terminal deliverable is a source-hashed, competition-legal, valid VQ2 R2
+Submission finish; every offline checkpoint, Training finish, and diagnosis is
+an intermediate artifact.

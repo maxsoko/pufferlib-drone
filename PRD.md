@@ -9998,3 +9998,33 @@ For each training/eval block, record:
   retains crash/transport/layout/phase/count gates and the 512/100,000 volume,
   and only demotes crossing margin from rejection to diagnosis. No FlightSim,
   N712, shadow, bounded attempt, or Submission action occurred.
+
+### VQ2 persistent mission and corrected DAgger collection — VG009, 2026-07-30
+
+- Persistent goal prompt SHA-256 `052ba7cb...` is the explicit superseding
+  decision requested by VG008. It removes the automatic two-failure halt while
+  retaining immutable rejection evidence and the ban on unchanged retries.
+  The full terminal condition is a source-hashed, competition-legal, valid VQ2
+  R2 Submission finish. Shadows, bounded Training, and eventual Submission are
+  standing-authorized only after their respective offline/promotion gates.
+- Preregister `vq2_vg009_variable_gate_dagger_round1_corrected_512` at seed
+  `429049`. Do not read or fit VG007/VG008 arrays. Retain 512 new exact-uniform
+  count-5--12 episodes, 2,048 steps, at least 100,000 records, Gate-1/Gate-2
+  reach, at most 5% crash, and exact hard-safety, count, action-parity,
+  terminal-layout, and public-phase predicates.
+- Source now uses a distinct `actor_result` rather than rebinding the output
+  path. Rejection persistence is an explicit helper that validates the failed
+  list, atomically writes the full predicate map to a sibling report, then
+  writes the same map and report hash to terminal rejected state before the
+  exception. Tests cover both success and inconsistent-map refusal.
+- `crossing_margin_violation` remains in admitted/rejected reports with
+  `admission_predicate=false`, diagnostic radius `0.50 m`, and official radius
+  `0.75 m`. It no longer rejects the intentionally imperfect DAgger corpus by
+  itself. Crash, out-of-order, action, wire-rate, and thrust-envelope safety
+  remain hard gates.
+- Collector/runner/test/preregistration hashes are `4f52642a...`/
+  `5ad42e7e...`/`a3dbba9a...`/`74ceeddb...`. Native and vision-native
+  regression suites pass, runner shell syntax passes, and the focused plus
+  adjacent Python suite passes `28/28`. VG009 is preregistered but not yet
+  executed. No FlightSim packet, teacher plant action, student update, N712
+  access, shadow, Training attempt, or Submission action occurred.

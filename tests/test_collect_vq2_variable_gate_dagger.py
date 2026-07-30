@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import json
+import os
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -13,11 +17,17 @@ from scripts.collect_vq2_variable_gate_dagger import (
     MINIMUM_GATE1_RATE,
     MINIMUM_GATE2_RATE,
     MINIMUM_RECORDS,
+    crossing_margin_diagnostic,
     dagger_collection_predicates,
     dagger_collection_passes,
     dagger_config,
+    persist_rejection_evidence,
     verify_inputs,
 )
+
+
+ROOT = Path(__file__).resolve().parents[1]
+RUNNER = ROOT / "scripts/run_vq2_vg009_vast.sh"
 
 
 def _passing_metrics() -> dict[str, float]:
@@ -58,10 +68,19 @@ def _passing_arguments() -> dict[str, object]:
     }
 
 
-def test_vg008_admission_preserves_failure_states_but_requires_safe_transport() -> None:
+def test_vg009_admission_preserves_failure_states_but_requires_safe_transport() -> None:
     metrics = _passing_metrics()
+    metrics["env/crossing_margin_violation"] = 0.4375
     arguments = _passing_arguments()
     assert dagger_collection_passes(metrics, **arguments)
+    predicates = dagger_collection_predicates(metrics, **arguments)
+    assert "crossing_margin_violation" not in predicates
+    assert crossing_margin_diagnostic(metrics) == {
+        "crossing_margin_violation": 0.4375,
+        "admission_predicate": False,
+        "diagnostic_radius_m": 0.50,
+        "official_aperture_radius_m": 0.75,
+    }
 
     metrics = _passing_metrics()
     metrics["env/crash"] = MAXIMUM_CRASH_RATE + 1.0 / EPISODES
@@ -82,8 +101,12 @@ def test_vg008_admission_preserves_failure_states_but_requires_safe_transport() 
     changed["executed_action_max_error"] = 1e-6
     assert not dagger_collection_passes(metrics, **changed)
 
+    metrics = _passing_metrics()
+    metrics["env/action_envelope_violation"] = 1.0 / EPISODES
+    assert not dagger_collection_passes(metrics, **arguments)
 
-def test_vg008_config_is_exact_uniform_teacher_free_and_bounded(
+
+def test_vg009_config_is_exact_uniform_teacher_free_and_bounded(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     def fake_load(*args: object, **kwargs: object):
@@ -110,7 +133,7 @@ def test_vg008_config_is_exact_uniform_teacher_free_and_bounded(
     assert environment["observable_gate_index_denominator"] == 16.0
 
 
-def test_vg008_rejection_predicates_identify_the_record_floor() -> None:
+def test_vg009_rejection_predicates_identify_the_record_floor() -> None:
     metrics = _passing_metrics()
     arguments = _passing_arguments()
     arguments["lengths"] = np.full(
@@ -124,5 +147,67 @@ def test_vg008_rejection_predicates_identify_the_record_floor() -> None:
     )
 
 
-def test_vg008_frozen_failure_and_oracle_query_inputs_verify() -> None:
+def test_vg009_rejection_persists_complete_predicate_map_before_raise_path(
+    tmp_path,
+) -> None:
+    output_path = tmp_path / "vq2_vg009_dataset"
+    state_path = tmp_path / "vq2_vg009_dataset_state.json"
+    state = {"status": "collecting"}
+    report = {
+        "records": 123_456,
+        "vector_steps": 2_048,
+        "admission_predicates": {
+            "minimum_record_count": True,
+            "executed_action_parity": False,
+        },
+        "failed_admission_predicates": ["executed_action_parity"],
+    }
+    rejection_path = persist_rejection_evidence(
+        output_path=output_path,
+        state_path=state_path,
+        state=state,
+        rejection_report=report,
+    )
+    persisted_report = json.loads(rejection_path.read_text())
+    persisted_state = json.loads(state_path.read_text())
+    assert persisted_report["admission_predicates"] == report["admission_predicates"]
+    assert persisted_state["status"] == "rejected"
+    assert persisted_state["admission_predicates"] == report["admission_predicates"]
+    assert persisted_state["failed_admission_predicates"] == [
+        "executed_action_parity"
+    ]
+
+
+def test_vg009_rejection_refuses_an_inconsistent_predicate_map(tmp_path) -> None:
+    with pytest.raises(RuntimeError, match="predicate map is inconsistent"):
+        persist_rejection_evidence(
+            output_path=tmp_path / "vq2_vg009_dataset",
+            state_path=tmp_path / "vq2_vg009_dataset_state.json",
+            state={"status": "collecting"},
+            rejection_report={
+                "records": 1,
+                "vector_steps": 1,
+                "admission_predicates": {"safe": False},
+                "failed_admission_predicates": [],
+            },
+        )
+
+
+def test_vg009_frozen_failure_and_oracle_query_inputs_verify() -> None:
     verify_inputs()
+
+
+def test_vg009_vast_runner_is_source_locked_resumable_and_flightsim_free() -> None:
+    text = RUNNER.read_text()
+    assert os.access(RUNNER, os.X_OK)
+    assert 'VQ2_EXPECTED_COMMIT="${VQ2_EXPECTED_COMMIT:?' in text
+    assert "git rev-parse HEAD" in text
+    assert "git status --porcelain --untracked-files=no" in text
+    assert "vq2_vg009_variable_gate_dagger_round1_corrected_512" in text
+    assert "bash build.sh drone_race_vision --float" in text
+    assert "assert _C.precision_bytes == 4" in text
+    assert "tests/test_collect_vq2_variable_gate_dagger.py" in text
+    assert "--resume" in text
+    assert text.index('VQ2_STATE="') < text.index("test_drone_race_native_regressions")
+    for forbidden in ("FlightSim", "14550", "5600", "COMMAND_LONG"):
+        assert forbidden not in text

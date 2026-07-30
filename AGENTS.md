@@ -9734,3 +9734,35 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   SHA is `f9d99a43...`; it specifies a future new-tag correction only if an
   explicit superseding decision authorizes it. FlightSim remains frozen after
   N522, N712 closed, and VQ2 Submission forbidden.
+
+### VQ2 persistent authorization and VG009 preregistration — 2026-07-30
+
+- The user explicitly superseded the preceding two-failure stop through the
+  persistent goal prompt, SHA-256 `052ba7cb...`. The terminal objective is a
+  verified competition-legal VQ2 R2 Submission finish, not an offline
+  checkpoint or Training milestone. Continue evidence-driven new variations;
+  never retry a rejected configuration unchanged. The prompt gives standing
+  authority for command-free shadows and uniquely tagged bounded VQ2 Training
+  only after their gates, and eventual Submission only after the complete
+  three-finish promotion and source-lock gates.
+- VG009 is preregistered at new tag
+  `vq2_vg009_variable_gate_dagger_round1_corrected_512`, seed `429049`. It
+  retains 512 exact-uniform count-5--12 episodes, the 100,000-record floor,
+  Gate-1/Gate-2 reach, crash, hard safety, transport, terminal-layout, and held
+  public-phase predicates. VG007/VG008 arrays remain quarantined.
+- The causal source correction renames the recurrent actor result so it cannot
+  shadow the output path and writes the complete predicate map to both the
+  rejection report and terminal state before raising. It records native
+  `crossing_margin_violation` diagnostically but does not reject legal
+  `0.50--0.75 m` crossings inside the true `0.75 m` aperture. Crash and
+  out-of-order/action/wire/thrust envelope checks remain admission gates.
+- Collector/runner/test/preregistration SHA-256 values are
+  `4f52642a...`/`5ad42e7e...`/`a3dbba9a...`/`74ceeddb...`. Both native
+  regression suites pass and the focused plus adjacent Python suite passes
+  `28/28`; runner shell syntax also passes. The collector source-locks the
+  persistent prompt and VG008 diagnosis before its first offline action.
+- VG009 has not executed yet. It is offline native collection only and emits
+  zero FlightSim packets, teacher plant actions, or student updates. An
+  admitted result authorizes only a separately preregistered source-balanced
+  recurrent refit with VG003 and a new teacher-free screen. VQ2 live commands
+  and Submission remain gated; N712 remains permanently closed.

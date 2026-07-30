@@ -54,11 +54,11 @@ from scripts.eval_vq2_variable_gate_recurrent_policy import (
 )
 
 
-TAG = "vq2_vg008_variable_gate_dagger_round1_512"
+TAG = "vq2_vg009_variable_gate_dagger_round1_corrected_512"
 SCHEMA = "vq2_variable_gate_dagger_time_major_v1"
 AGENTS = 512
 EPISODES = 512
-SEED = 429048
+SEED = 429049
 COLLECTION_STEP_LIMIT = 2048
 MINIMUM_RECORDS = 100_000
 MINIMUM_GATE1_RATE = 0.90
@@ -68,7 +68,17 @@ DEFAULT_OUTPUT = (
     ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
 )
 PREREGISTRATION = (
-    ROOT / "docs/vq2_vg008_variable_gate_dagger_round1_preregistration_2026-07-29.md"
+    ROOT / "docs/vq2_vg009_variable_gate_dagger_round1_preregistration_2026-07-30.md"
+)
+GOAL_PROMPT = ROOT / "docs/vq2_variable_gate_solve_first_goal_prompt_2026-07-28.md"
+GOAL_PROMPT_SHA256 = (
+    "052ba7cb7a6db0b0274731f555a726994f83d424cb50e70f055e804926333e89"
+)
+VG008_DIAGNOSIS = (
+    ROOT / "docs/vq2_vg008_variable_gate_dagger_round1_diagnosis_2026-07-29.json"
+)
+VG008_DIAGNOSIS_SHA256 = (
+    "f9d99a436eaa300f70e52c00dc40b9f5752aad0684aac163ad7de7f439f183a4"
 )
 VG006_REPORT = (
     ROOT
@@ -129,9 +139,8 @@ def dagger_collection_predicates(
     raw_phase_encoding_max_error: float,
     phase_records: np.ndarray,
 ) -> dict[str, bool]:
-    required_zero = (
+    hard_safety_required_zero = (
         "out_of_order",
-        "crossing_margin_violation",
         "action_envelope_violation",
         "wire_rate_envelope_violation",
         "thrust_envelope_violation",
@@ -146,9 +155,9 @@ def dagger_collection_predicates(
     )
     return {
         "native_episode_count": metrics.get("env/n") == float(EPISODES),
-        "zero_safety_envelope_metrics": not any(
+        "zero_hard_safety_envelope_metrics": not any(
             metrics.get(f"env/{name}", math.inf) != 0.0
-            for name in required_zero
+            for name in hard_safety_required_zero
         ),
         "crash_rate": metrics.get("env/crash", math.inf) <= MAXIMUM_CRASH_RATE,
         "exact_uniform_gate_counts": exact_uniform_counts,
@@ -184,7 +193,53 @@ def dagger_collection_passes(
     return all(dagger_collection_predicates(metrics, **kwargs).values())
 
 
+def crossing_margin_diagnostic(metrics: dict[str, float]) -> dict[str, Any]:
+    """Record crossing quality without rejecting legal DAgger failure states."""
+
+    return {
+        "crossing_margin_violation": metrics.get(
+            "env/crossing_margin_violation", math.inf
+        ),
+        "admission_predicate": False,
+        "diagnostic_radius_m": 0.50,
+        "official_aperture_radius_m": 0.75,
+    }
+
+
+def persist_rejection_evidence(
+    *,
+    output_path: Path,
+    state_path: Path,
+    state: dict[str, Any],
+    rejection_report: dict[str, Any],
+) -> Path:
+    """Atomically persist the full predicate map before rejecting a tag."""
+
+    predicates = rejection_report["admission_predicates"]
+    failed = [name for name, passed in predicates.items() if not passed]
+    if failed != rejection_report["failed_admission_predicates"]:
+        raise RuntimeError("VG009 rejection report predicate map is inconsistent")
+    rejection_path = output_path.with_name(
+        f"{output_path.name}_rejection_report.json"
+    )
+    write_json_atomic(rejection_path, rejection_report)
+    state.update({
+        "status": "rejected",
+        "records": int(rejection_report["records"]),
+        "vector_steps": int(rejection_report["vector_steps"]),
+        "rejection_report_sha256": sha256_path(rejection_path),
+        "admission_predicates": predicates,
+        "failed_admission_predicates": failed,
+    })
+    write_json_atomic(state_path, state)
+    return rejection_path
+
+
 def verify_inputs() -> None:
+    if sha256_path(GOAL_PROMPT) != GOAL_PROMPT_SHA256:
+        raise RuntimeError("persistent goal prompt hash mismatch")
+    if sha256_path(VG008_DIAGNOSIS) != VG008_DIAGNOSIS_SHA256:
+        raise RuntimeError("VG008 diagnosis hash mismatch")
     if sha256_path(VG006_REPORT) != VG006_REPORT_SHA256:
         raise RuntimeError("VG006 rejection report hash mismatch")
     vg006 = json.loads(VG006_REPORT.read_text())
@@ -208,20 +263,22 @@ def collect(
 
     verify_inputs()
     if not PREREGISTRATION.is_file():
-        raise RuntimeError("VG008 preregistration is missing")
+        raise RuntimeError("VG009 preregistration is missing")
     if device_name == "cuda" and not torch.cuda.is_available():
-        raise RuntimeError("VG008 preregisters CUDA student inference")
+        raise RuntimeError("VG009 preregisters CUDA student inference")
     if getattr(_C, "env_name", None) != BACKEND_ENV_NAME:
-        raise RuntimeError("VG008 requires drone_race_vision backend")
+        raise RuntimeError("VG009 requires drone_race_vision backend")
     if getattr(_C, "precision_bytes", None) != 4:
-        raise RuntimeError("VG008 requires a float32 native binding")
+        raise RuntimeError("VG009 requires a float32 native binding")
     device = torch.device(device_name)
     actor, _checkpoint = load_actor(device)
     extension = Path(_C.__file__).resolve()
     source_paths = (
         Path(__file__).resolve(),
         PREREGISTRATION,
-        ROOT / "scripts/run_vq2_vg008_vast.sh",
+        GOAL_PROMPT,
+        VG008_DIAGNOSIS,
+        ROOT / "scripts/run_vq2_vg009_vast.sh",
         ROOT / "pufferlib/vq2_oracle.py",
         ROOT / "pufferlib/vq2_informed.py",
         ROOT / "pufferlib/vq2_public_phase.py",
@@ -279,7 +336,7 @@ def collect(
     vector = _C.create_vec(config, gpu=0)
     if vector.total_agents != AGENTS or vector.obs_size != ENV_OBS_SIZE:
         vector.close()
-        raise RuntimeError("VG008 native vector ABI changed")
+        raise RuntimeError("VG009 native vector ABI changed")
     observations = _cpu_tensor(
         vector.obs_ptr, (AGENTS, ENV_OBS_SIZE), torch.float32
     )
@@ -343,17 +400,17 @@ def collect(
                 phase_tensor = torch.from_numpy(held_phase[:, None]).to(device)
                 actor_input = torch.cat((legal, phase_tensor), dim=1)
                 active_device = torch.from_numpy(active).to(device)
-                output, candidate = actor.forward_step(actor_input, recurrent)
+                actor_result, candidate = actor.forward_step(actor_input, recurrent)
                 recurrent = preserve_frozen_state(
                     recurrent, candidate, active_device
                 )
                 student = torch.where(
                     active_device[:, None],
-                    output.mean,
-                    torch.zeros_like(output.mean),
+                    actor_result.mean,
+                    torch.zeros_like(actor_result.mean),
                 )
                 if not bool(torch.isfinite(student[active_device]).all()):
-                    raise RuntimeError("VG008 student emitted a non-finite action")
+                    raise RuntimeError("VG009 student emitted a non-finite action")
                 student_np = student.detach().cpu().numpy().astype(np.float32, copy=False)
                 selected_query = query[active].astype(np.float64)
                 selected_student = student_np[active].astype(np.float64)
@@ -397,7 +454,7 @@ def collect(
         native_log = dict(vector.log())
         terminal_count, terminal_is_last = writer.validate_episode_layout(lengths)
         if not np.array_equal(terminal_count, tracked_terminal_count):
-            raise RuntimeError("VG008 staged/tracked terminal counts differ")
+            raise RuntimeError("VG009 staged/tracked terminal counts differ")
         metrics = flatten_log(pufferl, native_log)
         predicate_arguments = {
             "lengths": lengths,
@@ -445,6 +502,7 @@ def collect(
                 "student_action_min": student_min.tolist(),
                 "student_action_max": student_max.tolist(),
                 "metrics": metrics,
+                "crossing_margin_diagnostic": crossing_margin_diagnostic(metrics),
                 "admission_predicates": predicates,
                 "failed_admission_predicates": [
                     name for name, passed in predicates.items() if not passed
@@ -462,19 +520,13 @@ def collect(
                     "submission_authorized": False,
                 },
             }
-            rejection_path = output.with_name(f"{output.name}_rejection_report.json")
-            write_json_atomic(rejection_path, rejection_report)
-            state.update({
-                "status": "rejected",
-                "records": int(label_count),
-                "vector_steps": int(lengths.max(initial=0)),
-                "rejection_report_sha256": sha256_path(rejection_path),
-                "failed_admission_predicates": (
-                    rejection_report["failed_admission_predicates"]
-                ),
-            })
-            write_json_atomic(state_path, state)
-            raise RuntimeError("VG008 DAgger collection failed admission")
+            persist_rejection_evidence(
+                output_path=output,
+                state_path=state_path,
+                state=state,
+                rejection_report=rejection_report,
+            )
+            raise RuntimeError("VG009 DAgger collection failed admission")
         manifest = writer.finalize(output)
     finally:
         vector.close()
@@ -545,6 +597,9 @@ def collect(
         "metadata_sha256": sha256_path(output / "metadata.json"),
         "files": manifest,
         "metrics": flatten_log(pufferl, native_log),
+        "crossing_margin_diagnostic": crossing_margin_diagnostic(
+            flatten_log(pufferl, native_log)
+        ),
         "loader_overrides": overrides,
         "source_commit": source_commit,
         "source_sha256": source_sha256,
