@@ -10286,3 +10286,35 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   `b44c5572...`/`eaab4e5e...`/`3e7849d3...`. Focused and adjacent tests pass
   `36/36`, all five dataset loaders/hash/phase audits pass, both native suites
   pass, and CLI/runner syntax passes. VG020 authorizes no live activity.
+
+### VQ2 VG020 epoch-3 throughput supersession / VG021 — 2026-07-30
+
+- VG020 ran cleanly on source commit `83a48e63...` through atomic epoch 3,
+  then was intentionally stopped before any completed epoch was lost. Epoch 3
+  is the new best at fixed-weight MSE `0.018124410839263784`; clean/VG009/
+  VG012/VG016/VG019 values are `0.0015846671/0.0072325038/0.0459751276/
+  0.0335440650/0.0240580149`. Exact weights and `4.0x` transition exposure
+  pass. The state/log hashes are `3d4694ba...`/`6f68f2ac...`; intentional exit
+  is `143`. VG020 is incomplete and grants no admission.
+- The measured cause is host decode and underfilled CUDA work: the trainer used
+  about 32 CPU cores while 8/10 GPU samples were `0--1%`. Production-shape
+  local probes show bitwise-identical device mask decode at `20.42 -> 1.65 ms`
+  median and bitwise-identical same-horizon grouping at `87.73 -> 31.20 ms`
+  forward/backward median.
+- VG021 preregisters one exact-state continuation tagged
+  `vq2_vg021_five_source_accelerated_continuation_001`. It binds parent state
+  SHA `3d4694ba...`, preserves model/optimizer/scaler/all RNG/history/config,
+  and may execute epochs 4--12 only after actual-chunk decode/output/state/
+  loss/gradient parity and at least `1.5x` throughput. No padding, recurrent
+  horizon change, source-weight change, or optimizer step before parity is
+  allowed.
+- Loader/trainer/parity/runner/recurrent-test/refit-test/preregistration hashes
+  are `a9bfc4a7...`/`3e80c744...`/`9689d3ac...`/`7cf0e97c...`/
+  `a17a898a...`/`cb6efe56...`/`b86f202b...`. The exact suite reached `39`
+  passing tests plus one corrected documentation-string assertion; the focused
+  correction passes and remote source-lock reruns the full suite before parity.
+- Vast resource discipline is corrected: historical instances `46201898`,
+  `46256686`, and `46275514` are `exited/stopped` with retained disks. Only
+  active worker `46280503` remains running. Epoch states/logs are synced under
+  persistent local `/root/vq2_evidence_sync`. FlightSim packet count remains
+  zero; shadow, Training, and Submission remain unauthorized.

@@ -1,0 +1,44 @@
+{
+  "schema": "vq2_vg020_epoch3_throughput_supersession_v1",
+  "tag": "vq2_vg020_variable_gate_five_source_refit_001",
+  "status": "throughput_superseded_after_epoch_3",
+  "source_commit": "83a48e63e1982aa636ff2b5136a9ea2451e6ff7d",
+  "completed_epoch": 3,
+  "optimizer_updates": 31742,
+  "best_epoch": 3,
+  "best_source_balanced_validation": 0.018124410839263784,
+  "selected_validation_weighted_mse": {
+    "clean": 0.0015846670762156882,
+    "dagger1": 0.007232503807070323,
+    "dagger2": 0.04597512758807036,
+    "dagger3": 0.033544065049872056,
+    "dagger4": 0.024058014885311393
+  },
+  "epoch_3": {
+    "epoch_optimizer_updates": 10652,
+    "paired_chunks": 2744,
+    "transition_paired_chunks": 2636,
+    "transition_update_exposures": 10544,
+    "minimum_transition_window_exposure": 4.0,
+    "source_weight_audit": true
+  },
+  "termination": {
+    "state_committed_utc": "2026-07-30T15:42:19.802487217Z",
+    "sigterm_sent_utc": "2026-07-30T15:42:29Z",
+    "trainer_exit_code": 143,
+    "completed_epoch_lost": false,
+    "reason": "The source-locked trainer was CPU-bound at approximately 79 minutes per epoch while the RTX 4090 was idle in most samples. It was stopped only after the atomic epoch-3 state to permit a separately tagged, parity-gated throughput continuation."
+  },
+  "artifact_sha256": {
+    "training_state": "3d4694baaeac55184d3672675b4c159ee339adbff45c4b46246a58118ecbb14b",
+    "runner_log_through_epoch_3": "6f68f2ac994c873662994d0b3a630ac1c33c06c9f800aaa8de6bf2ec020eb808"
+  },
+  "safety": {
+    "actor_input_privileged_values": 0,
+    "teacher_blend": 0.0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "submission_authorized": false
+  },
+  "authority": "This incomplete run is not a numerical admission. It authorizes only the exact-state, source-locked, parity-gated VG021 offline continuation; no shadow, Training, or Submission activity is authorized."
+}

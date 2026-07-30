@@ -121,11 +121,21 @@ def reconstruct_phase_batch(
         or tail.shape[-1] != PHASE_LEGAL_OBS_SIZE - MASK_SIZE
     ):
         raise ValueError("phase tail does not align with the mask batch")
-    decoded_mask = torch.from_numpy(np.asarray(mask).copy()).float().mul_(1.0 / 255.0)
-    decoded_tail = torch.from_numpy(np.asarray(tail, dtype=np.float32).copy())
+    mask_array = np.ascontiguousarray(mask)
+    tail_array = np.ascontiguousarray(tail, dtype=np.float32)
+    if not mask_array.flags.writeable:
+        mask_array = mask_array.copy()
+    if not tail_array.flags.writeable:
+        tail_array = tail_array.copy()
+
+    # Keep the 4,096-byte visual mask compact across the host/device boundary.
+    # Expanding it to float32 on the CPU made the loader dominate five-source
+    # training while the GPU waited for synchronous copies.
+    decoded_mask = torch.from_numpy(mask_array).to(device, non_blocking=False)
+    decoded_mask = decoded_mask.float().mul_(1.0 / 255.0)
+    decoded_tail = torch.from_numpy(tail_array).to(device, non_blocking=False)
     observation = torch.cat((decoded_mask, decoded_tail), -1)
-    observation = observation.transpose(0, 1).contiguous()
-    return observation.to(device, non_blocking=False)
+    return observation.transpose(0, 1).contiguous()
 
 
 def phase_increment_rows(

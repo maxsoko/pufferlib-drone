@@ -46,6 +46,39 @@ def test_reconstruct_phase_batch_is_batch_major_and_exact() -> None:
     assert observation[1, 2, -1].item() == pytest.approx(7.0 / 16.0)
 
 
+@pytest.mark.parametrize(
+    "device",
+    [
+        pytest.param(torch.device("cpu"), id="cpu"),
+        pytest.param(
+            torch.device("cuda"),
+            id="cuda",
+            marks=pytest.mark.skipif(
+                not torch.cuda.is_available(), reason="CUDA is unavailable"
+            ),
+        ),
+    ],
+)
+def test_reconstruct_phase_batch_device_decode_is_bitwise_exact(
+    device: torch.device,
+) -> None:
+    rng = np.random.default_rng(429095)
+    mask = rng.integers(0, 256, size=(5, 3, MASK_SIZE), dtype=np.uint8)
+    tail = rng.standard_normal(
+        (5, 3, PHASE_LEGAL_OBS_SIZE - MASK_SIZE), dtype=np.float32
+    )
+    mask.setflags(write=False)
+    tail.setflags(write=False)
+
+    expected_mask = torch.from_numpy(mask.copy()).float().mul_(1.0 / 255.0)
+    expected_tail = torch.from_numpy(tail.copy())
+    expected = torch.cat((expected_mask, expected_tail), -1)
+    expected = expected.transpose(0, 1).contiguous().to(device)
+
+    actual = reconstruct_phase_batch(mask, tail, device=device)
+    assert torch.equal(actual, expected)
+
+
 def test_phase_increment_rows_preserves_chunk_boundary_transition() -> None:
     phase = np.asarray(
         [[0.0, 0.0], [1.0 / 16.0, 0.0], [1.0 / 16.0, 2.0 / 16.0]],

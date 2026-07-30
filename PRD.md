@@ -10387,3 +10387,19 @@ For each training/eval block, record:
   `eaab4e5e...`/`3e7849d3...`; all `36/36` focused/adjacent tests, five full
   dataset loaders, and both native suites pass. VG020 can authorize only a new
   teacher-free offline screen; live authority remains zero.
+
+### VQ2 accelerated continuation — VG021, 2026-07-30
+
+- VG020 was preserved after atomic epoch 3 (state SHA `3d4694ba...`) with a new
+  best fixed-weight MSE of `0.0181244108`; it was intentionally stopped because
+  CPU float expansion and five small actor calls left the RTX 4090 mostly idle.
+- VG021 continues only that exact state under a new source/tag. Device-side
+  uint8 decode is bitwise identical and locally reduces production-shape decode
+  median `20.42 -> 1.65 ms`; equal-horizon source grouping is bitwise identical
+  and reduces forward/backward median `87.73 -> 31.20 ms`.
+- Before epoch 4, require actual-chunk output/state/loss/gradient parity and
+  `>=1.5x` throughput with zero optimizer steps. Preserve all optimizer/scaler/
+  RNG/history/config state and finish epochs 4--12 under the original admission
+  rules. VG021 is offline only.
+- Exactly one Vast GPU is active after stopping three idle historical workers;
+  continuous states/logs are stored in persistent local evidence storage.
