@@ -10399,3 +10399,33 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   Generic/wrapper/runner/test/preregistration hashes are `dc91107e...`/
   `fdacf95f...`/`b03974cb...`/`c922b944...`/`20e4c142...`. VG023 is offline
   only; FlightSim, shadow, Training, and Submission remain unauthorized.
+
+### VQ2 VG023 rejection / VG024 visited-state collection — 2026-07-30
+
+- VG023 is terminally rejected: `0/256` finishes, `193` crashes (`91` low,
+  `101` lateral/XY, `1` high), `63` misses, and zero timeouts. Gate-1 reach is
+  `255/256`, Gate-2 reach is `26/256`, and no course reaches Gate 3.
+- Relative to VG018, Gate-2 reach rises from `4` to `26`, but crashes rise by
+  `25`; the crash distribution shifts from `143` low crashes to `101` lateral
+  crashes. Counts 5/8/11/12 reach Gate 2 on `5/9/6/6` courses, so the frontier
+  is transition-local rather than course-length-specific. The stronger turn
+  acquires Gate 2 more often but crosses the lateral-safety frontier and does
+  not consolidate downstream progress.
+- Executed-action error, phase off-tick/decrease/skip, raw phase encoding,
+  non-finite action, ordering, action/wire/thrust envelope faults are all zero.
+  Aggregate/state/log/exit hashes are `2a3023fd...`/`eb2ddaa8...`/
+  `058497f9...`/`53c234e5...`; completed-resume verification returns `2`
+  without state change. Rejection evidence SHA is `88f403f0...`; never retry
+  VG023 unchanged.
+- Preregister one resumable VG024 corpus tagged
+  `vq2_vg024_variable_gate_dagger_round5_vg022_visited_512`, seed `429109`:
+  512 exact-uniform count-5--12 episodes, 1,024-step bound, at least 300,000
+  records, and at least 95% Gate-1 reach. VG022 emits every deterministic plant
+  action; the SF016 oracle labels only the newly visited higher-turn/lateral-
+  recovery states.
+- Crash/Gate-2/crossing-margin rates remain corpus diagnostics; layout/count/
+  phase/action-history/label/action-wire-thrust/ordering predicates remain hard.
+  Generic/wrapper/runner/test/preregistration hashes are `cf0b8f6d...`/
+  `6b8063bb...`/`574ad9ac...`/`caf21cb6...`/`fb7875d4...`. If admitted, VG024
+  authorizes only a source-balanced refit retaining all five prior anchors.
+  Live authority remains zero.

@@ -10449,3 +10449,21 @@ For each training/eval block, record:
   231 finishes and zero hard safety/transport/phase fault. Wrapper/runner/test/
   preregistration hashes are `fdacf95f...`/`b03974cb...`/`c922b944...`/
   `20e4c142...`. This is offline-only and grants no live authority.
+
+### VQ2 VG023 rejection and VG024 DAgger — 2026-07-30
+
+- VG023 rejects at `0/256` finishes with `193` crashes, `63` misses, and no
+  timeout. It reaches Gate 1 on `255/256`, Gate 2 on `26/256`, and Gate 3 on
+  zero. Counts 5/8/11/12 contribute `5/9/6/6` Gate-2 reaches.
+- Versus VG018, Gate-2 reach improves by 22, but crashes worsen by 25 and shift
+  from mostly low to `101` lateral/XY crashes. This localizes a harder-turn /
+  lateral-recovery frontier independent of downstream gate count. Transport,
+  action-history, public-phase, ordering, and envelope faults are zero.
+- Report/state/log/exit hashes are `2a3023fd...`/`eb2ddaa8...`/`058497f9...`/
+  `53c234e5...`; remote completed-resume verification passes. Rejection
+  evidence SHA is `88f403f0...`; unchanged retry is forbidden.
+- VG024 collects exactly 512 VG022-visited episodes with seed `429109`, uniform
+  counts 5--12, 1,024-step bound, at least 300,000 labels and 95% Gate-1 reach.
+  The oracle labels only; VG022 remains the full-output plant actor. Wrapper/
+  runner/test/preregistration hashes are `6b8063bb...`/`574ad9ac...`/
+  `caf21cb6...`/`fb7875d4...`. VG024 is offline-only.
