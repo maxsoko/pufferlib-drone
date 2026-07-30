@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prove VG021 decode/grouping parity before any continuation update."""
+"""Prove VG022 device-decode parity before any continuation update."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ import statistics
 import subprocess
 import sys
 import time
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Callable
 
@@ -20,16 +21,14 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from pufferlib.vq2_informed import MASK_SIZE
-from pufferlib.vq2_recurrent_phase import PHASE_LEGAL_OBS_SIZE, VQ2PhaseRecurrentActor
+from pufferlib.vq2_recurrent_phase import VQ2PhaseRecurrentActor
 from scripts.eval_vq2_variable_gate_oracle import write_json_atomic
 from scripts.train_vq2_variable_gate_dagger_refit import RecurrentChunkStream
-from scripts.train_vq2_variable_gate_recurrent_bc import PHASE_TAIL_INDEX
 import scripts.train_vq2_variable_gate_five_source_refit as refit
 import scripts.train_vq2_variable_gate_three_source_refit as three_source
 
 
-SCHEMA = "vq2_vg021_acceleration_parity_report_v1"
+SCHEMA = "vq2_vg022_device_decode_parity_report_v1"
 
 
 def _legacy_reconstruct(
@@ -68,9 +67,9 @@ def _model(saved: dict[str, Any], device: torch.device) -> VQ2PhaseRecurrentActo
 
 def check(*, migration_state: Path, output: Path) -> dict[str, Any]:
     if not torch.cuda.is_available():
-        raise RuntimeError("VG021 parity requires CUDA")
+        raise RuntimeError("VG022 parity requires CUDA")
     if refit.sha256_path(migration_state) != refit.MIGRATION_STATE_SHA256:
-        raise RuntimeError("VG021 parity migration hash mismatch")
+        raise RuntimeError("VG022 parity migration hash mismatch")
     refit.verify_inputs()
     source_commit = subprocess.run(
         ["git", "rev-parse", "HEAD"],
@@ -86,7 +85,7 @@ def check(*, migration_state: Path, output: Path) -> dict[str, Any]:
         capture_output=True,
         text=True,
     ).stdout:
-        raise RuntimeError("VG021 parity requires a clean tracked worktree")
+        raise RuntimeError("VG022 parity requires a clean tracked worktree")
 
     device = torch.device("cuda")
     saved = torch.load(migration_state, map_location="cpu", weights_only=False)
@@ -98,7 +97,10 @@ def check(*, migration_state: Path, output: Path) -> dict[str, Any]:
         or saved.get("completed_epoch") != 3
         or saved.get("optimizer_updates") != 31_742
     ):
-        raise RuntimeError("VG021 parity parent identity mismatch")
+        raise RuntimeError("VG022 parity parent identity mismatch")
+    runtime = three_source.runtime_manifest()
+    if runtime != saved.get("runtime"):
+        raise RuntimeError(f"VG022 parity runtime mismatch: {runtime}")
 
     config = refit.FiveSourceConfig()
     datasets = {
@@ -141,17 +143,6 @@ def check(*, migration_state: Path, output: Path) -> dict[str, Any]:
         for name, dataset in datasets.items()
     }
 
-    # Actual stored rows prove that moving uint8 expansion to CUDA is lossless.
-    indices = splits["clean"][0][: config.source_agent_batch_size]
-    sample_mask = np.take(datasets["clean"].mask[: config.sequence_chunk], indices, axis=1)
-    sample_tail = np.take(datasets["clean"].tail[: config.sequence_chunk], indices, axis=1)
-    legacy_observation = _legacy_reconstruct(sample_mask, sample_tail, device=device)
-    device_observation = refit.reconstruct_phase_batch(
-        sample_mask, sample_tail, device=device
-    )
-    decode_max_error = float((legacy_observation - device_observation).abs().max())
-    decode_bitwise = bool(torch.equal(legacy_observation, device_observation))
-
     rng = np.random.default_rng()
     rng.bit_generator.state = copy.deepcopy(saved["numpy_rng_state"])
     seed_model = _model(saved, device)
@@ -168,91 +159,138 @@ def check(*, migration_state: Path, output: Path) -> dict[str, Any]:
         for name, dataset in datasets.items()
     }
     items = {}
+    raw_chunks: dict[str, tuple[np.ndarray, np.ndarray]] = {}
     for name, stream in streams.items():
         item = stream.next(seed_model)
         if item is None:
-            raise RuntimeError(f"VG021 parity {name} emitted no next chunk")
+            raise RuntimeError(f"VG022 parity {name} emitted no next chunk")
         items[name] = item
-    groups = refit.prepare_source_groups(items)
+        assert stream._batch_agents is not None
+        end = int(stream._start)
+        start = end - int(item.observation.shape[1])
+        raw_chunks[name] = (
+            np.take(datasets[name].mask[start:end], stream._batch_agents, axis=1),
+            np.take(datasets[name].tail[start:end], stream._batch_agents, axis=1),
+        )
     action_weights = torch.tensor(config.action_weights, device=device)
 
-    def calculate(model: VQ2PhaseRecurrentActor, *, grouped: bool) -> tuple[
+    def decoded_items(*, legacy: bool) -> dict[str, Any]:
+        decoded = {}
+        for name, item in items.items():
+            mask, tail = raw_chunks[name]
+            observation = (
+                _legacy_reconstruct(mask, tail, device=device)
+                if legacy
+                else refit.reconstruct_phase_batch(mask, tail, device=device)
+            )
+            decoded[name] = replace(item, observation=observation)
+        return decoded
+
+    def calculate(
+        model: VQ2PhaseRecurrentActor, run_items: dict[str, Any]
+    ) -> tuple[
         dict[str, Any], dict[str, torch.Tensor], torch.Tensor
     ]:
         model.zero_grad(set_to_none=True)
         with torch.autocast("cuda", dtype=torch.float16):
-            if grouped:
-                outputs, states = refit.forward_source_groups(model, groups)
-            else:
-                outputs, states = {}, {}
-                for name, item in items.items():
-                    outputs[name], states[name] = model.forward_sequence(
-                        item.observation, item.start_state
-                    )
+            outputs, states = {}, {}
+            for name, item in run_items.items():
+                outputs[name], states[name] = model.forward_sequence(
+                    item.observation, item.start_state
+                )
             loss, _ = refit.five_source_loss(
                 {name: value.mean for name, value in outputs.items()},
-                {name: item.target for name, item in items.items()},
-                {name: item.valid for name, item in items.items()},
+                {name: item.target for name, item in run_items.items()},
+                {name: item.valid for name, item in run_items.items()},
                 weights=action_weights,
                 previous_predictions={
-                    name: item.previous_prediction for name, item in items.items()
+                    name: item.previous_prediction for name, item in run_items.items()
                 },
                 previous_valid={
-                    name: item.previous_valid for name, item in items.items()
+                    name: item.previous_valid for name, item in run_items.items()
                 },
                 config=config,
             )
         loss.backward()
         return outputs, states, loss
 
+    legacy_items = decoded_items(legacy=True)
+    device_items = decoded_items(legacy=False)
+    decode_max_error = max(
+        float(
+            (
+                legacy_items[name].observation - device_items[name].observation
+            ).abs().max()
+        )
+        for name in items
+    )
+    decode_bitwise = all(
+        torch.equal(
+            legacy_items[name].observation, device_items[name].observation
+        )
+        for name in items
+    )
     legacy_model = _model(saved, device)
-    grouped_model = _model(saved, device)
-    legacy_outputs, legacy_states, legacy_loss = calculate(legacy_model, grouped=False)
-    grouped_outputs, grouped_states, grouped_loss = calculate(grouped_model, grouped=True)
+    device_model = _model(saved, device)
+    legacy_outputs, legacy_states, legacy_loss = calculate(legacy_model, legacy_items)
+    device_outputs, device_states, device_loss = calculate(device_model, device_items)
     mean_error = max(
-        float((legacy_outputs[name].mean - grouped_outputs[name].mean).abs().max())
+        float(
+            (
+                legacy_outputs[name].mean.detach()
+                - device_outputs[name].mean.detach()
+            ).abs().max()
+        )
         for name in items
     )
     pre_tanh_error = max(
         float(
             (
-                legacy_outputs[name].pre_tanh_mean
-                - grouped_outputs[name].pre_tanh_mean
+                legacy_outputs[name].pre_tanh_mean.detach()
+                - device_outputs[name].pre_tanh_mean.detach()
             ).abs().max()
         )
         for name in items
     )
     state_error = max(
-        float((legacy_states[name] - grouped_states[name]).abs().max())
+        float(
+            (
+                legacy_states[name].detach() - device_states[name].detach()
+            ).abs().max()
+        )
         for name in items
     )
-    loss_error = abs(float(legacy_loss.detach()) - float(grouped_loss.detach()))
+    loss_error = abs(float(legacy_loss.detach()) - float(device_loss.detach()))
     gradient_error = max(
         float((left.grad - right.grad).abs().max())
-        for left, right in zip(legacy_model.parameters(), grouped_model.parameters())
+        for left, right in zip(legacy_model.parameters(), device_model.parameters())
         if left.grad is not None and right.grad is not None
     )
 
     def legacy_step() -> None:
-        calculate(legacy_model, grouped=False)
+        run_items = decoded_items(legacy=True)
+        for _ in range(config.transition_window_exposure):
+            calculate(legacy_model, run_items)
 
-    def grouped_step() -> None:
-        calculate(grouped_model, grouped=True)
+    def device_step() -> None:
+        run_items = decoded_items(legacy=False)
+        for _ in range(config.transition_window_exposure):
+            calculate(device_model, run_items)
 
-    legacy_samples = _synchronized_samples(legacy_step)
-    grouped_samples = _synchronized_samples(grouped_step)
+    legacy_samples = _synchronized_samples(legacy_step, warmup=2, samples=7)
+    device_samples = _synchronized_samples(device_step, warmup=2, samples=7)
     legacy_median = statistics.median(legacy_samples)
-    grouped_median = statistics.median(grouped_samples)
-    speedup = legacy_median / grouped_median
+    device_median = statistics.median(device_samples)
+    speedup = legacy_median / device_median
     admitted = bool(
         decode_bitwise
         and decode_max_error == 0.0
-        and mean_error <= 1e-6
-        and pre_tanh_error <= 1e-6
-        and state_error <= 1e-6
-        and loss_error <= 1e-7
-        and gradient_error <= 1e-5
-        and speedup >= 1.5
+        and mean_error == 0.0
+        and pre_tanh_error == 0.0
+        and state_error == 0.0
+        and loss_error == 0.0
+        and gradient_error == 0.0
+        and speedup >= 1.15
     )
     report = {
         "schema": SCHEMA,
@@ -265,7 +303,7 @@ def check(*, migration_state: Path, output: Path) -> dict[str, Any]:
         "chunk_horizons": {
             name: int(item.observation.shape[1]) for name, item in items.items()
         },
-        "group_count": len(groups),
+        "transition_exposures_per_timed_step": config.transition_window_exposure,
         "decode_bitwise_equal": decode_bitwise,
         "decode_max_abs_error": decode_max_error,
         "mean_max_abs_error": mean_error,
@@ -274,9 +312,9 @@ def check(*, migration_state: Path, output: Path) -> dict[str, Any]:
         "loss_abs_error": loss_error,
         "gradient_max_abs_error": gradient_error,
         "legacy_median_seconds": legacy_median,
-        "grouped_median_seconds": grouped_median,
+        "device_decode_median_seconds": device_median,
         "speedup": speedup,
-        "runtime": three_source.runtime_manifest(),
+        "runtime": runtime,
         "safety": {
             "actor_input_privileged_values": 0,
             "teacher_blend": 0.0,

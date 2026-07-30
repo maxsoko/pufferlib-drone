@@ -10403,3 +10403,15 @@ For each training/eval block, record:
   rules. VG021 is offline only.
 - Exactly one Vast GPU is active after stopping three idle historical workers;
   continuous states/logs are stored in persistent local evidence storage.
+
+### VQ2 device-decode continuation — VG022, 2026-07-30
+
+- Reject VG021 batching before any optimizer step: four-way grouping changes
+  FP16 outputs; pairwise grouping is output-exact but misses both the frozen
+  gradient and speed gates.
+- VG022 removes grouping and retains only bitwise device decode/redundant-copy
+  removal. Require bitwise observation/output/state/loss/gradient parity and
+  `>=1.15x` complete four-exposure transition-step speed on the locked Vast
+  runtime before migrating the exact VG020 epoch-3 state.
+- If admitted, complete epochs 4--12 under the unchanged five-source loss and
+  admission rules. This remains offline-only evidence.

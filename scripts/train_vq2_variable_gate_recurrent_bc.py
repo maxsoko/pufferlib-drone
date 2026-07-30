@@ -330,11 +330,11 @@ class VariableGateBCDataset:
         )
         observation = reconstruct_phase_batch(mask, tail, device=device)
         action_np = np.take(self.action[start:end], indices, axis=1)
-        action = torch.from_numpy(np.asarray(action_np, dtype=np.float32).copy())
+        action = torch.from_numpy(np.ascontiguousarray(action_np, dtype=np.float32))
         action = action.transpose(0, 1).contiguous().to(device)
-        valid = torch.from_numpy(np.asarray(valid_np, dtype=np.uint8).copy())
+        valid = torch.from_numpy(np.ascontiguousarray(valid_np, dtype=np.uint8))
         valid = valid.transpose(0, 1).contiguous().bool().to(device)
-        transition = torch.from_numpy(transition_np.copy())
+        transition = torch.from_numpy(np.ascontiguousarray(transition_np))
         transition = transition.transpose(0, 1).contiguous().bool().to(device)
         return observation, action, valid, transition
 

@@ -10318,3 +10318,28 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   active worker `46280503` remains running. Epoch states/logs are synced under
   persistent local `/root/vq2_evidence_sync`. FlightSim packet count remains
   zero; shadow, Training, and Submission remain unauthorized.
+
+### VQ2 bitwise device-decode continuation — VG022, 2026-07-30
+
+- VG021 source batching is rejected before any optimizer step. Four-source
+  grouping changed real FP16 actor outputs by up to `0.0013427734`. Pairwise
+  grouping made mean/pre-tanh/state/loss exactly equal, but gradient error
+  `1.52587890625e-5` exceeded the frozen `1e-5` cap and speedup `1.4892539843`
+  missed the frozen `1.5x` floor. Never retry VG021 unchanged; local diagnostic
+  evidence SHA is `442c33c3...`.
+- Preregister one causally distinct continuation tagged
+  `vq2_vg022_five_source_device_decode_continuation_001`. Remove grouping
+  entirely and preserve the original five actor calls/order. The sole runtime
+  optimization transfers compact uint8 masks before exact CUDA float expansion
+  and removes redundant copies of already-contiguous arrays.
+- Before epoch 4, the locked original Vast runtime must prove bitwise actor
+  observations, outputs, states, loss, and every gradient on actual next-epoch
+  chunks, zero optimizer/state writes, and `>=1.15x` median time for a complete
+  transition step (five decodes plus four unchanged exposures). Any failure
+  rejects VG022 without unchanged retry.
+- Loader/trainer/checker/runner/recurrent-test/refit-test/preregistration hashes
+  are `7d156466...`/`281da992...`/`4c4be374...`/`69a15437...`/
+  `a17a898a...`/`df827124...`/`63bea5a8...`. Focused source/artifact tests pass
+  after a corrected wrap-independent documentation assertion; compilation and
+  runner syntax pass. The remote runner reruns the exact full suite before the
+  parity gate. No live authority exists.

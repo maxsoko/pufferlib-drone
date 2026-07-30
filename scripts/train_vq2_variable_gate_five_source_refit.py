@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Continue VG020 with parity-gated device decode and grouped source batches."""
+"""Continue VG020 with parity-gated bitwise device-side mask decode."""
 
 from __future__ import annotations
 
@@ -24,7 +24,6 @@ from pufferlib.vq2_recurrent_phase import (
     PHASE_LEGAL_OBS_SIZE,
     VQ2PhaseRecurrentActor,
 )
-from pufferlib.vq2_recurrent import RecurrentActorOutput
 from scripts.eval_vq2_variable_gate_oracle import write_json_atomic
 from scripts.train_vq2_recurrent_bc import (
     ActionAccumulator,
@@ -44,10 +43,10 @@ import scripts.train_vq2_variable_gate_four_source_refit as four_source
 import scripts.train_vq2_variable_gate_three_source_refit as three_source
 
 
-TAG = "vq2_vg021_five_source_accelerated_continuation_001"
+TAG = "vq2_vg022_five_source_device_decode_continuation_001"
 CHECKPOINT_SCHEMA = "vq2_variable_gate_recurrent_bc_checkpoint_v1"
-REPORT_SCHEMA = "vq2_variable_gate_five_source_accelerated_report_v1"
-STATE_SCHEMA = "vq2_variable_gate_five_source_accelerated_state_v1"
+REPORT_SCHEMA = "vq2_variable_gate_five_source_device_decode_report_v1"
+STATE_SCHEMA = "vq2_variable_gate_five_source_device_decode_state_v1"
 SEED = 429094
 MIGRATION_STATE_SHA256 = (
     "3d4694baaeac55184d3672675b4c159ee339adbff45c4b46246a58118ecbb14b"
@@ -119,11 +118,18 @@ VG020_SUPERSESSION = (
 VG020_SUPERSESSION_SHA256 = (
     "5beb1c64077779727d48e100e2db7db9d5d23561b9196c5cdc324879e0edd34d"
 )
-PREREGISTRATION = (
+VG021_PREREGISTRATION = (
     ROOT / "docs/vq2_vg021_accelerated_continuation_preregistration_2026-07-30.md"
 )
-RUNNER = ROOT / "scripts/run_vq2_vg021_vast.sh"
-PARITY_CHECKER = ROOT / "scripts/check_vq2_vg021_acceleration_parity.py"
+VG021_REJECTION = ROOT / "docs/vq2_vg021_local_batching_rejection_2026-07-30.json"
+VG021_REJECTION_SHA256 = (
+    "442c33c334793cb6c2a6f676db4bf75674ab0ee0e2d388dbfe59eb5f2a0c2527"
+)
+PREREGISTRATION = (
+    ROOT / "docs/vq2_vg022_device_decode_continuation_preregistration_2026-07-30.md"
+)
+RUNNER = ROOT / "scripts/run_vq2_vg022_vast.sh"
+PARITY_CHECKER = ROOT / "scripts/check_vq2_vg022_device_decode_parity.py"
 DEFAULT_OUTPUT = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
 SOURCE_WEIGHTS = {
     "clean": 0.35,
@@ -170,6 +176,8 @@ def source_paths() -> list[Path]:
     return [
         Path(__file__).resolve(),
         PREREGISTRATION,
+        VG021_PREREGISTRATION,
+        VG021_REJECTION,
         VG020_PREREGISTRATION,
         VG020_SUPERSESSION,
         RUNNER,
@@ -225,67 +233,6 @@ def objective_weights(config: FiveSourceConfig) -> dict[str, float]:
     }
 
 
-def prepare_source_groups(
-    items: dict[str, Any],
-) -> list[tuple[tuple[str, ...], tuple[int, ...], torch.Tensor, torch.Tensor]]:
-    """Concatenate only source chunks with identical recurrent horizons."""
-
-    names_by_steps: dict[int, list[str]] = {}
-    for name, item in items.items():
-        observation = item.observation
-        start_state = item.start_state
-        if observation.ndim != 3 or start_state.ndim != 3:
-            raise ValueError(f"{name} source tensors must be recurrent batches")
-        if observation.shape[0] != start_state.shape[1]:
-            raise ValueError(f"{name} source observation/state batch mismatch")
-        names_by_steps.setdefault(int(observation.shape[1]), []).append(name)
-
-    groups = []
-    for same_horizon_names in names_by_steps.values():
-        # Eight-image CUDA batches preserve the production actor's FP16 kernel
-        # path much more closely than a single 16/20-image mega-batch. The
-        # source-locked parity checker remains the final authority.
-        for start in range(0, len(same_horizon_names), 2):
-            names = same_horizon_names[start : start + 2]
-            source_names = tuple(names)
-            batch_sizes = tuple(
-                int(items[name].observation.shape[0]) for name in names
-            )
-            groups.append(
-                (
-                    source_names,
-                    batch_sizes,
-                    torch.cat([items[name].observation for name in names], dim=0),
-                    torch.cat([items[name].start_state for name in names], dim=1),
-                )
-            )
-    return groups
-
-
-def forward_source_groups(
-    model: VQ2PhaseRecurrentActor,
-    groups: list[tuple[tuple[str, ...], tuple[int, ...], torch.Tensor, torch.Tensor]],
-) -> tuple[dict[str, RecurrentActorOutput], dict[str, torch.Tensor]]:
-    """Run one actor call per distinct sequence length and restore source maps."""
-
-    outputs: dict[str, RecurrentActorOutput] = {}
-    states: dict[str, torch.Tensor] = {}
-    for names, batch_sizes, observation, start_state in groups:
-        combined, next_state = model.forward_sequence(observation, start_state)
-        mean_parts = combined.mean.split(batch_sizes, dim=0)
-        pre_tanh_parts = combined.pre_tanh_mean.split(batch_sizes, dim=0)
-        log_std_parts = combined.log_std.split(batch_sizes, dim=0)
-        state_parts = next_state.split(batch_sizes, dim=1)
-        for index, name in enumerate(names):
-            outputs[name] = RecurrentActorOutput(
-                mean=mean_parts[index],
-                pre_tanh_mean=pre_tanh_parts[index],
-                log_std=log_std_parts[index],
-            )
-            states[name] = state_parts[index]
-    return outputs, states
-
-
 def five_source_loss(
     predictions: dict[str, torch.Tensor],
     targets: dict[str, torch.Tensor],
@@ -333,6 +280,7 @@ def verify_inputs() -> None:
     expected = {
         GOAL_PROMPT: GOAL_PROMPT_SHA256,
         VG020_SUPERSESSION: VG020_SUPERSESSION_SHA256,
+        VG021_REJECTION: VG021_REJECTION_SHA256,
         DAGGER4_ADMISSION: DAGGER4_ADMISSION_SHA256,
         PARENT_ADMISSION: PARENT_ADMISSION_SHA256,
         PARENT_CHECKPOINT: PARENT_CHECKPOINT_SHA256,
@@ -342,9 +290,9 @@ def verify_inputs() -> None:
     }
     for path, digest in expected.items():
         if sha256_path(path) != digest:
-            raise RuntimeError(f"VG021 source evidence hash mismatch: {path}")
+            raise RuntimeError(f"VG022 source evidence hash mismatch: {path}")
     if not PREREGISTRATION.is_file():
-        raise RuntimeError("VG021 preregistration is missing")
+        raise RuntimeError("VG022 preregistration is missing")
     parent = json.loads(PARENT_REPORT.read_text())
     parent_admission = json.loads(PARENT_ADMISSION.read_text())
     dagger4 = json.loads((DAGGER4_DATASET / "report.json").read_text())
@@ -439,12 +387,12 @@ def train(
     parity_report: Path | None = None,
 ) -> dict[str, Any]:
     if config.sequence_chunk < 256 or config.transition_window_exposure < 4:
-        raise RuntimeError("VG021 requires 256-step BPTT and 4x transitions")
+        raise RuntimeError("VG022 requires 256-step BPTT and 4x transitions")
     if objective_weights(config) != SOURCE_WEIGHTS:
-        raise RuntimeError("VG021 requires exact 0.35/0.10/0.10/0.15/0.30 weights")
+        raise RuntimeError("VG022 requires exact 0.35/0.10/0.10/0.15/0.30 weights")
     verify_inputs()
     if device_name == "cuda" and not torch.cuda.is_available():
-        raise RuntimeError("VG021 preregisters CUDA training")
+        raise RuntimeError("VG022 preregisters CUDA training")
 
     report_path = output / "report.json"
     state_path = output / "training_state.pt"
@@ -455,9 +403,9 @@ def train(
         verify_completed_output(output, report)
         return report
     if output.exists() and not state_path.is_file():
-        raise RuntimeError("VG021 output exists without resumable state")
+        raise RuntimeError("VG022 output exists without resumable state")
     if state_path.is_file() and migration_state is not None:
-        raise RuntimeError("VG021 cannot migrate over an existing state")
+        raise RuntimeError("VG022 cannot migrate over an existing state")
 
     device = torch.device(device_name)
     random.seed(config.seed)
@@ -521,10 +469,10 @@ def train(
 
     source_commit, source_sha256 = current_source_identity()
     if parity_report is None or not parity_report.is_file():
-        raise RuntimeError("VG021 requires its admitted acceleration parity report")
+        raise RuntimeError("VG022 requires its admitted device-decode parity report")
     parity = json.loads(parity_report.read_text())
     if (
-        parity.get("schema") != "vq2_vg021_acceleration_parity_report_v1"
+        parity.get("schema") != "vq2_vg022_device_decode_parity_report_v1"
         or parity.get("tag") != TAG
         or parity.get("source_commit") != source_commit
         or parity.get("migration_state_sha256") != MIGRATION_STATE_SHA256
@@ -532,15 +480,15 @@ def train(
         or parity.get("optimizer_steps") != 0
         or parity.get("state_writes") != 0
         or not parity.get("decode_bitwise_equal")
-        or float(parity.get("mean_max_abs_error", float("inf"))) > 1e-6
-        or float(parity.get("pre_tanh_max_abs_error", float("inf"))) > 1e-6
-        or float(parity.get("next_state_max_abs_error", float("inf"))) > 1e-6
-        or float(parity.get("loss_abs_error", float("inf"))) > 1e-7
-        or float(parity.get("gradient_max_abs_error", float("inf"))) > 1e-5
-        or float(parity.get("speedup", 0.0)) < 1.5
+        or float(parity.get("mean_max_abs_error", float("inf"))) != 0.0
+        or float(parity.get("pre_tanh_max_abs_error", float("inf"))) != 0.0
+        or float(parity.get("next_state_max_abs_error", float("inf"))) != 0.0
+        or float(parity.get("loss_abs_error", float("inf"))) != 0.0
+        or float(parity.get("gradient_max_abs_error", float("inf"))) != 0.0
+        or float(parity.get("speedup", 0.0)) < 1.15
         or parity.get("runtime") != three_source.runtime_manifest()
     ):
-        raise RuntimeError("VG021 acceleration parity report is not admitted")
+        raise RuntimeError("VG022 device-decode parity report is not admitted")
     parity_identity = {
         "report_sha256": sha256_path(parity_report),
         "mean_max_abs_error": parity["mean_max_abs_error"],
@@ -617,21 +565,21 @@ def train(
 
     if state_path.is_file():
         if not resume:
-            raise FileExistsError(f"VG021 state already exists at {state_path}")
+            raise FileExistsError(f"VG022 state already exists at {state_path}")
         saved = torch.load(state_path, map_location=device, weights_only=False)
         for key, expected in identity.items():
             if saved.get(key) != expected:
-                raise RuntimeError(f"VG021 resume mismatch for {key}")
+                raise RuntimeError(f"VG022 resume mismatch for {key}")
         if saved.get("status") != "training":
-            raise RuntimeError("VG021 can resume only active training state")
+            raise RuntimeError("VG022 can resume only active training state")
         restore_dynamic_state(saved)
     else:
         if resume:
-            raise RuntimeError("VG021 --resume requested without state")
+            raise RuntimeError("VG022 --resume requested without state")
         if migration_state is None or not migration_state.is_file():
-            raise RuntimeError("VG021 requires the frozen VG020 migration state")
+            raise RuntimeError("VG022 requires the frozen VG020 migration state")
         if sha256_path(migration_state) != MIGRATION_STATE_SHA256:
-            raise RuntimeError("VG021 migration state hash mismatch")
+            raise RuntimeError("VG022 migration state hash mismatch")
         saved = torch.load(migration_state, map_location=device, weights_only=False)
         required = {
             "schema": MIGRATION_SCHEMA,
@@ -650,11 +598,11 @@ def train(
         }
         for key, expected in required.items():
             if saved.get(key) != expected:
-                raise RuntimeError(f"VG021 migration mismatch for {key}")
+                raise RuntimeError(f"VG022 migration mismatch for {key}")
         if [int(item["epoch"]) for item in saved.get("history", [])] != [1, 2, 3]:
-            raise RuntimeError("VG021 migration history is not exact epochs 1..3")
+            raise RuntimeError("VG022 migration history is not exact epochs 1..3")
         if int(saved.get("best_epoch", -1)) != 3:
-            raise RuntimeError("VG021 migration best epoch changed")
+            raise RuntimeError("VG022 migration best epoch changed")
         restore_dynamic_state(saved)
         output.mkdir(parents=True)
         atomic_torch_save(
@@ -716,7 +664,6 @@ def train(
             transition_present = any(item.transition.any() for item in items.values())
             repetitions = config.transition_window_exposure if transition_present else 1
             transition_chunks += int(transition_present)
-            source_groups = prepare_source_groups(items)
             final_outputs: dict[str, Any] = {}
             final_states: dict[str, torch.Tensor] = {}
             for _ in range(repetitions):
@@ -726,7 +673,12 @@ def train(
                     dtype=torch.float16,
                     enabled=device.type == "cuda",
                 ):
-                    outputs, states = forward_source_groups(model, source_groups)
+                    outputs: dict[str, Any] = {}
+                    states: dict[str, torch.Tensor] = {}
+                    for name, item in items.items():
+                        outputs[name], states[name] = model.forward_sequence(
+                            item.observation, item.start_state
+                        )
                     loss, components = five_source_loss(
                         {name: output.mean for name, output in outputs.items()},
                         {name: item.target for name, item in items.items()},
@@ -842,7 +794,7 @@ def train(
         )
 
     if [int(item["epoch"]) for item in history] != list(range(1, 13)):
-        raise RuntimeError("VG021 final history is not exact epochs 1..12")
+        raise RuntimeError("VG022 final history is not exact epochs 1..12")
     minimum_transition_exposure = min(
         float(item["minimum_transition_window_exposure"]) for item in history
     )

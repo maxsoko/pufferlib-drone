@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 from dataclasses import replace
-from types import SimpleNamespace
 
 import pytest
 import torch
@@ -10,62 +9,6 @@ import torch
 from pufferlib.vq2_recurrent import ACTION_SIZE
 from scripts.train_vq2_recurrent_bc import weighted_action_mse
 import scripts.train_vq2_variable_gate_five_source_refit as refit
-
-
-def test_equal_horizon_sources_share_actor_call_without_changing_outputs() -> None:
-    torch.manual_seed(429096)
-    model = refit.VQ2PhaseRecurrentActor(hidden_size=32).eval()
-    steps = {
-        "clean": 4,
-        "dagger1": 4,
-        "dagger2": 5,
-        "dagger3": 5,
-        "dagger4": 7,
-    }
-    items = {}
-    for name, horizon in steps.items():
-        observation = torch.rand(2, horizon, refit.PHASE_LEGAL_OBS_SIZE)
-        observation[..., 4096:-1] = torch.randn_like(observation[..., 4096:-1])
-        observation[..., -1] = torch.rand_like(observation[..., -1])
-        items[name] = SimpleNamespace(
-            observation=observation,
-            start_state=model.initial_state(2, device="cpu"),
-        )
-
-    expected_outputs = {}
-    expected_states = {}
-    with torch.no_grad():
-        for name, item in items.items():
-            expected_outputs[name], expected_states[name] = model.forward_sequence(
-                item.observation, item.start_state
-            )
-        groups = refit.prepare_source_groups(items)
-        actual_outputs, actual_states = refit.forward_source_groups(model, groups)
-
-    assert sorted(len(names) for names, _, _, _ in groups) == [1, 2, 2]
-    assert set(actual_outputs) == set(items)
-    for name in items:
-        torch.testing.assert_close(
-            actual_outputs[name].mean,
-            expected_outputs[name].mean,
-            atol=1e-6,
-            rtol=1e-6,
-        )
-        torch.testing.assert_close(
-            actual_outputs[name].pre_tanh_mean,
-            expected_outputs[name].pre_tanh_mean,
-            atol=1e-6,
-            rtol=1e-6,
-        )
-        torch.testing.assert_close(
-            actual_outputs[name].log_std,
-            expected_outputs[name].log_std,
-            atol=0.0,
-            rtol=0.0,
-        )
-        torch.testing.assert_close(
-            actual_states[name], expected_states[name], atol=1e-6, rtol=1e-6
-        )
 
 
 def test_five_source_loss_uses_fixed_weights_despite_record_counts() -> None:
@@ -216,8 +159,8 @@ def test_vg020_runner_is_source_locked_resumable_and_offline() -> None:
         assert forbidden not in text
 
 
-def test_vg021_migration_and_parity_gate_are_frozen_before_epoch_four() -> None:
-    assert refit.TAG == "vq2_vg021_five_source_accelerated_continuation_001"
+def test_vg022_migration_and_parity_gate_are_frozen_before_epoch_four() -> None:
+    assert refit.TAG == "vq2_vg022_five_source_device_decode_continuation_001"
     assert refit.MIGRATION_STATE_SHA256 == (
         "3d4694baaeac55184d3672675b4c159ee339adbff45c4b46246a58118ecbb14b"
     )
@@ -226,11 +169,13 @@ def test_vg021_migration_and_parity_gate_are_frozen_before_epoch_four() -> None:
     checker = refit.PARITY_CHECKER.read_text()
     assert refit.MIGRATION_STATE_SHA256 in preregistration
     assert refit.MIGRATION_STATE_SHA256 in runner
-    assert "epoch `3`" in preregistration
+    assert "`3`" in preregistration
     assert "31,742" in preregistration
-    assert runner.rindex("check_vq2_vg021_acceleration_parity.py") < runner.rindex(
+    assert runner.rindex("check_vq2_vg022_device_decode_parity.py") < runner.rindex(
         "run_training"
     )
+    assert "forward_source_groups" not in checker
+    assert "forward_source_groups" not in refit.train.__code__.co_names
     assert '"optimizer_steps": 0' in checker
     assert '"state_writes": 0' in checker
     for forbidden in ("apt-get", "pip install", "FlightSim", "14550", "5600"):

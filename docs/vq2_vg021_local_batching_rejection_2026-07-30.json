@@ -1,0 +1,36 @@
+{
+  "schema": "vq2_vg021_local_batching_rejection_v1",
+  "tag": "vq2_vg021_five_source_accelerated_continuation_001",
+  "status": "rejected_before_optimizer_step",
+  "source_commit": "d360985209bc2a57ece8bd0268c78fe04c647d6d",
+  "runtime_scope": "local_diagnostic_only_not_locked_vast_runtime",
+  "migration_state_sha256": "3d4694baaeac55184d3672675b4c159ee339adbff45c4b46246a58118ecbb14b",
+  "optimizer_steps": 0,
+  "state_writes": 0,
+  "device_decode": {
+    "bitwise_equal": true,
+    "max_abs_error": 0.0
+  },
+  "pairwise_grouping": {
+    "mean_max_abs_error": 0.0,
+    "pre_tanh_max_abs_error": 0.0,
+    "next_state_max_abs_error": 0.0,
+    "loss_abs_error": 0.0,
+    "gradient_max_abs_error": 0.0000152587890625,
+    "legacy_median_seconds": 0.09527130199421663,
+    "grouped_median_seconds": 0.063972500996897,
+    "speedup": 1.4892539842836188
+  },
+  "failed_preregistered_predicates": [
+    "gradient_max_abs_error<=1e-5",
+    "speedup>=1.5"
+  ],
+  "decision": "Reject source batching without a remote optimizer step. Preserve only bitwise device decode for the causally distinct VG022 continuation; never retry VG021 unchanged.",
+  "safety": {
+    "actor_input_privileged_values": 0,
+    "teacher_blend": 0.0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "submission_authorized": false
+  }
+}

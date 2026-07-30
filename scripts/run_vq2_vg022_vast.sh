@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Source-locked Vast bootstrap for the parity-gated VG021 continuation.
+# Source-locked Vast bootstrap for the parity-gated VG022 continuation.
 set -euo pipefail
 
-VQ2_EXPECTED_COMMIT="${VQ2_EXPECTED_COMMIT:?set the pushed VG021 commit}"
+VQ2_EXPECTED_COMMIT="${VQ2_EXPECTED_COMMIT:?set the pushed VG022 commit}"
 VQ2_WORKSPACE_PATH="${VQ2_WORKSPACE_PATH:-/workspace/pufferlib-drone}"
-VQ2_OUTPUT="${VQ2_OUTPUT:-$VQ2_WORKSPACE_PATH/logs/drone_race_full_policy_six_gate_bootstrap/vq2_vg021_five_source_accelerated_continuation_001}"
+VQ2_OUTPUT="${VQ2_OUTPUT:-$VQ2_WORKSPACE_PATH/logs/drone_race_full_policy_six_gate_bootstrap/vq2_vg022_five_source_device_decode_continuation_001}"
 VQ2_STATE="$VQ2_OUTPUT/training_state.pt"
 VQ2_MIGRATION_STATE="${VQ2_MIGRATION_STATE:-/workspace/vq2_vg020_epoch3_training_state.pt}"
-VQ2_PARITY_REPORT="${VQ2_PARITY_REPORT:-/workspace/vq2_vg021_acceleration_parity_report.json}"
+VQ2_PARITY_REPORT="${VQ2_PARITY_REPORT:-/workspace/vq2_vg022_device_decode_parity_report.json}"
 
 cd "$VQ2_WORKSPACE_PATH"
 if [ "$(git rev-parse HEAD)" != "$VQ2_EXPECTED_COMMIT" ]; then
@@ -19,7 +19,7 @@ if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
     exit 2
 fi
 if [ ! -x .venv/bin/python ]; then
-    echo "VG021 requires the source-locked Vast virtual environment" >&2
+    echo "VG022 requires the source-locked Vast virtual environment" >&2
     exit 2
 fi
 source .venv/bin/activate
@@ -40,7 +40,7 @@ run_training() {
     fi
 }
 
-# A persisted VG021 state is already source/runtime/parity-bound. Resume it
+# A persisted VG022 state is already source/runtime/parity-bound. Resume it
 # without installing, rebuilding, retesting, or touching epoch-zero inputs.
 if [ -f "$VQ2_STATE" ]; then
     run_training
@@ -75,9 +75,9 @@ actual = {
     "torch_cuda": str(torch.version.cuda),
 }
 if actual != expected:
-    raise SystemExit(f"VG021 runtime mismatch: {actual} != {expected}")
+    raise SystemExit(f"VG022 runtime mismatch: {actual} != {expected}")
 if torch.cuda.get_device_name(0) != "NVIDIA GeForce RTX 4090":
-    raise SystemExit(f"VG021 GPU mismatch: {torch.cuda.get_device_name(0)}")
+    raise SystemExit(f"VG022 GPU mismatch: {torch.cuda.get_device_name(0)}")
 print(actual)
 PY
 
@@ -101,7 +101,7 @@ OMP_NUM_THREADS=16 MKL_NUM_THREADS=16 python -m pytest -q \
     tests/test_train_vq2_variable_gate_four_source_refit.py \
     tests/test_train_vq2_variable_gate_five_source_refit.py
 
-python scripts/check_vq2_vg021_acceleration_parity.py \
+python scripts/check_vq2_vg022_device_decode_parity.py \
     --migration-state "$VQ2_MIGRATION_STATE" \
     --output "$VQ2_PARITY_REPORT"
 python - <<'PY' "$VQ2_PARITY_REPORT"
@@ -109,7 +109,7 @@ import json
 import sys
 report = json.load(open(sys.argv[1]))
 if not report.get("admitted") or report.get("optimizer_steps") != 0:
-    raise SystemExit("VG021 parity did not admit")
+    raise SystemExit("VG022 parity did not admit")
 PY
 
 run_training
