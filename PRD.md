@@ -10175,3 +10175,17 @@ For each training/eval block, record:
 - Recovery/runner/test/preregistration hashes are `070f9b8d...`/`8511c9b1...`/
   `97c6bbe7...`/`8263105f...`; tests pass `40/40` and both native suites pass.
   VG013 has not run and grants no live authority.
+
+### VQ2 VG013 recovered-corpus admission — 2026-07-30
+
+- VG013 completed once from commit `7a9a376a...` with no resume or fresh
+  rollout. All 171,903 actions, 512 terminal events, observations, phases, and
+  VG010 outputs replay with zero error; every original and recovery predicate
+  passes.
+- Reconstructed outcomes are 354 low crashes, 150 misses, 8 timeouts, 371
+  Gate-1 reaches, and 2 Gate-2 reaches. These remain failure-state corpus
+  diagnostics; zero ordering and hard action/wire/thrust faults admit the data,
+  not the policy.
+- Report/state/log hashes are `38358a58...`/`e78d48da...`/`eb0692c6...` and
+  admission evidence SHA is `5c9d0e4b...`. The GPU is stopped. Next authority
+  is one preregistered three-source VG003/VG009/VG012 refit only.

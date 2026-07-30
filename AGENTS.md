@@ -9978,3 +9978,25 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   pass `40/40`, both native suites pass, and the full local corpus audit passes.
   VG013 has not run. FlightSim, N712, shadow, Training, and Submission remain
   forbidden.
+
+### VQ2 VG012 corpus recovered and admitted — VG013, 2026-07-30
+
+- VG013 ran once without resume on source commit `7a9a376a...`. Remote native/
+  vision regressions, float32 build/ABI, and `40/40` tests passed before the
+  recovery state. Full array hashing and the deterministic native replay then
+  admitted the corpus; no VG012 policy rollout was repeated.
+- All `171,903` actions replay exactly: 171,391 come from the next stored legal
+  action-history row and 512 terminal actions are source-derived by VG010.
+  Active rows, terminal events, stored mask bytes, legal tail, held phase,
+  VG010 action, and executed-action errors are all exactly zero. Replayed phase
+  records match `[94697,77121,85,0,...]` exactly.
+- Native outcomes are diagnostic: `354/512` low crashes (`69.140625%`),
+  `150/512` misses, `8/512` timeouts, 371 Gate-1 reaches and 2 Gate-2 reaches.
+  Out-of-order/action/wire/thrust-envelope metrics are zero. All 20 original
+  corpus predicates and all 14 recovery predicates pass.
+- Recovery report/state/log SHA-256 values are `38358a58...`/`e78d48da...`/
+  `eb0692c6...`; independent admission evidence SHA is `5c9d0e4b...`. The paid
+  instance is stopped after sync. VG013 admits training data only and
+  authorizes one separately preregistered refit preserving VG003, VG009, and
+  recovered VG012 at explicit source weights. It does not admit VG010 or any
+  live activity.
