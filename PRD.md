@@ -10154,3 +10154,24 @@ For each training/eval block, record:
   `baeb921d...`/`08759b2a...`/`30d7ff13...`/`94dcd090...`; focused and adjacent
   tests pass `36/36`. VG012 has not run. Admission can authorize only a new
   three-source VG003/VG009/VG012 refit; live activity remains forbidden.
+
+### VQ2 VG012 finalization failure and deterministic recovery — 2026-07-30
+
+- The sole seed-`429064` VG012 rollout passed all remote preflight gates and
+  completed 512 episodes, but report serialization failed after array/metadata
+  finalization because one accepted predicate was `np.bool_`. Preserve the
+  failed state and never resume the collector unchanged.
+- The immutable corpus has 171,903 legal records, 512 exact final terminals,
+  length `110/335.748046875/2,048`, phase records `[94697,77121,85,0,...]`,
+  Gate-1 reach 371/512, and Gate-2 reach 2/512. All array hashes, phase/layout,
+  and finite enveloped query labels independently verify. Metadata/state/log/
+  archive hashes are `e7bfdba1...`/`75a89042...`/`c860ba57...`/`c2f868dc...`.
+- Fix future report serialization by converting the complete predicate map to
+  Python bool (`cf0b8f6d...`), without authorizing a rerun. Preregister VG013
+  as a deterministic postcollection recovery: replay stored nonterminal
+  actions, derive only 512 terminal actions from source-locked VG010, and
+  require exact native observation/action/terminal/phase reproduction plus all
+  original hard predicates.
+- Recovery/runner/test/preregistration hashes are `070f9b8d...`/`8511c9b1...`/
+  `97c6bbe7...`/`8263105f...`; tests pass `40/40` and both native suites pass.
+  VG013 has not run and grants no live authority.

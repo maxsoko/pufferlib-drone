@@ -204,7 +204,9 @@ def dagger_collection_predicates(
         predicates["gate_2_reach_rate"] = (
             metrics.get("env/ordered_gate1_sampled", 0.0) >= MINIMUM_GATE2_RATE
         )
-    return predicates
+    # NumPy reductions yield np.bool_; reports and terminal state must remain
+    # strict JSON on both accepted and rejected collection paths.
+    return {name: bool(passed) for name, passed in predicates.items()}
 
 
 def dagger_collection_passes(

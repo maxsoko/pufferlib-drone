@@ -74,6 +74,7 @@ def test_vg009_admission_preserves_failure_states_but_requires_safe_transport() 
     arguments = _passing_arguments()
     assert dagger_collection_passes(metrics, **arguments)
     predicates = dagger_collection_predicates(metrics, **arguments)
+    assert all(type(value) is bool for value in predicates.values())
     assert "crossing_margin_violation" not in predicates
     assert crossing_margin_diagnostic(metrics) == {
         "crossing_margin_violation": 0.4375,

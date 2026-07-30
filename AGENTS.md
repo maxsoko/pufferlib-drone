@@ -9941,3 +9941,40 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   shell syntax, and diff hygiene pass. No VG012 rollout has run yet. FlightSim
   remains frozen, N712 remains closed, and shadow, Training, and Submission
   remain forbidden.
+
+### VQ2 VG012 postcollection failure and VG013 recovery — 2026-07-30
+
+- VG012 ran once on retained RTX 4090 instance `46201898` from source commit
+  `107963410014...`. Remote native/vision regressions, float32 CUDA build/ABI,
+  and `36/36` tests passed before seed `429064` began. The 512-episode rollout
+  reached writer finalization, but accepted-report serialization failed because
+  `post_gate_1_records_present` remained a NumPy boolean. Never invoke VG012
+  resume: its generic collecting-state path would delete the finalized arrays
+  and rerun the policy unchanged.
+- The finalized corpus has `171,903` records with length min/mean/max
+  `110/335.748046875/2,048`. All 512 valid prefixes are contiguous and have
+  one final terminal. Phase records are `[94697,77121,85,0,...]`; 371/512
+  (`72.4609375%`) reach Gate 1 and 2/512 (`0.390625%`) reach Gate 2. All 373
+  phase increments are monotone/exact `/16`; query labels are finite and
+  inside `[-1,1]`.
+- Array SHA-256 values for action/mask/tail/terminal/valid are
+  `a7e5c358...`/`1f2c8590...`/`80b8fabf...`/`a17bc26a...`/`3c18a5a8...`.
+  Metadata/state/log/archive hashes are `e7bfdba1...`/`75a89042...`/
+  `c860ba57...`/`c2f868dc...`. The 51 MB post-exit preservation archive was
+  copied and independently extracted locally; both paid instances are stopped.
+- The generic collector now converts every predicate to a native Python bool
+  before either report path; its fixed SHA is `cf0b8f6d...`. This fix does not
+  authorize a second VG012 rollout.
+- Preregister one deterministic recovery tagged
+  `vq2_vg013_vg012_postcollection_recovery_001`. It recreates the same native
+  seed/config and replays each recorded nonterminal action from the next legal
+  action-history row. VG010 advances only to prove action parity and derives
+  the one unavailable terminal action per episode. No new course is sampled.
+- VG013 admission requires every original hard collection predicate, exact
+  active/terminal layout, exact stored mask bytes, tail/action/executed-action
+  error at most `1e-7`, all 171,903 actions and 512 terminals, exact phase
+  records, and finite enveloped actor output. Recovery/runner/test/prereg hashes
+  are `070f9b8d...`/`8511c9b1...`/`97c6bbe7...`/`8263105f...`; focused tests
+  pass `40/40`, both native suites pass, and the full local corpus audit passes.
+  VG013 has not run. FlightSim, N712, shadow, Training, and Submission remain
+  forbidden.
