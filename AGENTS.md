@@ -10162,3 +10162,22 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   `3a06b184...`/`670c6dd9...`/`422e59b9...`. Focused and adjacent tests pass
   `31/31`; parent loading and the full VG016 loader/hash/phase audit pass.
   VG017 has not run and authorizes no live activity.
+
+### VQ2 four-source recurrent refit admitted — VG017, 2026-07-30
+
+- VG017 completed its sole seed-`429080` run from source commit `68e024c8...`
+  with no resume. All 12 epochs and `94,428` optimizer updates completed with
+  exact `0.40/0.15/0.15/0.30` source weights and minimum `3.0x` transition
+  exposure.
+- Epoch 11 is selected. Balanced validation improves from `0.112781651689` to
+  `0.019213320459` (`5.87x`), while VG016 improves from `0.342616097521` to
+  `0.037651743717` (`9.10x`). Recovered VG012 also improves to
+  `0.043122754397`; clean/VG009 are `0.001008161865/0.006974129592`, both well
+  within their fixed caps.
+- Checkpoint/report/state/log/exit SHA-256 values are `6769476f...`/
+  `476c7306...`/`4a723fd5...`/`5244cbd3...`/`9a271f2a...`. Remote and local
+  completed-output verifiers and sync parity pass. Admission evidence JSON
+  SHA-256 is `df664cba...`; both GPU instances are stopped.
+- VG017 is numerical evidence only and authorizes one separately preregistered
+  fresh teacher-free screen. FlightSim, shadow, Training, and Submission
+  remain forbidden.

@@ -10295,3 +10295,19 @@ For each training/eval block, record:
   `670c6dd9...`/`422e59b9...`; tests pass `31/31`, parent loading passes, and
   the VG016 loader verifies all hashes and phase records. VG017 has not run;
   live authority remains zero.
+
+### VQ2 VG017 refit admission — 2026-07-30
+
+- The sole seed-`429080` fit completed 12/12 epochs without resume and selected
+  epoch 11 after `94,428` updates. Every source-weight and transition audit
+  passes.
+- Balanced validation improves `0.112781651689 → 0.019213320459`; VG016
+  improves `0.342616097521 → 0.037651743717`. Selected clean/VG009/recovered-
+  VG012 values are `0.001008161865/0.006974129592/0.043122754397`, satisfying
+  all preservation caps.
+- Checkpoint/report/state/log/exit hashes are `6769476f...`/`476c7306...`/
+  `4a723fd5...`/`5244cbd3...`/`9a271f2a...`; remote/local verification and sync
+  parity pass. Admission evidence SHA is `df664cba...`; both GPU instances are
+  stopped.
+- VG017 authorizes only one fresh teacher-free offline screen; no live action
+  is authorized.

@@ -1,0 +1,102 @@
+{
+  "schema": "vq2_vg017_four_source_refit_admission_v1",
+  "tag": "vq2_vg017_variable_gate_four_source_refit_001",
+  "date": "2026-07-30",
+  "source_commit": "68e024c869ee6137addb4eaf69e45c3bde4536bb",
+  "completed": true,
+  "numerically_admitted": true,
+  "resume_count": 0,
+  "exit_code": 0,
+  "best_epoch": 11,
+  "epochs_completed": 12,
+  "optimizer_updates": 94428,
+  "wall_time_seconds": 3023.254284255905,
+  "baseline_validation": {
+    "clean_weighted_mse": 0.0004734345390305828,
+    "vg009_weighted_mse": 0.0067721361533606885,
+    "recovered_vg012_weighted_mse": 0.05861085462904192,
+    "vg016_weighted_mse": 0.3426160975210664,
+    "source_balanced_weighted_mse": 0.11278165168929254
+  },
+  "selected_validation": {
+    "clean_weighted_mse": 0.0010081618645085386,
+    "vg009_weighted_mse": 0.006974129592088099,
+    "recovered_vg012_weighted_mse": 0.04312275439684425,
+    "vg016_weighted_mse": 0.03765174371732631,
+    "source_balanced_weighted_mse": 0.01921332045934116
+  },
+  "improvement": {
+    "source_balanced_factor": 5.869971925360781,
+    "vg016_factor": 9.099607712548085,
+    "recovered_vg012_factor": 1.3591630555336487,
+    "clean_weighted_mse_below_cap": true,
+    "vg009_weighted_mse_below_cap": true,
+    "recovered_vg012_weighted_mse_below_cap": true,
+    "clean_cap": 0.02,
+    "vg009_cap": 0.02,
+    "recovered_vg012_cap": 0.1
+  },
+  "optimization_audit": {
+    "clean_objective_weight_per_update": 0.4,
+    "vg009_objective_weight_per_update": 0.15,
+    "recovered_vg012_objective_weight_per_update": 0.15,
+    "vg016_objective_weight_per_update": 0.3,
+    "all_epoch_source_weight_audits_pass": true,
+    "minimum_transition_window_exposure": 3.0,
+    "recurrent_bptt_steps": 256,
+    "genuine_episode_boundaries": true
+  },
+  "dataset_phase_audit": {
+    "vg003_clean_phase_increments": 1920,
+    "vg009_phase_increments": 515,
+    "recovered_vg012_phase_increments": 373,
+    "vg016_phase_increments": 510,
+    "maximum_phase_encoding_error": 0.0
+  },
+  "artifact_sha256": {
+    "checkpoint": "6769476f309beb4bb502c64a83c4f992b47da2b1a8d8b6913398b4b19b3ab4a8",
+    "report": "476c730649c0f127feb4975fe2ad44f66be64b0ea8dde4d48c5ada7bb0d4c86b",
+    "completed_state": "4a723fd5fd20c376202f5c723fde09c71021d5bc98eaa2aa3c15cd415520b13c",
+    "runner_log": "5244cbd3784c7d1791e4c13ea226bc97e58a8ed42400970e1f174b68e1fb842f",
+    "runner_exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  "input_sha256": {
+    "vg014_checkpoint": "60d69a1f80a1551b190cd4b517dfa029bc3dbe48728a853a47b658df0866d79e",
+    "vg014_report": "067d9c198c14959dbb7221d34f9fec0f065a3cee41043e3ce0ff1f9a7bbf0a16",
+    "vg014_admission": "073fc31e143e2d8e61e40cead685698c47e012b7153b32622bd4dc202fbcfa72",
+    "vg003_report": "b8069d05cec63038659893a4020fa61ca1276ae035bc1a2ea5754f75e2298e85",
+    "vg003_metadata": "7a5d6359641c3e01f838e6fcdb57d32ddc18cc71ddbf1f8b3d0025309cabfe64",
+    "vg009_report": "72c1e41d128f16ff082362e0dac2fb0cea36eef1a7d65e8e96f8ec31c3f50637",
+    "vg009_metadata": "da20bd4ef93b7371712880787226a7f41b23785841d7307d501e0b7a8f829468",
+    "vg012_metadata": "e7bfdba11d1a1c65187c820203bb3a675d51b93cdff9270498ce8280aa25caac",
+    "vg013_recovery_report": "38358a5813b7d6811d186006bc44a2e4470e51ad5a3d9c462bef4516b2b069c9",
+    "vg016_report": "bcd86c8b594b459644201f3baa218443b56aae5b63779f244bd2c4abeeeaa197",
+    "vg016_metadata": "4f075d2d8a6e194c055ac73e9fdb322be727ac75ceac13f5dde3b5a67e2dfba9",
+    "vg016_admission": "eb6c4f56f3565a9c980693c360dcc173da10cec7b4b639446c07ee79da1baf90",
+    "preregistration": "422e59b9c6479eb9d1774df2b6547d7a4cf84b25bc0b6a4d7bf3e4e61db7131c"
+  },
+  "verification": {
+    "remote_completed_output_verifier": true,
+    "local_completed_output_verifier": true,
+    "remote_to_local_artifact_hashes_exact": true,
+    "all_twelve_epoch_weight_and_transition_audits_pass": true
+  },
+  "safety": {
+    "actor_input_privileged_values": 0,
+    "teacher_blend": 0.0,
+    "teacher_plant_actions": 0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "submission_authorized": false
+  },
+  "compute": {
+    "training_instance_id": 46201898,
+    "gpu": "NVIDIA GeForce RTX 4090",
+    "instance_cur_state_after_sync": "stopped",
+    "instance_intended_status_after_sync": "stopped",
+    "gpu_utilization_after_stop_percent": 0.0,
+    "replacement_instance_id": 46256686,
+    "replacement_instance_stopped": true
+  },
+  "next_authority": "One separately preregistered fresh teacher-free deterministic screen only; no shadow, VQ2 Training, or Submission action is authorized."
+}
