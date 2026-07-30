@@ -10268,3 +10268,21 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   training data only; next authority is a separately preregistered five-source
   refit preserving VG003/VG009/recovered-VG012/VG016 and adding VG019.
   FlightSim, shadow, Training, and Submission remain forbidden.
+
+### VQ2 five-source recurrent refit — VG020, 2026-07-30
+
+- Preregister one 12-epoch fit from VG017, seed `429094`, pairing VG003,
+  VG009, recovered VG012, VG016, and VG019 chunks on every update at exact
+  normalized weights `0.35/0.10/0.10/0.15/0.30`.
+- Use four agents per source, 256-step BPTT, four transition exposures, AdamW
+  `1e-5`, weight decay `1e-5`, gradient cap `1.0`, and smoothness `1e-4`.
+  The lower learning rate protects Gate 1 while the new VG019 states and higher
+  transition exposure target the persistent Gate-2 failure.
+- Select minimum fixed-weight five-source validation. Numerical admission
+  requires an overall and VG019 improvement, clean/VG009 MSE at most `0.02`,
+  each later source at most `0.10`, exact weights, and `>=4.0x` transition
+  exposure. Admission can authorize only a fresh offline screen.
+- Trainer/runner/test/preregistration SHA-256 values are `3421998f...`/
+  `b44c5572...`/`eaab4e5e...`/`3e7849d3...`. Focused and adjacent tests pass
+  `36/36`, all five dataset loaders/hash/phase audits pass, both native suites
+  pass, and CLI/runner syntax passes. VG020 authorizes no live activity.

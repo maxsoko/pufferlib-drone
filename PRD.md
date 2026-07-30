@@ -10373,3 +10373,17 @@ For each training/eval block, record:
   SHA is `9b110d50...`. Instance `46275514` is stopped with disk retained.
 - VG019 authorizes only a separately preregistered five-source refit retaining
   VG003/VG009/recovered-VG012/VG016 and adding VG019; live authority is zero.
+
+### VQ2 five-source recurrent refit — VG020, 2026-07-30
+
+- Run one 12-epoch fit from VG017, seed `429094`, pairing VG003/VG009/
+  recovered-VG012/VG016/VG019 at exact per-update weights
+  `0.35/0.10/0.10/0.15/0.30`.
+- Preserve four-agent source batches and 256-step recurrence; increase
+  transition exposure to `4.0x` while lowering AdamW to `1e-5`. Select minimum
+  fixed-weight validation and require overall/VG019 improvement plus fixed
+  per-source preservation caps.
+- Trainer/runner/test/preregistration hashes are `3421998f...`/`b44c5572...`/
+  `eaab4e5e...`/`3e7849d3...`; all `36/36` focused/adjacent tests, five full
+  dataset loaders, and both native suites pass. VG020 can authorize only a new
+  teacher-free offline screen; live authority remains zero.
