@@ -1,0 +1,172 @@
+{
+  "schema": "vq2_vg025_six_source_refit_admission_v1",
+  "tag": "vq2_vg025_variable_gate_six_source_refit_001",
+  "date": "2026-07-30",
+  "source_commit": "ddb1aa6506403c36e98fef73a7854896e7d8e6ca",
+  "completed": true,
+  "numerically_admitted": true,
+  "exit_code": 0,
+  "best_epoch": 5,
+  "epochs_completed": 6,
+  "optimizer_updates": 64060,
+  "wall_time_seconds": 5275.614272244973,
+  "baseline_validation_weighted_mse": {
+    "clean": 0.001098834732804026,
+    "vg009": 0.005883390232095976,
+    "recovered_vg012": 0.04272573101792143,
+    "vg016": 0.030032797044049892,
+    "vg019": 0.018746281005405072,
+    "vg024": 0.05822764413154265,
+    "source_balanced": 0.028955003783597753
+  },
+  "selected_validation_weighted_mse": {
+    "clean": 0.0014724487330268381,
+    "vg009": 0.006805755992290477,
+    "recovered_vg012": 0.042591179859553276,
+    "vg016": 0.03221419182043183,
+    "vg019": 0.016596490825003023,
+    "vg024": 0.010012726881823013,
+    "source_balanced": 0.01212692862693193
+  },
+  "admission_audit": {
+    "source_balanced_improvement_factor": 2.3876617628715495,
+    "vg024_improvement_factor": 5.81536326904596,
+    "clean_cap": 0.02,
+    "vg009_cap": 0.02,
+    "recovered_vg012_cap": 0.06,
+    "vg016_cap": 0.05,
+    "vg019_cap": 0.04,
+    "vg024_cap": 0.1,
+    "all_caps_pass": true,
+    "all_epoch_source_weight_audits_pass": true,
+    "minimum_transition_window_exposure": 4.0,
+    "recurrent_bptt_steps": 256,
+    "genuine_episode_boundaries": true,
+    "six_independently_normalized_sources_per_update": true,
+    "raw_record_count_sets_source_weight": false,
+    "all_report_values_finite": true
+  },
+  "source_weights_per_optimizer_update": {
+    "clean": 0.3,
+    "vg009": 0.05,
+    "recovered_vg012": 0.05,
+    "vg016": 0.1,
+    "vg019": 0.15,
+    "vg024": 0.35
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "optimizer_updates": 10887,
+      "source_balanced_validation_weighted_mse": 0.014690220502249147,
+      "minimum_transition_window_exposure": 4.0,
+      "source_weight_audit": true
+    },
+    {
+      "epoch": 2,
+      "optimizer_updates": 21373,
+      "source_balanced_validation_weighted_mse": 0.013603781120136226,
+      "minimum_transition_window_exposure": 4.0,
+      "source_weight_audit": true
+    },
+    {
+      "epoch": 3,
+      "optimizer_updates": 31785,
+      "source_balanced_validation_weighted_mse": 0.013006904978104307,
+      "minimum_transition_window_exposure": 4.0,
+      "source_weight_audit": true
+    },
+    {
+      "epoch": 4,
+      "optimizer_updates": 42548,
+      "source_balanced_validation_weighted_mse": 0.013127847032556676,
+      "minimum_transition_window_exposure": 4.0,
+      "source_weight_audit": true
+    },
+    {
+      "epoch": 5,
+      "optimizer_updates": 53270,
+      "source_balanced_validation_weighted_mse": 0.01212692862693193,
+      "minimum_transition_window_exposure": 4.0,
+      "source_weight_audit": true
+    },
+    {
+      "epoch": 6,
+      "optimizer_updates": 64060,
+      "source_balanced_validation_weighted_mse": 0.012169122298562656,
+      "minimum_transition_window_exposure": 4.0,
+      "source_weight_audit": true
+    }
+  ],
+  "dataset_phase_audit": {
+    "clean_increments": 1920,
+    "vg009_increments": 515,
+    "recovered_vg012_increments": 373,
+    "vg016_increments": 510,
+    "vg019_increments": 521,
+    "vg024_increments": 519,
+    "maximum_phase_encoding_error": 0.0
+  },
+  "artifact_sha256": {
+    "checkpoint": "85671c31a7c7a25cf49414cd51259357a2efd64b5d2b441fea27c51b93bf77aa",
+    "report": "b9d22d2867b8518a0f8b1b8a0fbbad9d0977f3a57e189b83d1362be98f38dcb6",
+    "completed_state": "f4a1b84ff0142872b22de646fa2c21ffd7f1f1b37b2f46c33043fb6ad5afa025",
+    "runner_log": "5d868cb5c8462dd5b9584996b1bcbae811dd042592507e53f5daeb7c54839761",
+    "runner_exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "remote_completed_resume_log": "b9d22d2867b8518a0f8b1b8a0fbbad9d0977f3a57e189b83d1362be98f38dcb6",
+    "remote_completed_resume_exit": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9",
+    "local_completed_resume_log": "b9d22d2867b8518a0f8b1b8a0fbbad9d0977f3a57e189b83d1362be98f38dcb6",
+    "local_completed_resume_exit": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"
+  },
+  "epoch_state_sha256": {
+    "epoch_1": "42ad4703b71d2276a88647b484895139578249526facf7916f17015f146d7a51",
+    "epoch_2": "8ffc158db83a6c17e27eb28425ef775345542ec4d1a4be0ee44f9aa79616f188",
+    "epoch_3": "e4e368d685ce4d829d178661457100a40a8562e565e9122284cb31ca19b9b6d0",
+    "epoch_4": "fc4e121bb256b9194ae2a4511ae1f1cc6cfaf529221cbfbb38da21233aa88b3f",
+    "epoch_5": "219447c2aa3cae1e20456e70eea8015d97adaeae8449407b0242902fff89af85",
+    "epoch_6_completed": "f4a1b84ff0142872b22de646fa2c21ffd7f1f1b37b2f46c33043fb6ad5afa025"
+  },
+  "input_sha256": {
+    "goal_prompt": "052ba7cb7a6db0b0274731f555a726994f83d424cb50e70f055e804926333e89",
+    "preregistration": "b57da8f7c51928fdbfc77128b43374555ac994b4ff519ee77615f968a1818e8b",
+    "parent_checkpoint": "bd3f93d46e2b04af4a1ae843ac8a920bd75e2954079dbba3c6a3da541bb93915",
+    "parent_report": "23d281824813e14c3d77c4446a36f4af4d29769c01bdd0a46202caae017c95b3",
+    "vg024_report": "5d36213f14e8efca977fc9cfb501d9e264ec8e1856fcd4a5c71bc0a45d6eaa96",
+    "vg024_metadata": "dfe6474521a063f923d7de1d7303cc3004087e1a115b2fc713353be1ac2c69c4",
+    "vg024_admission": "3b31cb2e3d5d60d0443cb46eaa3e9facc0b9673ab233e253a1de20e506e201dd"
+  },
+  "verification": {
+    "remote_completed_output_verifier": true,
+    "local_completed_output_verifier": true,
+    "remote_completed_resume_state_unchanged": true,
+    "local_completed_resume_state_unchanged": true,
+    "remote_to_local_artifact_hashes_exact": true,
+    "independent_checkpoint_equals_selected_best_state": true,
+    "history_is_exact_epochs_1_through_6": true
+  },
+  "runtime": {
+    "python": "3.12.3",
+    "torch": "2.10.0a0+a36e1d39eb.nv26.01.42222806",
+    "torch_cuda": "13.1",
+    "numpy": "2.1.0",
+    "machine": "x86_64"
+  },
+  "safety": {
+    "actor_input_privileged_values": 0,
+    "teacher_blend": 0.0,
+    "teacher_plant_actions": 0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "shadow_authorized": false,
+    "training_authorized": false,
+    "submission_authorized": false
+  },
+  "compute": {
+    "training_instance_id": 46280503,
+    "gpu": "NVIDIA GeForce RTX 4090",
+    "effective_cpu_count": 36.57142857142857,
+    "historical_idle_instances_stopped": [46201898, 46256686, 46275514],
+    "instance_retained_running_for_fresh_screen": true
+  },
+  "next_authority": "One separately preregistered fresh teacher-free deterministic native screen only; no shadow, VQ2 Training, or Submission action is authorized."
+}

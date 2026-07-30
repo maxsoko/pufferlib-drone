@@ -10485,3 +10485,26 @@ For each training/eval block, record:
 - Trainer/runner/test/preregistration hashes are `a3142bf3...`/`9dc71bb9...`/
   `b25f18c1...`/`b57da8f7...`; `47/47` focused tests and both native suites
   pass. No live authority is granted.
+
+### VQ2 VG025 admission and VG026 accelerated fresh screen — 2026-07-30
+
+- VG025 completes the fixed six-epoch contract in `5,275.614272 s` and selects
+  epoch 5 after `64,060` cumulative updates. Balanced validation improves
+  `0.0289550038 -> 0.0121269286`; VG024 improves
+  `0.0582276441 -> 0.0100127269`. All six preservation caps, exact source
+  weights, finite-value checks, and `4.0x` transition exposure pass.
+- Checkpoint/report/state/log/exit hashes are `85671c31...`/`b9d22d28...`/
+  `f4a1b84f...`/`5d868cb5...`/`9a271f2a...`. Remote/local completed verifiers
+  and immutable completed-resume checks pass; admission evidence SHA is
+  `633a34d5...`. FlightSim packet count remains zero.
+- VG026 screens only that actor on 256 fresh teacher-free courses at counts
+  5/8/11/12 using seeds `429111/429114/429117/429118`. Require at least 231
+  ordered finishes and zero crash or hard phase/action/transport fault.
+- A source-locked 4-vs-32-thread probe must first reproduce exactly 128 steps
+  and 8,192 actions per run, exact discrete fields, and numeric error at most
+  `1e-7`, with zero policy-state or optimizer writes. Only an admitted probe
+  permits the 32-thread screen.
+- Wrapper/parity/runner/test/parity-test/preregistration hashes are
+  `e0df8de3...`/`48985cdf...`/`13771ba9...`/`720fcb6b...`/
+  `7cb6c936...`/`155396ec...`; local gates pass `40/40` plus both native
+  suites. This grants no shadow, Training, or Submission authority.

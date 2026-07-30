@@ -10456,3 +10456,36 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   runner/test/preregistration hashes are `a3142bf3...`/`9dc71bb9...`/
   `b25f18c1...`/`b57da8f7...`; both native suites and `47/47` focused tests
   pass. VG025 is offline-only and grants no live authority.
+
+### VQ2 VG025 numerical admission / VG026 accelerated screen — 2026-07-30
+
+- VG025 completed all six source-locked epochs once in `5,275.614272 s` with
+  `64,060` optimizer updates. Epoch 5 is selected at source-balanced validation
+  MSE `0.01212692862693193`, improving the `0.028955003783597753` baseline by
+  `2.387662x`. Its newly visited VG024 validation improves from `0.0582276441`
+  to `0.0100127269` (`5.815363x`).
+- Selected clean/VG009/recovered-VG012/VG016/VG019/VG024 values are
+  `0.001472449/0.006805756/0.042591180/0.032214192/0.016596491/
+  0.010012727`; all frozen caps pass. Every epoch proves exact six-source
+  weights and `4.0x` transition exposure. The actor remains the unchanged
+  4,119-input recurrent full-output Puffer policy with zero teacher blend.
+- Checkpoint/report/completed-state/log/exit SHA-256 values are `85671c31...`/
+  `b9d22d28...`/`f4a1b84f...`/`5d868cb5...`/`9a271f2a...`. Remote and local
+  completed-output verifiers pass, both completed-resume checks return zero and
+  leave the state hash unchanged, and every epoch boundary is mirrored locally.
+  Admission evidence SHA-256 is `633a34d5...`.
+- Preregister one fresh screen tagged
+  `vq2_vg026_variable_gate_recurrent_teacher_free_256`: counts 5/8/11/12,
+  64 terminal episodes each, fresh seeds `429111/429114/429117/429118`, at
+  least `231/256` ordered finishes, and zero crash or hard transport/phase
+  fault. Crossing margin remains diagnostic at the real `0.75 m` aperture.
+- Before any admission episode, require a bounded 4-vs-32-thread parity probe:
+  64 count-5 agents for exactly 128 steps and 8,192 actions per run, exact
+  discrete fields, numeric error at most `1e-7`, and zero optimizer/state/
+  teacher/FlightSim work. A local dry check with the frozen historical actor
+  was exact; only the source-locked VG025-bound remote report is authoritative.
+- Wrapper/parity-checker/runner/wrapper-test/parity-test/preregistration hashes
+  are `e0df8de3...`/`48985cdf...`/`13771ba9...`/`720fcb6b...`/
+  `7cb6c936...`/`155396ec...`. Both native suites, compilation/shell checks,
+  and `40/40` focused tests pass. VG026 is offline-only; shadow, VQ2 Training,
+  and Submission remain unauthorized.
