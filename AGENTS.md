@@ -9835,3 +9835,30 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   `C:\Users\anon\Desktop\AI-GP Simulator v1.0.3391\AIGP_3391\FlightSim.exe`;
   teacher plant actions, FlightSim packets, N712 access, shadow, Training, and
   Submission authorization remain zero.
+
+### VQ2 source-balanced recurrent refit admitted — VG010, 2026-07-30
+
+- Source commit `67872b79...` passed remote native/vision regressions, a fresh
+  float32 CUDA build/ABI check, and `22/22` focused tests before epoch zero.
+  The sole seed-`429050` run completed all 12 epochs without resume in
+  `3699.850431 s`, with `83,449` optimizer updates.
+- Epoch 12 is selected. Equal-source validation weighted MSE falls from the
+  VG005 baseline `0.2285099178` to `0.003846616384` (`59.4054x`). VG009
+  validation falls from `0.4569625541` to `0.007483940194` (`61.0591x`), while
+  clean validation is `0.000209292575`, safely below the fixed `0.02` cap.
+- All 12 epochs have exact zero source-weight difference and minimum `3.0x`
+  transition exposure. The actor has zero privileged input/teacher blend;
+  FlightSim packets, sealed-test accesses, and Submission authorization are
+  zero.
+- Checkpoint/report/completed-state/runner-log SHA-256 values are
+  `a0934753...`/`dfe943b5...`/`c7ae30ca...`/`a283a1fa...`. The completed
+  resume verifier and an independent local audit both reproduce the full hash
+  chain. Admission evidence JSON SHA is `c0fbfc72...`.
+- The previously partial local VG003 corpus was recovered exactly from
+  retained instance `46201898`: compressed archive SHA is `9c41a835...`, all
+  five array hashes match metadata, and the local loader independently sees
+  `2,396,907` records plus all `1,920` legal phase increments. Both Vast
+  instances are stopped after evidence sync.
+- VG010 is numerical fit evidence only. It authorizes one separately
+  preregistered teacher-free deterministic screen on new courses; it does not
+  authorize shadow, VQ2 Training, or Submission.

@@ -10089,3 +10089,20 @@ For each training/eval block, record:
   resumed and completed outputs fail closed on identity mismatch. No teacher
   plant action, FlightSim packet, N712 access, shadow, Training, or Submission
   action is authorized by VG010.
+
+### VQ2 source-balanced refit admitted — VG010, 2026-07-30
+
+- The sole source-locked seed-`429050` run completed 12/12 epochs with no
+  resume, `83,449` updates, exact `0.5/0.5` source balance in every epoch, and
+  minimum `3.0x` transition exposure.
+- Selected epoch 12 scores `0.003846616384` equal-source validation versus
+  VG005's `0.2285099178`. VG009 validation improves from `0.4569625541` to
+  `0.007483940194`; clean validation is `0.000209292575` under the fixed
+  `0.02` cap. VG010 is numerically admitted.
+- Checkpoint/report/state/log hashes are `a0934753...`/`dfe943b5...`/
+  `c7ae30ca...`/`a283a1fa...`; independent local and completed-resume audits
+  pass. Admission evidence SHA is `c0fbfc72...`.
+- Exact VG003 recovery is complete: archive SHA `9c41a835...`, all array
+  hashes match, `2,396,907` records and `1,920` phase increments verify. Both
+  retained GPU instances are stopped. Next authority is a separately
+  preregistered teacher-free screen only; live activity remains forbidden.

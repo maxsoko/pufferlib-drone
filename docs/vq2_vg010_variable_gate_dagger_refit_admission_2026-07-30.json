@@ -1,0 +1,88 @@
+{
+  "schema": "vq2_vg010_source_balanced_refit_admission_v1",
+  "tag": "vq2_vg010_variable_gate_source_balanced_refit_001",
+  "date": "2026-07-30",
+  "source_commit": "67872b796c9848e73d288fb1e4964a3077b9911d",
+  "completed": true,
+  "numerically_admitted": true,
+  "resume_count": 0,
+  "exit_code": 0,
+  "best_epoch": 12,
+  "epochs_completed": 12,
+  "optimizer_updates": 83449,
+  "wall_time_seconds": 3699.850430684164,
+  "baseline_validation": {
+    "clean_weighted_mse": 5.728148761635799e-05,
+    "dagger_weighted_mse": 0.4569625541189154,
+    "source_balanced_weighted_mse": 0.22850991780326588
+  },
+  "selected_validation": {
+    "clean_weighted_mse": 0.00020929257494672866,
+    "dagger_weighted_mse": 0.007483940193738347,
+    "source_balanced_weighted_mse": 0.003846616384342538
+  },
+  "improvement": {
+    "source_balanced_factor": 59.40543453550612,
+    "dagger_factor": 61.05908682985551,
+    "clean_mse_below_preregistered_cap": true,
+    "preregistered_clean_weighted_mse_cap": 0.02
+  },
+  "optimization_audit": {
+    "clean_objective_weight_per_update": 0.5,
+    "dagger_objective_weight_per_update": 0.5,
+    "all_epoch_source_weight_differences_zero": true,
+    "minimum_transition_window_exposure": 3.0,
+    "recurrent_bptt_steps": 256,
+    "genuine_episode_boundaries": true
+  },
+  "artifact_sha256": {
+    "checkpoint": "a093475371a94bc284310bbe64609fe515a35e50be0e68a7fdfb781b55f03822",
+    "report": "dfe943b593f99c4ccfa53b04290a30cd3a58ea9fefd11d9489786e064b8734a5",
+    "completed_state": "c7ae30cab7995978f8a99c2e9c9753923402fafa5acaac902aa64966f6101b41",
+    "runner_log": "a283a1faf3d273eb7e254239bd6865e9d094b1c9ee4a4575c7b4e0ebe1fa7e53"
+  },
+  "input_sha256": {
+    "vg005_checkpoint": "f686a35dc923137bc40fd6feca459e52e5585d5b6fa047b7f77a171e2832a6c3",
+    "vg005_report": "bdcd2b38ea3537f2c250281c63f2e6aeca0ad87c97521339f098eec7ff474e5b",
+    "vg003_report": "b8069d05cec63038659893a4020fa61ca1276ae035bc1a2ea5754f75e2298e85",
+    "vg003_metadata": "7a5d6359641c3e01f838e6fcdb57d32ddc18cc71ddbf1f8b3d0025309cabfe64",
+    "vg009_report": "72c1e41d128f16ff082362e0dac2fb0cea36eef1a7d65e8e96f8ec31c3f50637",
+    "vg009_metadata": "da20bd4ef93b7371712880787226a7f41b23785841d7307d501e0b7a8f829468",
+    "vg009_admission": "71c4898f7a7a306b0f6def06bda63d5192de456c8a849e1f08f83ba908cd3091",
+    "preregistration": "1de4c1ff2ea8c530c445feb04ef13d43efb9db4ea236d19016ae870a0a4e56ba"
+  },
+  "vg003_recovery": {
+    "source_instance_id": 46201898,
+    "archive_sha256": "9c41a83503869caa44285b566014e217a361499f1db0fb046adfdad19547abb5",
+    "report_sha256": "b8069d05cec63038659893a4020fa61ca1276ae035bc1a2ea5754f75e2298e85",
+    "metadata_sha256": "7a5d6359641c3e01f838e6fcdb57d32ddc18cc71ddbf1f8b3d0025309cabfe64",
+    "array_sha256": {
+      "action.npy": "c76fee3c4a7a0e4917a086057e46918d7f11cc7812bdc2e0d1f4d9c76f5759fc",
+      "mask.npy": "463e0028feeaa0f8c900a7099c9d99ca7ff7c0c5f08bfb6cb59f89bc05b5f553",
+      "tail.npy": "fd28285dc799880acf8592ff1ee9dcfee6d21d4a930db90ebbfbd6d391304f16",
+      "terminal.npy": "17c11ae6dadcd1175c3df2344ed595644cb5274fc7681b82e5608231cbf97b15",
+      "valid.npy": "c7e70a84e9fdf4ad68eec948ff7f410dfdda48102682bcc552e77b37f88c0080"
+    },
+    "agents": 256,
+    "time_steps": 15266,
+    "records": 2396907,
+    "phase_increments": 1920,
+    "phase_encoding_max_error": 0.0,
+    "independently_verified_local": true
+  },
+  "safety": {
+    "actor_input_privileged_values": 0,
+    "teacher_blend": 0.0,
+    "teacher_plant_actions": 0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "submission_authorized": false
+  },
+  "compute": {
+    "training_instance_id": 46256686,
+    "gpu": "NVIDIA GeForce RTX 4090",
+    "training_instance_stopped_after_sync": true,
+    "source_instance_stopped_after_recovery": true
+  },
+  "next_authority": "A separately preregistered teacher-free deterministic screen only; no shadow, Training, or Submission action is authorized."
+}
