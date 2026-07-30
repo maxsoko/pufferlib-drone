@@ -10199,3 +10199,27 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
 - Base/wrapper/runner/test/preregistration SHA-256 values are `dc91107e...`/
   `2eaacd3c...`/`f02586e8...`/`0a6e6d4b...`/`4b0e77b2...`. Focused and adjacent
   tests pass `27/27`; CLI and runner syntax pass. VG018 is offline-only.
+
+### VQ2 teacher-free screen rejected — VG018, 2026-07-30
+
+- The sole source-locked screen completed all 256 fresh courses and is
+  terminally rejected: `0/256` finishes, `168/256` crashes (`65.625%`),
+  `88/256` misses, and zero timeout. Never retry VG018 unchanged.
+- Gate-1 reach is `254/256`, Gate-2 reach is `4/256`, and one episode reaches
+  Gate 3. Count-specific crash/miss values are 5g `36/28`, 8g `37/27`, 11g
+  `48/16`, and 12g `47/17`; `143/168` crashes are low crashes. The same early
+  transition failure occurs at every requested course length.
+- Transport is exact: executed-action error, phase off-tick/decrease/skip,
+  phase encoding, non-finite action, out-of-order, and action/wire/thrust
+  envelope faults are zero. The `5/256` crossing-margin flags remain
+  diagnostic and are not causal.
+- Aggregate/state/runner-log SHA-256 values are `40be8bf0...`/`8b106a11...`/
+  `c82644ad...`; all count hashes and remote/local parity verify. The detached
+  launch's auxiliary exit tracker was malformed before the runner began and
+  contains only a newline (`01ba4719...`); the screen result is unaffected,
+  and a no-rollout completed-resume audit captured exit `2` with log/exit hashes
+  `40be8bf0...`/`53c234e5...`. Rejection evidence SHA is `b0d7ddb3...`.
+- Relative to VG015, reach improves marginally but crashes rise by 31, so the
+  next authority is a new VG017-visited early-transition DAgger corpus under a
+  fresh tag/seed, preserving VG003/VG009/recovered-VG012/VG016 anchors.
+  FlightSim, shadow, Training, and Submission remain forbidden.

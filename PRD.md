@@ -10323,3 +10323,21 @@ For each training/eval block, record:
 - Base/wrapper/runner/test/preregistration hashes are `dc91107e...`/
   `2eaacd3c...`/`f02586e8...`/`0a6e6d4b...`/`4b0e77b2...`; tests pass `27/27`.
   This screen grants no live authority.
+
+### VQ2 VG018 screen rejection — 2026-07-30
+
+- VG018 is terminally rejected: `0/256` finishes, `168` crashes (`143` low),
+  `88` misses, and no timeout. It reaches Gate 1 on `254/256`, Gate 2 on
+  `4/256`, and Gate 3 on `1/256`; the failure remains the post-Gate-1
+  transition across all four course lengths.
+- Exact action-history and held-phase transport, zero ordering/envelope faults,
+  and only `5/256` diagnostic crossing-margin flags exclude runtime divergence.
+  Compared with VG015, marginal reach gains came with 31 more crashes.
+- Report/state/runner-log hashes are `40be8bf0...`/`8b106a11...`/`c82644ad...`.
+  The detached launch's auxiliary exit capture contains a newline because of
+  orchestration quoting, but terminal output is intact; a completed-resume
+  audit returns exit `2` and reproduces report hash `40be8bf0...`. All remote/
+  local and count/report chains verify. Rejection evidence SHA is `b0d7ddb3...`.
+- Never retry VG018 unchanged. Continue with a newly preregistered VG017-
+  visited early-transition DAgger corpus retaining all prior admitted anchors;
+  no live activity is authorized.
