@@ -9803,3 +9803,35 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   states at equal source objective weight, followed by a new teacher-free
   screen. Teacher plant actions, student updates during collection, FlightSim
   packets, N712 access, shadow, Training, and Submission actions remain zero.
+
+### VQ2 source-balanced recurrent refit preregistration — VG010, 2026-07-30
+
+- Preregister exactly one offline fit tagged
+  `vq2_vg010_variable_gate_source_balanced_refit_001`, seed `429050`. It starts
+  from frozen VG005 SHA `f686a35d...`, reads only admitted VG003 clean anchors
+  and admitted VG009 visited-state labels, and never reads VG007/VG008.
+- Every optimizer update pairs one clean and one failure-state chunk and gives
+  each source exactly `0.5` normalized objective weight; raw clean record
+  volume cannot dilute VG009. Recurrent state follows genuine episode
+  boundaries through 256-step BPTT windows. Public-phase transition windows
+  receive three updates from the same incoming state.
+- Retain twelve epochs, four agents per source, AdamW `3e-5`, weight decay
+  `1e-5`, gradient cap `1.0`, smoothness `1e-4`, and action weights
+  `(1,1,4,1)`. VG003 agents 224--255 and VG009 agents 448--511 are disjoint
+  validation sets. The unchanged VG005 parent is selection epoch zero.
+- Numerical admission requires a child with lower equal-source validation
+  score than VG005, strictly lower VG009 validation MSE, clean validation MSE
+  at most `0.02`, exact equal-weight audit, and at least three transition
+  exposures. Admission authorizes only a newly preregistered teacher-free
+  screen; it authorizes no live action.
+- The source-locked runner verifies every parent/dataset/admission hash,
+  build/runtime prerequisites, both native regression suites, float32 vision
+  ABI, and focused tests before epoch zero. Once resumable state exists, it
+  performs no build, install, or tests. Completed resume also binds current
+  commit/sources, checkpoint, report, and completed state.
+- Trainer/runner/test SHA-256 values are `afc7ea57...`/`76178b04...`/
+  `c8d0b306...`; preregistration SHA is `1de4c1ff...`. The
+  authoritative VQ2 executable remains untouched at
+  `C:\Users\anon\Desktop\AI-GP Simulator v1.0.3391\AIGP_3391\FlightSim.exe`;
+  teacher plant actions, FlightSim packets, N712 access, shadow, Training, and
+  Submission authorization remain zero.

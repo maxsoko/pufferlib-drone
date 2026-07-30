@@ -10065,3 +10065,27 @@ For each training/eval block, record:
   objective weight before a new teacher-free screen. VG009 collection used
   zero teacher plant action, student update, FlightSim packet, N712 access,
   shadow, Training run, or Submission action.
+
+### VQ2 source-balanced recurrent refit — VG010, 2026-07-30
+
+- Run one source-locked offline refit tagged
+  `vq2_vg010_variable_gate_source_balanced_refit_001`, seed `429050`, from
+  immutable VG005. Use admitted VG003 and VG009 only; VG007/VG008 remain
+  quarantined.
+- Pair a clean and visited-state recurrent chunk on every update, normalize
+  each source loss independently, and mix them at exact `0.5/0.5` weight.
+  Preserve real episode boundaries, 256-step BPTT, and three exposures for
+  any window containing a public-phase transition.
+- Train twelve epochs at AdamW `3e-5` with four agents per source. Reserve the
+  final 32 VG003 and final 64 VG009 agents for source-specific validation and
+  include unchanged VG005 as epoch zero in checkpoint selection.
+- A child is numerically admitted only if its equal-source validation score
+  and VG009 score both improve, clean validation weighted MSE remains at most
+  `0.02`, source weights are exact, and transition exposure is at least three.
+  This can authorize a separately preregistered teacher-free screen only.
+- Runner/trainer/test hashes are `76178b04...`/`afc7ea57...`/`c8d0b306...`.
+  Preregistration SHA is `1de4c1ff...`. Epoch-zero state locks
+  the full commit/source/evidence/runtime/RNG identity;
+  resumed and completed outputs fail closed on identity mismatch. No teacher
+  plant action, FlightSim packet, N712 access, shadow, Training, or Submission
+  action is authorized by VG010.
