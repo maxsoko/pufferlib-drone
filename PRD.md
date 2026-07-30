@@ -10311,3 +10311,15 @@ For each training/eval block, record:
   stopped.
 - VG017 authorizes only one fresh teacher-free offline screen; no live action
   is authorized.
+
+### VQ2 fresh teacher-free screen — VG018, 2026-07-30
+
+- Screen only VG017 epoch 11 SHA `6769476f...`: 64 fresh courses each at
+  counts 5/8/11/12, seeds `429085/429088/429091/429092`, under tag
+  `vq2_vg018_variable_gate_recurrent_teacher_free_256`.
+- Require at least 231/256 ordered finishes and zero hard crash, ordering,
+  action/wire/thrust, non-finite, or phase/action-history fault. Crossing margin
+  remains diagnostic while true aperture stays `0.75 m`.
+- Base/wrapper/runner/test/preregistration hashes are `dc91107e...`/
+  `2eaacd3c...`/`f02586e8...`/`0a6e6d4b...`/`4b0e77b2...`; tests pass `27/27`.
+  This screen grants no live authority.
