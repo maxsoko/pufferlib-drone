@@ -10238,3 +10238,16 @@ For each training/eval block, record:
   runner as mode `100644`. Its log/exit hashes are `86efa14b...`/`703d2c10...`.
   Correct only the tree mode to `100755`; then bootstrap 002 may begin the
   still-unused VG015 screen under a fresh source commit.
+
+### VQ2 VG015 screen rejection — 2026-07-30
+
+- VG015 is terminally rejected: `0/256` finishes, `137` crashes, `119` misses,
+  and no timeout. It passes Gate 1 on `246/256` courses but Gate 2 on only
+  `2/256`; no course reaches Gate 3.
+- Exact transport and zero phase/action/ordering faults localize the failure to
+  Gate-2 closed-loop covariate shift. This improves materially over VG011's
+  176 Gate-1 reaches and 193 crashes but remains unsafe and noncompetitive.
+- Report/state/log/exit hashes are `bb655666...`/`85d9d19b...`/`2de58ce7...`/
+  `53c234e5...`; local terminal-chain verification passes. Rejection evidence
+  SHA is `568f948e...`. Never retry VG015 unchanged. Continue only with a
+  preregistered VG014-visited DAgger corpus; no live action is authorized.

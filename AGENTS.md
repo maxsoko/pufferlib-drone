@@ -10073,3 +10073,25 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   Preserve this preflight failure. Correct only the runner tree mode to `100755`
   and launch bootstrap 002 from the new source commit; the VG015 screen tag and
   all preregistered content hashes remain unused and unchanged.
+
+### VQ2 teacher-free screen rejected — VG015, 2026-07-30
+
+- Bootstrap 002 passed its source-locked preflight and completed all 256 fresh
+  courses. VG015 is rejected with `0/256` finishes, `137/256` crashes
+  (`53.515625%`), `119/256` misses, and zero timeout. Never retry it unchanged.
+- Per-count crash/miss values are 5g `31/33`, 8g `37/27`, 11g `34/30`, and
+  12g `35/29`. Gate-1 reach is `246/256`, Gate-2 reach is `2/256`, and no
+  episode reaches Gate 3. Relative to VG011, Gate-1 reach improves from 176
+  and crashes fall from 193, but failure remains localized to the Gate-2
+  transition and is independent of course length.
+- Transport is exact: executed-action error, phase off-tick/decrease/skip,
+  phase-encoding, non-finite action, out-of-order, and action/wire/thrust
+  envelope faults are zero. The `0.0703125` crossing-margin rate remains
+  diagnostic and is not causal.
+- Aggregate/state/log/exit SHA-256 values are `bb655666...`/`85d9d19b...`/
+  `2de58ce7...`/`53c234e5...`; all count hashes and the terminal chain verify
+  locally. Rejection evidence JSON SHA-256 is `568f948e...`. The GPU is stopped
+  after sync.
+- The next authority is a newly preregistered VG014-visited-state DAgger
+  collection retaining VG003, VG009, and recovered-VG012 anchors. FlightSim,
+  shadow, Training, and Submission remain forbidden.
