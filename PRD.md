@@ -10203,3 +10203,19 @@ For each training/eval block, record:
   `4795040a...`/`a30aecf4...`/`397c3b11...`/`9855d318...`; tests pass `27/27`,
   both native suites pass, and recovered-dataset loading verifies all hashes.
   VG014 has not run; live authority remains zero.
+
+### VQ2 VG014 refit admission — 2026-07-30
+
+- The sole seed-`429065` VG014 fit completed 12/12 epochs without resume and
+  selected epoch 8 after `88,890` optimizer updates. All per-epoch source
+  weight and transition-exposure audits pass.
+- Balanced validation improves from `0.145574128220` to `0.016582464965`.
+  Selected clean/VG009/recovered-VG012 weighted MSE values are
+  `0.000473434539/0.006772136153/0.058610854629`, satisfying every numerical
+  admission predicate.
+- Checkpoint/report/state/log hashes are `60d69a1f...`/`067d9c19...`/
+  `8d585f66...`/`56207a53...`; remote and local completed-output verification
+  and sync parity pass. Admission evidence SHA is `073fc31e...`; both Vast
+  instances are stopped.
+- VG014 authorizes only one newly preregistered fresh teacher-free screen.
+  It does not authorize shadow, VQ2 Training, or Submission.

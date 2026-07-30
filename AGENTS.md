@@ -10026,3 +10026,23 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   Focused tests pass `27/27`, both native suites pass, parent loading and the
   full recovered-dataset loader/hash/phase audit pass. VG014 has not run and
   authorizes no live activity.
+
+### VQ2 three-source recurrent refit admitted — VG014, 2026-07-30
+
+- VG014 completed its sole seed-`429065` run from source commit `92d77178...`
+  with no resume. All 12 epochs and `88,890` optimizer updates completed with
+  exact `0.50/0.25/0.25` source balance and minimum `3.0x` transition-window
+  exposure.
+- Epoch 8 is selected. Its source-balanced validation weighted MSE is
+  `0.016582464965`, improving VG010's `0.145574128220` baseline by `8.78x`.
+  Recovered-VG012 improves from `0.574393987536` to `0.058610854629`;
+  VG009 improves from `0.007483940194` to `0.006772136153`. Clean validation
+  is `0.000473434539`, below the fixed `0.02` cap.
+- Checkpoint/report/completed-state/runner-log SHA-256 values are
+  `60d69a1f...`/`067d9c19...`/`8d585f66...`/`56207a53...`. Remote and local
+  completed-output verifiers pass, and synced hashes are exact. Admission
+  evidence JSON SHA-256 is `073fc31e...`.
+- Both Vast instances are stopped after artifact sync. VG014 is numerical fit
+  evidence only and authorizes one separately preregistered fresh teacher-free
+  deterministic screen. FlightSim, shadow, Training, and Submission remain
+  forbidden.
