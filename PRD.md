@@ -10357,3 +10357,19 @@ For each training/eval block, record:
   tests pass `36/36` and both native suites pass. Admission can authorize only
   a five-source refit preserving VG003/VG009/recovered-VG012/VG016; live
   authority remains zero.
+
+### VQ2 VG019 corpus admission — 2026-07-30
+
+- After one preserved pre-action missing-evidence bootstrap, VG019 completed
+  once from commit `965b1a23...` and admitted `475,453` records from 512
+  exact-uniform courses. Length min/mean/max is
+  `298/928.619140625/1,024`; all 20 hard predicates pass.
+- Phase mass is `[132553,340705,2195,0,...]` with 521 exact increments. The
+  corpus reaches Gate 1 in `508/512` and Gate 2 in `13/512`; 170 low crashes,
+  77 misses, and 265 timeouts remain failure-state diagnostics.
+- Report/metadata/state/archive/log/exit hashes are `2079ce9d...`/
+  `773273fc...`/`e003edf3...`/`b9632600...`/`3d7847eb...`/`9a271f2a...`.
+  Full local array/hash/layout/phase verification passes; admission evidence
+  SHA is `9b110d50...`. Instance `46275514` is stopped with disk retained.
+- VG019 authorizes only a separately preregistered five-source refit retaining
+  VG003/VG009/recovered-VG012/VG016 and adding VG019; live authority is zero.

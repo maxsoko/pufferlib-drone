@@ -10243,3 +10243,28 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   Focused and adjacent tests pass `36/36`; both native regression suites pass,
   and CLI/runner syntax checks pass. VG019 is offline-only and, if admitted,
   authorizes only a five-source refit retaining all four prior anchors.
+
+### VQ2 VG017-visited DAgger corpus admitted — VG019, 2026-07-30
+
+- Bootstrap 001 stopped before state/action because the fresh worker lacked
+  frozen VG006/SF016 evidence required by the test shard; log/exit hashes are
+  `24bd2b03...`/`4355a46b...`. After transferring only those exact reports,
+  bootstrap 002 passed both native suites and `36/36` tests and ran once from
+  commit `965b1a23...`.
+- VG019 admitted `475,453` legal records from 512 exact-uniform count-5--12
+  courses. Episode length min/mean/max is `298/928.619140625/1,024`; all 20
+  hard predicates pass. Phase records are `[132553,340705,2195,0,...]` with
+  521 exact held `/16` increments.
+- Diagnostic outcomes are 170 low crashes, 77 misses, and 265 horizon
+  timeouts. Gate-1 reach is `508/512`, Gate-2 reach is `13/512`, and Gate-3
+  reach is zero. Action-history/phase errors, non-finite labels, and hard
+  ordering/action/wire/thrust faults are zero.
+- Report/metadata/state/archive/log/exit SHA-256 values are `2079ce9d...`/
+  `773273fc...`/`e003edf3...`/`b9632600...`/`3d7847eb...`/`9a271f2a...`.
+  The full 2.1 GB corpus was synced through the 131 MB archive; every array
+  hash, shape/dtype, record/layout, terminal, phase, and action-envelope audit
+  passes locally. Admission evidence SHA is `9b110d50...`.
+- Instance `46275514` is stopped with retained disk after sync. VG019 admits
+  training data only; next authority is a separately preregistered five-source
+  refit preserving VG003/VG009/recovered-VG012/VG016 and adding VG019.
+  FlightSim, shadow, Training, and Submission remain forbidden.
