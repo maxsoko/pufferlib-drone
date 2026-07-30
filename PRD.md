@@ -10234,3 +10234,7 @@ For each training/eval block, record:
 - Base/wrapper/runner/test/preregistration hashes are `dc91107e...`/
   `261eaee1...`/`762ddc6c...`/`463fcc39...`/`234bb8ef...`; tests pass `27/27`.
   No live action is authorized by this screen.
+- Bootstrap 001 exited `126` before state or action because Git recorded the
+  runner as mode `100644`. Its log/exit hashes are `86efa14b...`/`703d2c10...`.
+  Correct only the tree mode to `100755`; then bootstrap 002 may begin the
+  still-unused VG015 screen under a fresh source commit.

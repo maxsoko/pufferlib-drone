@@ -10067,3 +10067,9 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   `261eaee1...`/`762ddc6c...`/`463fcc39...`/`234bb8ef...`. Focused and adjacent
   tests pass `27/27`; direct CLI invocation and runner shell syntax pass.
   VG015 is offline-only and authorizes no live activity.
+- Bootstrap 001 stopped before build, test, state creation, or policy action
+  because the newly added runner's executable bit was not represented in Git;
+  exit code is `126`, and log/exit hashes are `86efa14b...`/`703d2c10...`.
+  Preserve this preflight failure. Correct only the runner tree mode to `100755`
+  and launch bootstrap 002 from the new source commit; the VG015 screen tag and
+  all preregistered content hashes remain unused and unchanged.
