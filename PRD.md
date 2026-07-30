@@ -10467,3 +10467,21 @@ For each training/eval block, record:
   The oracle labels only; VG022 remains the full-output plant actor. Wrapper/
   runner/test/preregistration hashes are `6b8063bb...`/`574ad9ac...`/
   `caf21cb6...`/`fb7875d4...`. VG024 is offline-only.
+
+### VQ2 VG024 admission and VG025 refit — 2026-07-30
+
+- VG024 admits all 20 hard predicates with `512,351` labels from 512 episodes,
+  `510` Gate-1 reaches, `12` Gate-2 reaches, `28` low crashes, zero XY/high
+  crashes, `9` misses, and `475` diagnostic timeouts. Phase/action/order/
+  envelope faults are zero; no teacher action or FlightSim packet was emitted.
+- Report/metadata/state/archive hashes are `5d36213f...`/`dfe64745...`/
+  `3eaeae4d...`/`4b15dad4...`. Completed resume is immutable and the locally
+  restored 2.1 GB corpus verifies every array and episode layout. Admission
+  evidence SHA is `3b31cb2e...`.
+- VG025 is one resumable six-epoch refit from VG022 epoch 9. Each optimizer
+  update retains all six sources with exact weights
+  `0.30/0.05/0.05/0.10/0.15/0.35`, uses 256-step BPTT and four transition
+  exposures, and selects only a numerically improved validation epoch.
+- Trainer/runner/test/preregistration hashes are `a3142bf3...`/`9dc71bb9...`/
+  `b25f18c1...`/`b57da8f7...`; `47/47` focused tests and both native suites
+  pass. No live authority is granted.

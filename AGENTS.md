@@ -10429,3 +10429,30 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   `6b8063bb...`/`574ad9ac...`/`caf21cb6...`/`fb7875d4...`. If admitted, VG024
   authorizes only a source-balanced refit retaining all five prior anchors.
   Live authority remains zero.
+
+### VQ2 VG024 admission / VG025 six-source refit — 2026-07-30
+
+- VG024 admits `512,351` legal records from 512 exact-uniform count-5--12
+  VG022-visited episodes in `270.226356 s`. Episode lengths are
+  `309/1000.685547/1024` min/mean/max; phase records are
+  `[135829,375514,1008,0,...]`, with `519` loader-audited increments.
+- It reaches Gate 1 on `510/512` and Gate 2 on `12/512`; diagnostics are `28`
+  low crashes, zero XY/high crashes, `9` misses, `475` horizon timeouts, and
+  `7` crossing-margin violations. All 20 hard corpus predicates pass. Phase,
+  ordering, action-history, action/wire/thrust envelope, non-finite query,
+  teacher-emission, and FlightSim faults are zero.
+- Report/metadata/state/archive/runner-log hashes are `5d36213f...`/
+  `dfe64745...`/`3eaeae4d...`/`4b15dad4...`/`0c4442d5...`. Completed-resume
+  exits zero and leaves state unchanged. The 148 MB archive is hash-exact
+  locally; every 2.1 GB array hash, shape, dtype, record count, and terminal
+  layout independently verifies. Admission evidence SHA is `3b31cb2e...`.
+- Preregister VG025 tag `vq2_vg025_variable_gate_six_source_refit_001`: start
+  from VG022 epoch 9, seed `429110`, six epochs, learning rate `5e-6`, 256-step
+  BPTT, and four transition exposures. Every update contains clean/VG009/
+  recovered-VG012/VG016/VG019/VG024 at exact weights
+  `0.30/0.05/0.05/0.10/0.15/0.35`.
+- Numerical admission requires balanced and VG024 improvement plus clean/prior
+  validation caps `0.02/0.02/0.06/0.05/0.04` and VG024 cap `0.10`. Trainer/
+  runner/test/preregistration hashes are `a3142bf3...`/`9dc71bb9...`/
+  `b25f18c1...`/`b57da8f7...`; both native suites and `47/47` focused tests
+  pass. VG025 is offline-only and grants no live authority.
