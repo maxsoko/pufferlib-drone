@@ -10428,3 +10428,24 @@ For each training/eval block, record:
   while model/Adam moment loading performs the required CUDA migration; local
   restoration and an isolated optimizer step pass. Bootstrap 003 is immutable
   and must not be retried unchanged.
+
+### VQ2 VG022 admission and VG023 fresh screen — 2026-07-30
+
+- Bootstrap 004 at commit `5cc119c6...` passed native/build plus `40/40` tests,
+  then re-admitted bitwise zero-step parity at `5.176540700x` transition-step
+  speedup. CPU-mapped migration restored model/optimizer/scaler/all RNG state
+  exactly and atomically continued VG020 epoch 3 through epoch 12.
+- Epoch 9 is selected after `126,455` total updates. Balanced validation is
+  `0.015374308140`; clean/VG009/VG012/VG016/VG019 values are
+  `0.001098835/0.005883390/0.042725731/0.030032797/0.018746281`. All source
+  caps, weights, and `4.0x` transition audits pass. Accelerated epochs 4--12
+  took `6,812.492 s`, about `12.62` minutes per epoch.
+- Checkpoint/report/state/parity/log/exit hashes are `bd3f93d4...`/
+  `23d28182...`/`96c5e83e...`/`2bc7ac8c...`/`bdf48bda...`/`9a271f2a...`.
+  Remote/local completed verification and continuous sync pass; admission
+  evidence SHA is `ac93a00d...`.
+- VG023 screens only that admitted actor on 256 fresh teacher-free courses at
+  counts 5/8/11/12 with seeds `429101/429104/429107/429108`. Require at least
+  231 finishes and zero hard safety/transport/phase fault. Wrapper/runner/test/
+  preregistration hashes are `fdacf95f...`/`b03974cb...`/`c922b944...`/
+  `20e4c142...`. This is offline-only and grants no live authority.

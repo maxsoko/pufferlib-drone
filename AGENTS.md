@@ -10366,3 +10366,36 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   payload on CPU, after which model/optimizer loaders migrate parameter state
   and CPU/CUDA RNG restoration retains the required tensor representation.
   Never retry bootstrap 003 unchanged.
+
+### VQ2 VG022 accelerated refit admission / VG023 screen — 2026-07-30
+
+- Bootstrap 004 from source commit `5cc119c6...` passed both native suites, a
+  fresh float32 SM89 build, and `40/40` tests. Its zero-step parity rerun is
+  bitwise exact for observations, decode, actor outputs, recurrent state, loss,
+  and every gradient, with `5.176540700x` complete-transition speedup. Parity
+  report SHA-256 is `2bc7ac8c...`.
+- Loading the complete migration payload on CPU preserved CPU/CUDA RNG tensor
+  representation while model weights and Adam moments migrated correctly.
+  VG022 atomically continued the exact VG020 epoch-3 state through epochs
+  4--12. The nine accelerated epochs took `6,812.492 s` total, about `12.62`
+  minutes each versus VG020's `77--80` minutes.
+- Epoch 9 is selected at fixed-weight MSE `0.015374308139712155`, improving the
+  five-source baseline by `3.036x`. Clean/VG009/recovered-VG012/VG016/VG019
+  values are `0.001098835/0.005883390/0.042725731/0.030032797/0.018746281`;
+  all caps pass. All 12 source-weight audits and exact `4.0x` transition
+  exposures pass after `126,455` optimizer updates.
+- Checkpoint/report/completed-state/log/exit SHA-256 values are `bd3f93d4...`/
+  `23d28182...`/`96c5e83e...`/`bdf48bda...`/`9a271f2a...`. Remote and canonical
+  local completed-output verifiers pass, and every epoch state was synced.
+  Numerical admission evidence SHA-256 is `ac93a00d...`.
+- Preregister exactly one fresh screen tagged
+  `vq2_vg023_variable_gate_recurrent_teacher_free_256`: 64 terminal episodes
+  each at counts 5/8/11/12, seeds `429101/429104/429107/429108`. VG022 emits
+  every deterministic recurrent four-action output; teacher blend/control,
+  sampling, clipping, fallback, and privileged input remain zero.
+- Admit VG023 only at `>=231/256` ordered finishes with zero crash, ordering,
+  action/wire/thrust, non-finite, action-history, or public-phase fault. The
+  `0.50 m` crossing margin remains diagnostic at the real `0.75 m` aperture.
+  Generic/wrapper/runner/test/preregistration hashes are `dc91107e...`/
+  `fdacf95f...`/`b03974cb...`/`c922b944...`/`20e4c142...`. VG023 is offline
+  only; FlightSim, shadow, Training, and Submission remain unauthorized.
