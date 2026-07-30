@@ -51,6 +51,7 @@ TOTAL_EPISODES = EPISODES_PER_COUNT * len(COUNTS)
 SEEDS = {count: 429032 + count for count in COUNTS}
 MINIMUM_SUCCESS_RATE = 0.90
 MAX_EXECUTED_ACTION_ERROR = 5e-5
+REQUIRE_ZERO_CROSSING_MARGIN = True
 CHECKPOINT = (
     ROOT
     / "logs/drone_race_full_policy_six_gate_bootstrap"
@@ -70,6 +71,8 @@ PREREGISTRATION = (
 DEFAULT_OUTPUT = (
     ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
 )
+RUNNER = ROOT / "scripts/run_vq2_vg006_vast.sh"
+EXTRA_SOURCE_PATHS: tuple[Path, ...] = ()
 
 
 def runtime_manifest() -> dict[str, str]:
@@ -189,7 +192,10 @@ def count_safety_passes(report: dict[str, Any]) -> bool:
         and report.get("raw_phase_encoding_max_error", math.inf) <= 1e-6
         and metrics.get("env/crash") == 0.0
         and metrics.get("env/out_of_order") == 0.0
-        and metrics.get("env/crossing_margin_violation") == 0.0
+        and (
+            not REQUIRE_ZERO_CROSSING_MARGIN
+            or metrics.get("env/crossing_margin_violation") == 0.0
+        )
         and metrics.get("env/action_envelope_violation") == 0.0
         and metrics.get("env/wire_rate_envelope_violation") == 0.0
         and metrics.get("env/thrust_envelope_violation") == 0.0
@@ -347,6 +353,7 @@ def run_count(
         "seed": SEEDS[num_gates],
         "checkpoint_sha256": CHECKPOINT_SHA256,
         "checkpoint_best_epoch": payload["best_epoch"],
+        "crossing_margin_admission_predicate": REQUIRE_ZERO_CROSSING_MARGIN,
         "vector_steps": vector_steps,
         "wall_time_seconds": time.perf_counter() - started,
         "inference_seconds": inference_seconds,
@@ -404,7 +411,7 @@ def source_identity() -> dict[str, Any]:
     paths = (
         Path(__file__).resolve(),
         PREREGISTRATION,
-        ROOT / "scripts/run_vq2_vg006_vast.sh",
+        RUNNER,
         ROOT / "scripts/collect_vq2_variable_gate_oracle_bc_dataset.py",
         ROOT / "scripts/eval_vq2_variable_gate_oracle.py",
         ROOT / "scripts/eval_vq2_recurrent_policy.py",
@@ -418,6 +425,7 @@ def source_identity() -> dict[str, Any]:
         ROOT / "pufferlib/vq2_recurrent_phase.py",
         CHECKPOINT,
         TRAIN_REPORT,
+        *EXTRA_SOURCE_PATHS,
     )
     sources = {
         str(path.relative_to(ROOT)): sha256_path(path) for path in paths
@@ -459,6 +467,10 @@ def run_admission(
         "episodes_per_count": EPISODES_PER_COUNT,
         "seeds": {str(key): value for key, value in SEEDS.items()},
         "checkpoint_sha256": CHECKPOINT_SHA256,
+        "admission_contract": {
+            "minimum_success_rate": MINIMUM_SUCCESS_RATE,
+            "require_zero_crossing_margin": REQUIRE_ZERO_CROSSING_MARGIN,
+        },
         **identity,
         "safety": {
             "teacher_labels_written": 0,
@@ -528,6 +540,13 @@ def run_admission(
         "success_rate": successes / TOTAL_EPISODES,
         "minimum_success_rate": MINIMUM_SUCCESS_RATE,
         "zero_crash": all(report["metrics"]["env/crash"] == 0.0 for report in reports),
+        "crossing_margin_admission_predicate": REQUIRE_ZERO_CROSSING_MARGIN,
+        "crossing_margin_violation_rate": sum(
+            report["metrics"]["env/crossing_margin_violation"]
+            * EPISODES_PER_COUNT
+            for report in reports
+        )
+        / TOTAL_EPISODES,
         "checkpoint_sha256": CHECKPOINT_SHA256,
         "count_reports": {
             str(report["num_gates"]): {

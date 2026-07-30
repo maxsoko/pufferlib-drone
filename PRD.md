@@ -10106,3 +10106,18 @@ For each training/eval block, record:
   hashes match, `2,396,907` records and `1,920` phase increments verify. Both
   retained GPU instances are stopped. Next authority is a separately
   preregistered teacher-free screen only; live activity remains forbidden.
+
+### VQ2 fresh teacher-free screen — VG011, 2026-07-30
+
+- Screen only VG010 SHA `a0934753...` under tag
+  `vq2_vg011_variable_gate_recurrent_teacher_free_256`: 64 new courses each at
+  counts 5/8/11/12 with seeds `429056/429059/429062/429063`.
+- Require at least 231/256 ordered finishes, zero crash/out-of-order and hard
+  action/wire/thrust/phase transport faults. Keep the native `0.50 m`
+  crossing-margin flag diagnostic; true aperture remains `0.75 m`.
+- The actor remains one teacher-free recurrent 4,119-input/full-output Puffer
+  policy. State locks candidate, evidence, source, compiled extension,
+  runtime, seeds, and admission contract before count 5.
+- Base/wrapper/runner/test/preregistration hashes are `dc91107e...`/
+  `19b97cbc...`/`39fa5994...`/`fbae6b53...`/`552b1e09...`. No live action is
+  authorized by this screen.
