@@ -10281,3 +10281,17 @@ For each training/eval block, record:
   admission evidence SHA is `eb6c4f56...` and both GPU instances are stopped.
 - VG016 admits training data only. Next authority is a preregistered refit that
   retains VG003/VG009/recovered-VG012 and adds VG016; live authority is zero.
+
+### VQ2 four-source refit — VG017, 2026-07-30
+
+- Run one 12-epoch fit from VG014, seed `429080`, pairing VG003/VG009/VG012/
+  VG016 chunks on every update at exact normalized weights
+  `0.40/0.15/0.15/0.30`.
+- Preserve four-agent source batches, 256-step recurrence, three transition
+  exposures, AdamW `2e-5`, and disjoint validation. Select minimum weighted
+  four-source validation and require overall/VG016 improvement plus fixed
+  clean/VG009/VG012 caps for numerical admission.
+- Trainer/runner/test/preregistration hashes are `aeb629cd...`/`3a06b184...`/
+  `670c6dd9...`/`422e59b9...`; tests pass `31/31`, parent loading passes, and
+  the VG016 loader verifies all hashes and phase records. VG017 has not run;
+  live authority remains zero.

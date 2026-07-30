@@ -10141,3 +10141,24 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
 - VG016 authorizes only a new source-balanced recurrent refit preserving
   VG003, VG009, and recovered-VG012 while adding VG016. FlightSim, shadow,
   Training, and Submission remain forbidden.
+
+### VQ2 four-source recurrent refit preregistration — VG017, 2026-07-30
+
+- Preregister one epoch-resumable fit tagged
+  `vq2_vg017_variable_gate_four_source_refit_001`, seed `429080`, starting from
+  VG014 SHA `60d69a1f...`. Use only admitted VG003 clean, VG009, recovered
+  VG012, and VG016 datasets; quarantined and failed collector states remain
+  excluded.
+- Every update pairs one recurrent chunk from all four sources and normalizes
+  each loss independently before exact `0.40/0.15/0.15/0.30` clean/VG009/
+  VG012/VG016 mixing. The clean stream defines 12 epochs; use four agents per
+  source, 256-step BPTT, three transition exposures, AdamW `2e-5`, weight decay
+  `1e-5`, gradient cap `1.0`, and smoothness `1e-4`.
+- Reserve final 32 clean and final 64 agents from each DAgger corpus. Select
+  minimum weighted four-source validation. Admission requires a child better
+  overall and on VG016, clean/VG009 each at most `0.02`, recovered VG012 at
+  most `0.10`, exact weights, and at least `3.0x` transition exposure.
+- Trainer/runner/test/preregistration SHA-256 values are `aeb629cd...`/
+  `3a06b184...`/`670c6dd9...`/`422e59b9...`. Focused and adjacent tests pass
+  `31/31`; parent loading and the full VG016 loader/hash/phase audit pass.
+  VG017 has not run and authorizes no live activity.
