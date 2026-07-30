@@ -10189,3 +10189,17 @@ For each training/eval block, record:
 - Report/state/log hashes are `38358a58...`/`e78d48da...`/`eb0692c6...` and
   admission evidence SHA is `5c9d0e4b...`. The GPU is stopped. Next authority
   is one preregistered three-source VG003/VG009/VG012 refit only.
+
+### VQ2 three-source refit — VG014, 2026-07-30
+
+- Run one 12-epoch fit from VG010, seed `429065`, pairing VG003/VG009/VG012
+  chunks on every update at exact normalized weights `0.50/0.25/0.25`.
+  Preserve 256-step recurrence, three transition exposures, four agents per
+  source, AdamW `2e-5`, and disjoint per-source validation.
+- Select the child with minimum weighted three-source validation. Require an
+  overall and recovered-VG012 improvement, clean/VG009 MSE each at most `0.02`,
+  exact weights, and `>=3.0x` transition exposure for numerical admission.
+- Loader/trainer/runner/test/preregistration hashes are `a3e4fb3e...`/
+  `4795040a...`/`a30aecf4...`/`397c3b11...`/`9855d318...`; tests pass `27/27`,
+  both native suites pass, and recovered-dataset loading verifies all hashes.
+  VG014 has not run; live authority remains zero.

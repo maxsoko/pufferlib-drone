@@ -224,16 +224,22 @@ class VariableGateBCDataset:
         self,
         root: Path = DATASET,
         *,
+        report_path: Path | None = None,
         verify_hashes: bool = True,
         expected_report_sha256: str = DATASET_REPORT_SHA256,
         expected_metadata_sha256: str = DATASET_METADATA_SHA256,
     ) -> None:
         self.root = Path(root)
-        if sha256_path(self.root / "report.json") != expected_report_sha256:
+        self.report_path = (
+            self.root / "report.json"
+            if report_path is None
+            else Path(report_path)
+        )
+        if sha256_path(self.report_path) != expected_report_sha256:
             raise RuntimeError("VG003 dataset report hash mismatch")
         if sha256_path(self.root / "metadata.json") != expected_metadata_sha256:
             raise RuntimeError("VG003 dataset metadata hash mismatch")
-        self.report = json.loads((self.root / "report.json").read_text())
+        self.report = json.loads(self.report_path.read_text())
         self.metadata = json.loads((self.root / "metadata.json").read_text())
         observation = self.metadata.get("observation", {})
         if not self.report.get("admitted") or (

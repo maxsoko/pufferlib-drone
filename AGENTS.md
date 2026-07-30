@@ -10000,3 +10000,29 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   authorizes one separately preregistered refit preserving VG003, VG009, and
   recovered VG012 at explicit source weights. It does not admit VG010 or any
   live activity.
+
+### VQ2 three-source recurrent refit preregistration — VG014, 2026-07-30
+
+- Preregister one epoch-resumable fit tagged
+  `vq2_vg014_variable_gate_three_source_refit_001`, seed `429065`, starting
+  from VG010 SHA `a0934753...`. Use only VG003 clean, admitted VG009, and the
+  VG013-recovered VG012 arrays; VG007/VG008 remain quarantined and the failed
+  VG012 state is never resumed or rewritten.
+- Every update pairs one recurrent chunk from each source and normalizes each
+  loss independently before exact `0.50/0.25/0.25` clean/VG009/VG012 mixing.
+  The clean stream defines an epoch; failure streams cycle only at episode-
+  batch boundaries. Use 12 epochs, four agents per source, 256-step BPTT,
+  three transition-window exposures, AdamW `2e-5`, weight decay `1e-5`,
+  gradient cap `1.0`, smoothness `1e-4`, and action weights `(1,1,4,1)`.
+- Reserve the final 32 clean agents and final 64 agents from each failure
+  source for validation. Select minimum weighted `0.50/0.25/0.25` validation.
+  Numerical admission requires a child better than VG010 overall and on
+  recovered VG012, with clean and VG009 validation each at most `0.02`, exact
+  source weights, and at least `3.0x` transition exposure.
+- The dataset loader now accepts an explicitly hashed external admitted report,
+  allowing VG012 arrays to remain immutable while using the VG013 recovery
+  report. Loader/trainer/runner/test/preregistration hashes are
+  `a3e4fb3e...`/`4795040a...`/`a30aecf4...`/`397c3b11...`/`9855d318...`.
+  Focused tests pass `27/27`, both native suites pass, parent loading and the
+  full recovered-dataset loader/hash/phase audit pass. VG014 has not run and
+  authorizes no live activity.
