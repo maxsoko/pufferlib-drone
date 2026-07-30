@@ -10266,3 +10266,18 @@ For each training/eval block, record:
   `c988ed48...`/`7991d1b1...`/`e1f79b79...`/`3357b8aa...`; tests pass `36/36`.
   Admission can authorize only a new source-balanced refit preserving VG003,
   VG009, and recovered VG012; live authority remains zero.
+
+### VQ2 VG016 corpus admission — 2026-07-30
+
+- The sole seed-`429079` collection completed without resume and admitted
+  `370,989` records from 512 exact-uniform courses. Episode length is
+  `245/724.587890625/1,024` min/mean/max; all 20 hard predicates pass.
+- Phase mass is `[122224,244180,4585,0,...]`. The corpus reaches Gate 1 in
+  `491/512` and Gate 2 in `19/512`; 82 low crashes, 251 misses, and 179
+  horizon timeouts remain diagnostics of the teacher-free failure states.
+- Report/metadata/state/archive/log/exit hashes are `bcd86c8b...`/
+  `4f075d2d...`/`67fd34e4...`/`e318732a...`/`224bbc5a...`/`9a271f2a...`.
+  Local verification passes every array hash, layout, record, and phase check;
+  admission evidence SHA is `eb6c4f56...` and both GPU instances are stopped.
+- VG016 admits training data only. Next authority is a preregistered refit that
+  retains VG003/VG009/recovered-VG012 and adds VG016; live authority is zero.

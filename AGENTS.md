@@ -10118,3 +10118,26 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   `c988ed48...`/`7991d1b1...`/`e1f79b79...`/`3357b8aa...`. Focused and adjacent
   tests pass `36/36`; direct CLI and runner shell syntax pass. VG016 grants no
   live authority.
+
+### VQ2 transition DAgger corpus admitted — VG016, 2026-07-30
+
+- VG016 completed its sole seed-`429079` run from source commit `cc8ae76e...`
+  without resume. It produced `370,989` legal records across 512 exact-uniform
+  count-5--12 episodes; length min/mean/max is
+  `245/724.587890625/1,024` and all 20 hard predicates pass.
+- Phase records are `[122224,244180,4585,0,...]`. All 510 increments are
+  monotone/exact `/16`; action-history error, phase timing/encoding error,
+  non-finite query labels, and query/action/wire/thrust envelope faults are
+  zero. Stored privileged and total-count values are zero.
+- Diagnostic outcomes are 82 low crashes, 251 misses, and 179 horizon
+  timeouts. Gate-1 reach is `491/512` (`95.8984375%`), Gate-2 reach is
+  `19/512` (`3.7109375%`), and Gate-3 reach is zero. These are precisely the
+  early transition states selected for labeling and are not policy admission.
+- Report/metadata/state/archive/log/exit SHA-256 values are `bcd86c8b...`/
+  `4f075d2d...`/`67fd34e4...`/`e318732a...`/`224bbc5a...`/`9a271f2a...`.
+  The full 2.1 GB arrays were synced via the 116 MB archive and locally pass
+  every hash, shape, dtype, record, terminal-layout, and phase audit. Admission
+  evidence JSON SHA-256 is `eb6c4f56...`; both GPU instances are stopped.
+- VG016 authorizes only a new source-balanced recurrent refit preserving
+  VG003, VG009, and recovered-VG012 while adding VG016. FlightSim, shadow,
+  Training, and Submission remain forbidden.
