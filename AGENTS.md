@@ -10338,8 +10338,8 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   transition step (five decodes plus four unchanged exposures). Any failure
   rejects VG022 without unchanged retry.
 - Loader/trainer/checker/runner/recurrent-test/refit-test/preregistration hashes
-  are `7d156466...`/`ff53deb9...`/`4c4be374...`/`54cba718...`/
-  `a17a898a...`/`df827124...`/`60486654...`. Focused source/artifact tests pass
+  are `7d156466...`/`c9500787...`/`4c4be374...`/`54cba718...`/
+  `a17a898a...`/`8de22270...`/`60486654...`. Focused source/artifact tests pass
   after a corrected wrap-independent documentation assertion; compilation and
   runner syntax pass. The remote runner reruns the exact full suite before the
   parity gate. No live authority exists.
@@ -10355,3 +10355,14 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   evidence SHA is `789ad575...`. Bootstrap 003 removes duplicate manifest logic
   and calls the trainer's `runtime_manifest()` directly. Never retry bootstrap
   002 unchanged.
+- Bootstrap 003 from commit `2a87bde1...` passed both native suites, a fresh
+  float32 SM89 build, and `39/39` tests. Its zero-step parity gate admitted with
+  bitwise observation/decode/output/state/loss/gradient equality and a
+  `5.218184021x` complete-transition speedup (`1.684904829 -> 0.322891033 s`).
+  It then failed before VG022 state creation or optimizer work because loading
+  the migration payload directly onto CUDA moved the CPU Torch RNG ByteTensor.
+  Parity/log/exit hashes are `f36c3b11...`/`f11e56dd...`/`4355a46b...`;
+  failure evidence SHA is `3a3f6d49...`. Bootstrap 004 loads the complete
+  payload on CPU, after which model/optimizer loaders migrate parameter state
+  and CPU/CUDA RNG restoration retains the required tensor representation.
+  Never retry bootstrap 003 unchanged.

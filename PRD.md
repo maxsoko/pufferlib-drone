@@ -10421,3 +10421,10 @@ For each training/eval block, record:
 - Bootstrap 002 then failed before state/optimizer work because its live
   dictionary omitted `machine`. Bootstrap 003 uses the trainer's canonical
   `runtime_manifest()` directly, eliminating the duplicated schema.
+- Bootstrap 003 passed native/build/tests and admitted exact zero-step parity:
+  all numerical errors are zero and complete-transition speedup is `5.218x`.
+  It failed before state creation or optimizer work when CUDA mapping moved the
+  CPU RNG ByteTensor. Bootstrap 004 preserves the full migration payload on CPU
+  while model/Adam moment loading performs the required CUDA migration; local
+  restoration and an isolated optimizer step pass. Bootstrap 003 is immutable
+  and must not be retried unchanged.

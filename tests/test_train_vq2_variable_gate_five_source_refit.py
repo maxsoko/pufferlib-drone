@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import inspect
+import json
 import os
 from dataclasses import replace
 
@@ -181,3 +183,17 @@ def test_vg022_migration_and_parity_gate_are_frozen_before_epoch_four() -> None:
     for forbidden in ("apt-get", "pip install", "FlightSim", "14550", "5600"):
         assert forbidden not in runner
         assert forbidden not in checker
+
+
+def test_vg022_restores_rng_payload_from_cpu_after_bootstrap_three() -> None:
+    source = inspect.getsource(refit.train)
+    assert 'torch.load(state_path, map_location="cpu", weights_only=False)' in source
+    assert (
+        'torch.load(migration_state, map_location="cpu", weights_only=False)'
+        in source
+    )
+    failure = json.loads(refit.VG022_BOOTSTRAP3_FAILURE.read_text())
+    assert failure["bootstrap"] == 3
+    assert failure["parity"]["admitted"] is True
+    assert failure["parity"]["optimizer_steps"] == 0
+    assert failure["vg022_state_created"] is False

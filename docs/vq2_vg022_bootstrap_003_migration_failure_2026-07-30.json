@@ -1,0 +1,45 @@
+{
+  "schema": "vq2_vg022_bootstrap_migration_failure_v1",
+  "tag": "vq2_vg022_five_source_device_decode_continuation_001",
+  "bootstrap": 3,
+  "status": "parity_admitted_then_failed_before_state_or_optimizer",
+  "source_commit": "2a87bde1639f677bd0e321a0a9c0429c64a86133",
+  "parity": {
+    "admitted": true,
+    "chunk_horizons": {
+      "clean": 256,
+      "dagger1": 225,
+      "dagger2": 256,
+      "dagger3": 256,
+      "dagger4": 256
+    },
+    "decode_bitwise_equal": true,
+    "decode_max_abs_error": 0.0,
+    "mean_max_abs_error": 0.0,
+    "pre_tanh_max_abs_error": 0.0,
+    "next_state_max_abs_error": 0.0,
+    "loss_abs_error": 0.0,
+    "gradient_max_abs_error": 0.0,
+    "legacy_median_seconds": 1.684904829133302,
+    "device_decode_median_seconds": 0.32289103302173316,
+    "speedup": 5.21818402129456,
+    "optimizer_steps": 0,
+    "state_writes": 0
+  },
+  "failure": "The trainer loaded the migration state with map_location=cuda, moving the CPU Torch RNG ByteTensor to CUDA before torch.set_rng_state().",
+  "optimizer_steps": 0,
+  "vg022_state_created": false,
+  "artifact_sha256": {
+    "parity_report": "f36c3b1138b83bf6171510faddb664fc7ed5da7655964325bc17623b2ba12211",
+    "runner_log": "f11e56dd9fd49edb9f3611a97efd8c0e617c8ca6447fe56229504cafa4d9c469",
+    "exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+  },
+  "recovery": "Load the complete state on CPU; model/optimizer loaders migrate parameter state as required while CPU and CUDA RNG byte tensors retain their required representation. Bootstrap 004 reruns parity under the new source commit; never retry bootstrap 003 unchanged.",
+  "safety": {
+    "actor_input_privileged_values": 0,
+    "teacher_blend": 0.0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "submission_authorized": false
+  }
+}

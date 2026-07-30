@@ -140,6 +140,12 @@ VG022_BOOTSTRAP2_FAILURE = (
 VG022_BOOTSTRAP2_FAILURE_SHA256 = (
     "789ad575620186e5d605c304e51089fbd819aed7e71c580a2d87dfc8a850a241"
 )
+VG022_BOOTSTRAP3_FAILURE = (
+    ROOT / "docs/vq2_vg022_bootstrap_003_migration_failure_2026-07-30.json"
+)
+VG022_BOOTSTRAP3_FAILURE_SHA256 = (
+    "3a3f6d498aa31d3741e35ec5092849d0d7bde569676f6b3ba1c77ff83ce838f6"
+)
 RUNNER = ROOT / "scripts/run_vq2_vg022_vast.sh"
 PARITY_CHECKER = ROOT / "scripts/check_vq2_vg022_device_decode_parity.py"
 DEFAULT_OUTPUT = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
@@ -192,6 +198,7 @@ def source_paths() -> list[Path]:
         VG021_REJECTION,
         VG022_BOOTSTRAP_FAILURE,
         VG022_BOOTSTRAP2_FAILURE,
+        VG022_BOOTSTRAP3_FAILURE,
         VG020_PREREGISTRATION,
         VG020_SUPERSESSION,
         RUNNER,
@@ -297,6 +304,7 @@ def verify_inputs() -> None:
         VG021_REJECTION: VG021_REJECTION_SHA256,
         VG022_BOOTSTRAP_FAILURE: VG022_BOOTSTRAP_FAILURE_SHA256,
         VG022_BOOTSTRAP2_FAILURE: VG022_BOOTSTRAP2_FAILURE_SHA256,
+        VG022_BOOTSTRAP3_FAILURE: VG022_BOOTSTRAP3_FAILURE_SHA256,
         DAGGER4_ADMISSION: DAGGER4_ADMISSION_SHA256,
         PARENT_ADMISSION: PARENT_ADMISSION_SHA256,
         PARENT_CHECKPOINT: PARENT_CHECKPOINT_SHA256,
@@ -582,7 +590,7 @@ def train(
     if state_path.is_file():
         if not resume:
             raise FileExistsError(f"VG022 state already exists at {state_path}")
-        saved = torch.load(state_path, map_location=device, weights_only=False)
+        saved = torch.load(state_path, map_location="cpu", weights_only=False)
         for key, expected in identity.items():
             if saved.get(key) != expected:
                 raise RuntimeError(f"VG022 resume mismatch for {key}")
@@ -596,7 +604,7 @@ def train(
             raise RuntimeError("VG022 requires the frozen VG020 migration state")
         if sha256_path(migration_state) != MIGRATION_STATE_SHA256:
             raise RuntimeError("VG022 migration state hash mismatch")
-        saved = torch.load(migration_state, map_location=device, weights_only=False)
+        saved = torch.load(migration_state, map_location="cpu", weights_only=False)
         required = {
             "schema": MIGRATION_SCHEMA,
             "tag": MIGRATION_TAG,
