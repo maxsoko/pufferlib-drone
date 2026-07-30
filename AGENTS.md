@@ -9910,3 +9910,34 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   VG010-visited-state DAgger collection, followed by a refit that preserves
   both VG003 clean anchors and the earlier VG009 failure distribution. Live
   activity remains forbidden.
+
+### VQ2 VG010-visited DAgger round 2 preregistration — VG012, 2026-07-30
+
+- Preregister exactly one offline collection tagged
+  `vq2_vg012_variable_gate_dagger_round2_vg010_visited_512`, seed `429064`.
+  Run 512 exact-uniform count-5--12 terminal episodes for at most 2,048 steps
+  each, with a 150,000-record floor and at least 60% Gate-1 reach. VG010 SHA
+  `a0934753...` emits every deterministic four-channel plant action; the
+  SF016 oracle is query-label only and student updates are zero.
+- VG011 predicts about 188,820 records at this population. Its `193/256`
+  crashes and zero Gate-2 reaches are the failure distribution VG012 must
+  label, so crash and Gate-2 reach are recorded as diagnostics rather than
+  corpus-admission predicates. This deliberate change affects collection
+  only; all later teacher-free admission still requires zero crash and
+  reliable full-course completion.
+- Hard admission retains exact uniform count mass, 512 single-final-terminal
+  layouts, record/length bounds, nonzero phase-1 records, zero out-of-order
+  and action/wire/thrust envelope metrics, action-history error at most
+  `1e-7`, and exact causal held-phase monotonicity/timing/encoding. Privileged
+  native state and total gate count never enter stored student observations.
+- The generic collector now exposes source-bound candidate/evidence and
+  diagnostic-policy configuration while preserving VG009 defaults. The VG012
+  wrapper locks VG010 checkpoint/report/admission, VG011 report/rejection,
+  SF016, the goal prompt, oracle, runtime, compiled extension, and all source
+  paths before its first action.
+- Base/wrapper/runner/test/preregistration SHA-256 values are
+  `2ad03c78...`/`baeb921d...`/`08759b2a...`/`30d7ff13...`/`94dcd090...`.
+  Focused and adjacent tests pass `36/36`; Python compilation, direct CLI,
+  shell syntax, and diff hygiene pass. No VG012 rollout has run yet. FlightSim
+  remains frozen, N712 remains closed, and shadow, Training, and Submission
+  remain forbidden.

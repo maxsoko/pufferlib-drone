@@ -10134,3 +10134,23 @@ For each training/eval block, record:
   rejection evidence SHA is `53d5ed65...`. Never retry unchanged. Continue
   with a new VG010-visited-state DAgger corpus while retaining VG003 and VG009
   distributions; no live action is authorized.
+
+### VQ2 VG010-visited DAgger round 2 — VG012, 2026-07-30
+
+- Run one source-locked offline corpus collection tagged
+  `vq2_vg012_variable_gate_dagger_round2_vg010_visited_512`, seed `429064`:
+  512 uniform count-5--12 episodes, 2,048-step bound, at least 150,000 valid
+  records, and at least 60% Gate-1 reach.
+- VG010 SHA `a0934753...` supplies every deterministic recurrent plant action.
+  The admitted SF016 oracle supplies labels only. Stored actor input remains
+  the legal 4,119-value public ABI with zero privileged state or total-count
+  values.
+- VG011's 75.390625% crash rate and zero Gate-2 reach identify the states that
+  need labels. Record those outcomes diagnostically for VG012 instead of
+  rejecting the corpus; preserve hard ordered-progress, action/wire/thrust,
+  action-parity, terminal-layout, record-volume, count-mass, and held-phase
+  predicates. This does not relax any later teacher-free screen.
+- Base/wrapper/runner/test/preregistration hashes are `2ad03c78...`/
+  `baeb921d...`/`08759b2a...`/`30d7ff13...`/`94dcd090...`; focused and adjacent
+  tests pass `36/36`. VG012 has not run. Admission can authorize only a new
+  three-source VG003/VG009/VG012 refit; live activity remains forbidden.
