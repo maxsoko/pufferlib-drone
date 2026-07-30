@@ -10251,3 +10251,18 @@ For each training/eval block, record:
   `53c234e5...`; local terminal-chain verification passes. Rejection evidence
   SHA is `568f948e...`. Never retry VG015 unchanged. Continue only with a
   preregistered VG014-visited DAgger corpus; no live action is authorized.
+
+### VQ2 VG014-visited DAgger round 3 — VG016, 2026-07-30
+
+- Run one source-locked offline corpus tagged
+  `vq2_vg016_variable_gate_dagger_round3_vg014_visited_512`, seed `429079`:
+  512 uniform count-5--12 episodes, 1,024-step bound, at least 350,000 records,
+  and at least 90% Gate-1 reach.
+- VG014 SHA `60d69a1f...` supplies every recurrent plant action; SF016 supplies
+  labels only. The 16-second horizon captures the Gate-2 transition while
+  limiting long post-miss divergence. Crash/Gate-2/timeout remain collection
+  diagnostics, not relaxations of later teacher-free admission.
+- Generic/wrapper/runner/test/preregistration hashes are `cf0b8f6d...`/
+  `c988ed48...`/`7991d1b1...`/`e1f79b79...`/`3357b8aa...`; tests pass `36/36`.
+  Admission can authorize only a new source-balanced refit preserving VG003,
+  VG009, and recovered VG012; live authority remains zero.

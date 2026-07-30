@@ -10095,3 +10095,26 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
 - The next authority is a newly preregistered VG014-visited-state DAgger
   collection retaining VG003, VG009, and recovered-VG012 anchors. FlightSim,
   shadow, Training, and Submission remain forbidden.
+
+### VQ2 VG014-visited DAgger round 3 preregistration — VG016, 2026-07-30
+
+- Preregister exactly one offline collection tagged
+  `vq2_vg016_variable_gate_dagger_round3_vg014_visited_512`, seed `429079`.
+  Run 512 exact-uniform count-5--12 episodes for at most 1,024 steps, with a
+  350,000-record floor and at least 90% Gate-1 reach. VG014 SHA `60d69a1f...`
+  emits every deterministic four-channel plant action; the SF016 oracle is
+  query-label only and student updates are zero.
+- The shortened 16-second horizon retains the causal prefix through VG015's
+  Gate-1 pass near step 233 and the failing Gate-2 phase while preventing long
+  post-miss divergence from dominating labels. Crash, Gate-2 reach, and
+  horizon timeout remain corpus diagnostics; later teacher-free admission is
+  unchanged and still requires zero crash plus reliable full-course finish.
+- Hard admission retains exact uniform count mass, 512 single-final-terminal
+  layouts, record/length bounds, nonzero phase-1 records, zero out-of-order and
+  action/wire/thrust-envelope metrics, query finiteness/envelope, action-history
+  error at most `1e-7`, and exact causal held-phase timing/encoding. Privileged
+  native state and total gate count never enter stored student observations.
+- Generic/wrapper/runner/test/preregistration SHA-256 values are `cf0b8f6d...`/
+  `c988ed48...`/`7991d1b1...`/`e1f79b79...`/`3357b8aa...`. Focused and adjacent
+  tests pass `36/36`; direct CLI and runner shell syntax pass. VG016 grants no
+  live authority.
