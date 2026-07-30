@@ -10023,8 +10023,19 @@ For each training/eval block, record:
   itself. Crash, out-of-order, action, wire-rate, and thrust-envelope safety
   remain hard gates.
 - Collector/runner/test/preregistration hashes are `4f52642a...`/
-  `5ad42e7e...`/`a3dbba9a...`/`74ceeddb...`. Native and vision-native
+  `8053e7c0...`/`d5105a8c...`/`530ac99e...`. Native and vision-native
   regression suites pass, runner shell syntax passes, and the focused plus
   adjacent Python suite passes `28/28`. VG009 is preregistered but not yet
   executed. No FlightSim packet, teacher plant action, student update, N712
   access, shadow, Training attempt, or Submission action occurred.
+- Preserved Vast instance `46201898` could not restart because host resources
+  were unavailable. Replacement `46256686` has an RTX 4090, 48 effective/96
+  visible CPUs, 128 GB RAM, and 100 GB disk at about `$0.3615/hour`.
+  Bootstrap 001 and 002 stopped before state/action for missing OpenMP headers
+  and `ccache`; immutable log hashes are `b1828937...` and `97e857c...`.
+  Bootstrap 003 built float32 successfully but stopped before state/action on
+  the phase-zero transfer test: the >=32-thread AMD Torch GEMM path differs by
+  at most one float32 ULP, while thread counts 1--16 are bit-exact. Its log SHA
+  is `ecc0e47b...`. The corrected runner checks both build prerequisites and
+  fixes only Python preflight reductions to 16 threads; CUDA inference and the
+  native collection remain at their default runtime settings.

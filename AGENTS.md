@@ -9757,10 +9757,20 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   `0.50--0.75 m` crossings inside the true `0.75 m` aperture. Crash and
   out-of-order/action/wire/thrust envelope checks remain admission gates.
 - Collector/runner/test/preregistration SHA-256 values are
-  `4f52642a...`/`5ad42e7e...`/`a3dbba9a...`/`74ceeddb...`. Both native
+  `4f52642a...`/`8053e7c0...`/`d5105a8c...`/`530ac99e...`. Both native
   regression suites pass and the focused plus adjacent Python suite passes
   `28/28`; runner shell syntax also passes. The collector source-locks the
   persistent prompt and VG008 diagnosis before its first offline action.
+- Preserved instance `46201898` could not restart because its host resources
+  were unavailable. Replacement instance `46256686` supplies one RTX 4090,
+  48 effective/96 visible CPUs, 128 GB RAM, and 100 GB storage at about
+  `$0.3615/hour`. Bootstrap 001/002 failed before state/action on missing
+  `omp.h`/`ccache`; log hashes are `b1828937...`/`97e857c...`. Bootstrap 003
+  built the float32 backend, then failed before state/action because Torch's
+  >=32-thread AMD GEMM path introduced at most one float32 ULP in an exact
+  phase-zero transfer test; log SHA is `ecc0e47b...`. The source-locked runner
+  now checks OpenMP/ccache and caps only Python preflight reductions to 16
+  threads, where transfer is bit-exact. CUDA collection remains uncapped.
 - VG009 has not executed yet. It is offline native collection only and emits
   zero FlightSim packets, teacher plant actions, or student updates. An
   admitted result authorizes only a separately preregistered source-balanced

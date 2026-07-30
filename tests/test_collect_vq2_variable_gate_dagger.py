@@ -204,8 +204,11 @@ def test_vg009_vast_runner_is_source_locked_resumable_and_flightsim_free() -> No
     assert "git rev-parse HEAD" in text
     assert "git status --porcelain --untracked-files=no" in text
     assert "vq2_vg009_variable_gate_dagger_round1_corrected_512" in text
+    assert "git clang ccache nvcc nvidia-smi python" in text
+    assert "clang -fopenmp -x c - -fsyntax-only" in text
     assert "bash build.sh drone_race_vision --float" in text
     assert "assert _C.precision_bytes == 4" in text
+    assert "OMP_NUM_THREADS=16 MKL_NUM_THREADS=16 python -m pytest" in text
     assert "tests/test_collect_vq2_variable_gate_dagger.py" in text
     assert "--resume" in text
     assert text.index('VQ2_STATE="') < text.index("test_drone_race_native_regressions")

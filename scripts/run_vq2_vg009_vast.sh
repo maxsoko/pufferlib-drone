@@ -31,12 +31,13 @@ if [ -f "$VQ2_STATE" ]; then
     exit $?
 fi
 
-for command_name in git clang nvcc nvidia-smi python; do
+for command_name in git clang ccache nvcc nvidia-smi python; do
     if ! command -v "$command_name" >/dev/null 2>&1; then
         echo "missing required command: $command_name" >&2
         exit 2
     fi
 done
+printf '#include <omp.h>\n' | clang -fopenmp -x c - -fsyntax-only
 if [ "$(nproc)" -lt 32 ]; then
     echo "VG009 requires at least 32 visible CPUs" >&2
     exit 2
@@ -69,7 +70,11 @@ assert _C.precision_bytes == 4, _C.precision_bytes
 print(f"native_env={_C.env_name} precision_bytes={_C.precision_bytes}")
 PY
 
-python -m pytest -q \
+# Canonicalize only the CPU-side test reductions. On high-core-count AMD hosts,
+# PyTorch's >=32-thread GEMM path can differ by one float32 ULP between the
+# legacy-width and zero-extended phase actor even though 1--16 threads are
+# bit-exact. Student inference in the collection below remains CUDA/default.
+OMP_NUM_THREADS=16 MKL_NUM_THREADS=16 python -m pytest -q \
     tests/test_collect_vq2_variable_gate_dagger.py \
     tests/test_collect_vq2_variable_gate_oracle_bc_dataset.py \
     tests/test_eval_vq2_variable_gate_recurrent_policy.py \

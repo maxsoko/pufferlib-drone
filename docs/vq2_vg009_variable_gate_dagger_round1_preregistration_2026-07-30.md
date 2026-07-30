@@ -86,13 +86,19 @@ and removes only its uniquely tagged staging directory.
 
 Bootstrap must pass both native regression suites, float32 ABI assertion, and
 the focused/adjacent Python suites before the only rollout. The wrapper
-requires at least 32 visible CPUs and 15 GiB free storage.
+requires `clang`, OpenMP headers, `ccache`, at least 32 visible CPUs, and 15
+GiB free storage. The Python preflight alone fixes `OMP_NUM_THREADS` and
+`MKL_NUM_THREADS` to 16: on the replacement 96-thread AMD runtime, Torch's
+wide CPU GEMM path differed by at most one float32 ULP between the legacy-width
+and zero-extended phase actor, while 1--16 threads remain bit-exact. Collection
+inference remains CUDA/default and the native rollout is not run under this
+test-only cap.
 
 ## Frozen source surface
 
 - `scripts/collect_vq2_variable_gate_dagger.py` — `4f52642a29b5dc9257615f7e54c4169b038dfad70ba8b7a5034d0e91d521e12a`
-- `scripts/run_vq2_vg009_vast.sh` — `5ad42e7ec686c70120a2290064b556a45cba95ae06d55143a22e15f430d25550`
-- `tests/test_collect_vq2_variable_gate_dagger.py` — `a3dbba9a1e37290980503f2dac10b2feb1a2345aabd5917d4af1898bed916452`
+- `scripts/run_vq2_vg009_vast.sh` — `8053e7c0d0fb46c421c322f3fd1a82cd2d1bae7a9430fc127ffca0c7325e1fc0`
+- `tests/test_collect_vq2_variable_gate_dagger.py` — `d5105a8c235846b25c486ab49e125660101599af32d009a8a4363f010707a629`
 - persistent goal prompt — `052ba7cb7a6db0b0274731f555a726994f83d424cb50e70f055e804926333e89`
 - VG008 diagnosis — `f9d99a436eaa300f70e52c00dc40b9f5752aad0684aac163ad7de7f439f183a4`
 - `pufferlib/vq2_oracle.py` — `877e7935b368414488fbaa93ff7bd6b3dce65f5686f224e442fb317a141d7694`
