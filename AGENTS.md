@@ -9771,8 +9771,35 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   phase-zero transfer test; log SHA is `ecc0e47b...`. The source-locked runner
   now checks OpenMP/ccache and caps only Python preflight reductions to 16
   threads, where transfer is bit-exact. CUDA collection remains uncapped.
-- VG009 has not executed yet. It is offline native collection only and emits
-  zero FlightSim packets, teacher plant actions, or student updates. An
-  admitted result authorizes only a separately preregistered source-balanced
-  recurrent refit with VG003 and a new teacher-free screen. VQ2 live commands
-  and Submission remain gated; N712 remains permanently closed.
+- The subsequent VG009 result is recorded below. This stage is offline native
+  collection only; VQ2 live commands and Submission remain gated, and N712
+  remains permanently closed.
+
+### VQ2 corrected DAgger collection admitted — VG009, 2026-07-30
+
+- Bootstrap 004 on source commit `7e0e4c76...` passed the float32 build and
+  remote `28/28` preflight, then executed the sole seed-`429049` rollout with
+  `resume_count=0`. VG009 is admitted with `123,992` legal query records from
+  all `512` terminal episodes in `241.125994 s`; episode length min/mean/max is
+  `111/242.171875/2,048`.
+- Gate-1/Gate-2 reach is `483/512` (`94.3359375%`) and `32/512` (`6.25%`).
+  There are `11/512` crashes (`2.1484375%`), below the fixed 5% collection
+  gate. Out-of-order, action-envelope, wire-rate, and thrust-envelope metrics
+  are zero, executed-action error is exactly zero, and gate-count mass is
+  exactly uniform over 5--12.
+- Crossing-margin rate is `240/512` (`46.875%`) and is correctly recorded with
+  `admission_predicate=false`; it does not weaken the true `0.75 m` aperture.
+  Public-phase records are `[63279,58370,2343,0,...]` with zero off-tick
+  change, decrease, skip, or encoding error. Every episode has one contiguous
+  valid prefix and one final terminal.
+- Report/state/metadata/runner-log SHA-256 values are `72c1e41d...`/
+  `88851898...`/`da20bd4e...`/`398b02cc...`. The full 4.2 GB dataset was
+  synced locally; independent verification recomputed every file hash, both
+  report chains, layout, record count, phase histogram, and all 20 admission
+  predicates. Admission evidence SHA-256 is `71c4898f...`.
+- The paid replacement instance is stopped with GPU cost zero and disk
+  retained. VG009 authorizes only a new VG010 preregistered source-balanced
+  recurrent refit starting from VG005, using VG003 clean anchors and VG009
+  states at equal source objective weight, followed by a new teacher-free
+  screen. Teacher plant actions, student updates during collection, FlightSim
+  packets, N712 access, shadow, Training, and Submission actions remain zero.

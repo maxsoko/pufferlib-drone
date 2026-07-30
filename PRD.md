@@ -10025,9 +10025,7 @@ For each training/eval block, record:
 - Collector/runner/test/preregistration hashes are `4f52642a...`/
   `8053e7c0...`/`d5105a8c...`/`530ac99e...`. Native and vision-native
   regression suites pass, runner shell syntax passes, and the focused plus
-  adjacent Python suite passes `28/28`. VG009 is preregistered but not yet
-  executed. No FlightSim packet, teacher plant action, student update, N712
-  access, shadow, Training attempt, or Submission action occurred.
+  adjacent Python suite passes `28/28`. The executed result is recorded below.
 - Preserved Vast instance `46201898` could not restart because host resources
   were unavailable. Replacement `46256686` has an RTX 4090, 48 effective/96
   visible CPUs, 128 GB RAM, and 100 GB disk at about `$0.3615/hour`.
@@ -10039,3 +10037,31 @@ For each training/eval block, record:
   is `ecc0e47b...`. The corrected runner checks both build prerequisites and
   fixes only Python preflight reductions to 16 threads; CUDA inference and the
   native collection remain at their default runtime settings.
+
+### VQ2 corrected DAgger corpus admitted — VG009, 2026-07-30
+
+- Bootstrap 004 passed remote float32 build/ABI and `28/28` tests, then ran
+  exactly once from commit `7e0e4c76...`, seed `429049`, with no resume. All
+  512 episodes reached a native terminal and produced `123,992` legal records
+  in `241.125994 s`; episode length min/mean/max is
+  `111/242.171875/2,048`.
+- VG005 passes Gate 1 in `483/512` episodes and Gate 2 in `32/512`. The DAgger
+  distribution contains 11 crashes (`2.1484375%`, within the fixed 5% cap),
+  while out-of-order, action, wire-rate, and thrust-envelope violations are
+  zero. Executed-action parity error is exactly zero and gate counts 5--12
+  have exact `1/8` episode mass.
+- `crossing_margin_violation` is `0.46875` and now remains diagnostic only, as
+  preregistered. Held-phase record counts are
+  `[63,279,58,370,2,343,0,...]`; tick, monotonicity, skip, and encoding audits
+  are exact. Terminal-prefix layout and all 20 admission predicates pass.
+- Immutable report/state/metadata/runner hashes are `72c1e41d...`/
+  `88851898...`/`da20bd4e...`/`398b02cc...`. All 4.2 GB were synced locally.
+  Independent local verification recomputed all five array hashes, state/report
+  chains, record/layout/phase values, and the predicate map. Admission evidence
+  JSON SHA is `71c4898f...`.
+- Instance `46256686` is stopped after sync with GPU cost zero and retained
+  disk. VG010 must preregister one source-balanced recurrent refit from VG005,
+  pairing VG003 clean anchors and VG009 failure states at equal source
+  objective weight before a new teacher-free screen. VG009 collection used
+  zero teacher plant action, student update, FlightSim packet, N712 access,
+  shadow, Training run, or Submission action.
