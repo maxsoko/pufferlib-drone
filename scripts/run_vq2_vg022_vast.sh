@@ -57,19 +57,12 @@ test "$(sha256sum "$VQ2_MIGRATION_STATE" | cut -d" " -f1)" = \
     3d4694baaeac55184d3672675b4c159ee339adbff45c4b46246a58118ecbb14b
 
 python - "$VQ2_MIGRATION_STATE" <<'PY'
-import platform
 import sys
-import numpy as np
 import torch
+from scripts.train_vq2_variable_gate_three_source_refit import runtime_manifest
 state = torch.load(sys.argv[1], map_location="cpu", weights_only=False)
 expected = state["runtime"]
-actual = {
-    "platform": platform.platform(),
-    "python": platform.python_version(),
-    "numpy": np.__version__,
-    "torch": torch.__version__,
-    "torch_cuda": str(torch.version.cuda),
-}
+actual = runtime_manifest()
 if actual != expected:
     raise SystemExit(f"VG022 runtime mismatch: {actual} != {expected}")
 if torch.cuda.get_device_name(0) != "NVIDIA GeForce RTX 4090":

@@ -10418,3 +10418,6 @@ For each training/eval block, record:
 - Bootstrap 001 failed before state/optimizer work on abbreviated version
   labels. Recovery compares the live runtime directly with the exact runtime
   embedded in the hash-bound epoch-3 migration state.
+- Bootstrap 002 then failed before state/optimizer work because its live
+  dictionary omitted `machine`. Bootstrap 003 uses the trainer's canonical
+  `runtime_manifest()` directly, eliminating the duplicated schema.
