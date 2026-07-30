@@ -128,6 +128,12 @@ VG021_REJECTION_SHA256 = (
 PREREGISTRATION = (
     ROOT / "docs/vq2_vg022_device_decode_continuation_preregistration_2026-07-30.md"
 )
+VG022_BOOTSTRAP_FAILURE = (
+    ROOT / "docs/vq2_vg022_bootstrap_001_preflight_failure_2026-07-30.json"
+)
+VG022_BOOTSTRAP_FAILURE_SHA256 = (
+    "a84ba484737bf4a572f1d165f4abe1e96a7fe578e95aeedfe8b5d3a5234e0c99"
+)
 RUNNER = ROOT / "scripts/run_vq2_vg022_vast.sh"
 PARITY_CHECKER = ROOT / "scripts/check_vq2_vg022_device_decode_parity.py"
 DEFAULT_OUTPUT = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
@@ -178,6 +184,7 @@ def source_paths() -> list[Path]:
         PREREGISTRATION,
         VG021_PREREGISTRATION,
         VG021_REJECTION,
+        VG022_BOOTSTRAP_FAILURE,
         VG020_PREREGISTRATION,
         VG020_SUPERSESSION,
         RUNNER,
@@ -281,6 +288,7 @@ def verify_inputs() -> None:
         GOAL_PROMPT: GOAL_PROMPT_SHA256,
         VG020_SUPERSESSION: VG020_SUPERSESSION_SHA256,
         VG021_REJECTION: VG021_REJECTION_SHA256,
+        VG022_BOOTSTRAP_FAILURE: VG022_BOOTSTRAP_FAILURE_SHA256,
         DAGGER4_ADMISSION: DAGGER4_ADMISSION_SHA256,
         PARENT_ADMISSION: PARENT_ADMISSION_SHA256,
         PARENT_CHECKPOINT: PARENT_CHECKPOINT_SHA256,

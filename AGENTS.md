@@ -10338,8 +10338,14 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   transition step (five decodes plus four unchanged exposures). Any failure
   rejects VG022 without unchanged retry.
 - Loader/trainer/checker/runner/recurrent-test/refit-test/preregistration hashes
-  are `7d156466...`/`281da992...`/`4c4be374...`/`69a15437...`/
-  `a17a898a...`/`df827124...`/`63bea5a8...`. Focused source/artifact tests pass
+  are `7d156466...`/`1575071b...`/`4c4be374...`/`5ea5e7b8...`/
+  `a17a898a...`/`df827124...`/`60486654...`. Focused source/artifact tests pass
   after a corrected wrap-independent documentation assertion; compilation and
   runner syntax pass. The remote runner reruns the exact full suite before the
   parity gate. No live authority exists.
+- Bootstrap 001 from commit `e7ae962f...` failed closed before tests, parity,
+  state, or optimizer work because the runner compared abbreviated package
+  labels instead of the migration state's exact runtime strings. Log/exit
+  hashes are `67806dd0...`/`4355a46b...`; failure evidence SHA is
+  `a84ba484...`. Recovery reads the exact expected runtime from the hash-bound
+  migration state. Never retry bootstrap 001 unchanged.

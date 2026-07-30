@@ -14,8 +14,9 @@ to CUDA. VG021 source batching is rejected and is absent from this variation.
 - Preserve model, optimizer, scaler, Python/NumPy/Torch/CUDA RNG, history,
   baseline, best state, configuration, source splits, and every legality/safety
   field exactly.
-- Use only the locked original runtime: Python `3.12.3`, NumPy `2.1`, PyTorch
-  `2.10.0a0+nv26.01`, CUDA `13.1`, RTX 4090, and
+- Use only the exact runtime embedded in the hash-bound migration state: Python
+  `3.12.3`, NumPy `2.1.0`, PyTorch
+  `2.10.0a0+a36e1d39eb.nv26.01.42222806`, CUDA `13.1`, RTX 4090, and
   `Linux-6.8.0-90-generic-x86_64-with-glibc2.39`.
 
 ## Sole permitted optimization

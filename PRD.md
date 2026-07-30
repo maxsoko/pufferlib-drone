@@ -10415,3 +10415,6 @@ For each training/eval block, record:
   runtime before migrating the exact VG020 epoch-3 state.
 - If admitted, complete epochs 4--12 under the unchanged five-source loss and
   admission rules. This remains offline-only evidence.
+- Bootstrap 001 failed before state/optimizer work on abbreviated version
+  labels. Recovery compares the live runtime directly with the exact runtime
+  embedded in the hash-bound epoch-3 migration state.

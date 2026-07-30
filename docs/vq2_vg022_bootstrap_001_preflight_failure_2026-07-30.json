@@ -1,0 +1,30 @@
+{
+  "schema": "vq2_vg022_bootstrap_preflight_failure_v1",
+  "tag": "vq2_vg022_five_source_device_decode_continuation_001",
+  "bootstrap": 1,
+  "status": "failed_closed_before_state_or_optimizer",
+  "source_commit": "e7ae962f32c15818afe4173e74d766c3ddca35ef",
+  "failure": "The runner hard-coded shortened NumPy and PyTorch display labels instead of comparing the live runtime with the exact runtime embedded in the hash-bound migration state.",
+  "observed_runtime": {
+    "platform": "Linux-6.8.0-90-generic-x86_64-with-glibc2.39",
+    "python": "3.12.3",
+    "numpy": "2.1.0",
+    "torch": "2.10.0a0+a36e1d39eb.nv26.01.42222806",
+    "torch_cuda": "13.1"
+  },
+  "optimizer_steps": 0,
+  "vg022_state_created": false,
+  "parity_attempted": false,
+  "artifact_sha256": {
+    "runner_log": "67806dd0a17065f4d4b510761be65157256a68dcd73223129db8e658630369d8",
+    "exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+  },
+  "recovery": "Source-fix the runner to read expected runtime values directly from the exact migration state. Bootstrap 002 may run only from the new pushed commit; never retry bootstrap 001 unchanged.",
+  "safety": {
+    "actor_input_privileged_values": 0,
+    "teacher_blend": 0.0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "submission_authorized": false
+  }
+}

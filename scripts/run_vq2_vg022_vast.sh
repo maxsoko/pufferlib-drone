@@ -56,17 +56,13 @@ done
 test "$(sha256sum "$VQ2_MIGRATION_STATE" | cut -d" " -f1)" = \
     3d4694baaeac55184d3672675b4c159ee339adbff45c4b46246a58118ecbb14b
 
-python - <<'PY'
+python - "$VQ2_MIGRATION_STATE" <<'PY'
 import platform
+import sys
 import numpy as np
 import torch
-expected = {
-    "platform": "Linux-6.8.0-90-generic-x86_64-with-glibc2.39",
-    "python": "3.12.3",
-    "numpy": "2.1",
-    "torch": "2.10.0a0+nv26.01",
-    "torch_cuda": "13.1",
-}
+state = torch.load(sys.argv[1], map_location="cpu", weights_only=False)
+expected = state["runtime"]
 actual = {
     "platform": platform.platform(),
     "python": platform.python_version(),
