@@ -10121,3 +10121,16 @@ For each training/eval block, record:
 - Base/wrapper/runner/test/preregistration hashes are `dc91107e...`/
   `19b97cbc...`/`39fa5994...`/`fbae6b53...`/`552b1e09...`. No live action is
   authorized by this screen.
+
+### VQ2 VG011 screen rejection — 2026-07-30
+
+- VG011 is terminally rejected: `0/256` finishes, `193` crashes, `63` misses,
+  no timeout. Count-specific crash rates are `70.3125%/78.125%/76.5625%/
+  76.5625%` for 5/8/11/12 gates.
+- Exactly 176 episodes reach Gate 1 and zero reach Gate 2. Executed-action and
+  held-phase transport errors are zero, localizing the failure to VG010
+  closed-loop covariate shift rather than runtime divergence.
+- Report/state/log hashes are `3e470b18...`/`f9e6b8c4...`/`a93947ab...`;
+  rejection evidence SHA is `53d5ed65...`. Never retry unchanged. Continue
+  with a new VG010-visited-state DAgger corpus while retaining VG003 and VG009
+  distributions; no live action is authorized.

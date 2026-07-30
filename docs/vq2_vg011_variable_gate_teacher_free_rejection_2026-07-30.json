@@ -1,0 +1,97 @@
+{
+  "schema": "vq2_vg011_teacher_free_rejection_v1",
+  "tag": "vq2_vg011_variable_gate_recurrent_teacher_free_256",
+  "date": "2026-07-30",
+  "source_commit": "58b7f7273bc6c9026ab46869e64e59e8451fe3ca",
+  "completed": true,
+  "admitted": false,
+  "unchanged_retry_forbidden": true,
+  "exit_code": 2,
+  "candidate_sha256": "a093475371a94bc284310bbe64609fe515a35e50be0e68a7fdfb781b55f03822",
+  "candidate_report_sha256": "dfe943b593f99c4ccfa53b04290a30cd3a58ea9fefd11d9489786e064b8734a5",
+  "episodes": 256,
+  "successes": 0,
+  "success_rate": 0.0,
+  "crashes": 193,
+  "crash_rate": 0.75390625,
+  "misses": 63,
+  "miss_rate": 0.24609375,
+  "timeouts": 0,
+  "gate1_reach": 176,
+  "gate1_reach_rate": 0.6875,
+  "gate2_reach": 0,
+  "crossing_margin_violation_rate": 0.0390625,
+  "crossing_margin_admission_predicate": false,
+  "transport": {
+    "executed_action_max_error": 0.0,
+    "phase_changes_off_tick": 0,
+    "phase_decreases": 0,
+    "phase_skips": 0,
+    "nonfinite_action": false,
+    "action_envelope_violations": 0
+  },
+  "counts": {
+    "5": {
+      "seed": 429056,
+      "successes": 0,
+      "crashes": 45,
+      "misses": 19,
+      "timeouts": 0,
+      "mean_gates_passed": 0.671875,
+      "gate1_reach": 43,
+      "gate2_reach": 0,
+      "report_sha256": "711de7f591d17e40776c1eeac694526027a22eac2b1169058629fd6a70ff9809"
+    },
+    "8": {
+      "seed": 429059,
+      "successes": 0,
+      "crashes": 50,
+      "misses": 14,
+      "timeouts": 0,
+      "mean_gates_passed": 0.6875,
+      "gate1_reach": 44,
+      "gate2_reach": 0,
+      "report_sha256": "3f9d6b1a7146a6d41d065ce89a3ab87417c41ceac90b3f33723f118a886eacfe"
+    },
+    "11": {
+      "seed": 429062,
+      "successes": 0,
+      "crashes": 49,
+      "misses": 15,
+      "timeouts": 0,
+      "mean_gates_passed": 0.6875,
+      "gate1_reach": 44,
+      "gate2_reach": 0,
+      "report_sha256": "5c978ef18b386923746e5499de38abba3a06d86b4bfddddbe2b1a01f1d623384"
+    },
+    "12": {
+      "seed": 429063,
+      "successes": 0,
+      "crashes": 49,
+      "misses": 15,
+      "timeouts": 0,
+      "mean_gates_passed": 0.703125,
+      "gate1_reach": 45,
+      "gate2_reach": 0,
+      "report_sha256": "1e5dc49530a5ac2e493a532140424ead152cc4646eb372a4157afe3928931eac"
+    }
+  },
+  "artifact_sha256": {
+    "aggregate_report": "3e470b1896881eaab74aa1391fdb51c3639d6ed1149e0678b3d4e35cb0e7cd3d",
+    "terminal_state": "f9e6b8c4251478c705e3fbdfcc1b4f0a41f569b98ed44bd9a7282afffa19b84a",
+    "runner_log": "a93947ab1ec00fd0ba57f9eab6f6db908035eaaaa51c00ea643456c5d630f499"
+  },
+  "safety": {
+    "teacher_labels_written": 0,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "submission_authorized": false
+  },
+  "diagnosis": {
+    "transport_divergence": false,
+    "course_length_dependency": false,
+    "failure_localization": "First-gate and early-transition covariate shift: 80 episodes never pass Gate 1, 176 pass Gate 1, none pass Gate 2, and 193 terminate in crash.",
+    "next_authority": "Preregister a new VG010-visited-state DAgger collection that preserves VG003 and VG009 anchors; do not retry VG011 or refit VG009 alone unchanged."
+  }
+}

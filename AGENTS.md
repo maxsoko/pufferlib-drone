@@ -9887,3 +9887,26 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   `19b97cbc...`/`39fa5994...`/`fbae6b53...`/`552b1e09...`. VG011 remains
   offline-only; rejection routes to a new source-balanced DAgger round, while
   admission authorizes only later offline promotion gates.
+
+### VQ2 teacher-free screen rejected — VG011, 2026-07-30
+
+- Source commit `58b7f727...` passed both remote native suites, a fresh
+  float32 CUDA build/ABI check, and `27/27` tests, then ran the sole fresh
+  256-course screen. VG011 is rejected with `0/256` finishes, `193/256`
+  crashes (`75.390625%`), `63/256` misses, and zero timeout.
+- Per-count crash/miss values are 5g `45/19`, 8g `50/14`, 11g `49/15`, and
+  12g `49/15`; mean gates passed are `0.671875/0.6875/0.6875/0.703125`.
+  Only `176/256` episodes pass Gate 1 and none pass Gate 2, so failure is
+  localized before course length matters.
+- Transport is exact: executed-action error, phase off-tick/decrease/skip,
+  non-finite action, and action-envelope faults are zero. The `0.0390625`
+  crossing-margin rate is diagnostic and not causal. This is policy
+  covariate shift, not checkpoint execution or native transport divergence.
+- Aggregate/state/log SHA-256 values are `3e470b18...`/`f9e6b8c4...`/
+  `a93947ab...`; all four count hashes and the terminal chain verify locally.
+  Rejection evidence SHA is `53d5ed65...`. The replacement GPU is stopped
+  after sync.
+- Never retry VG011 unchanged. The next authorized repair is a newly tagged
+  VG010-visited-state DAgger collection, followed by a refit that preserves
+  both VG003 clean anchors and the earlier VG009 failure distribution. Live
+  activity remains forbidden.
