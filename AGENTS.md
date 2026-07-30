@@ -10223,3 +10223,23 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   next authority is a new VG017-visited early-transition DAgger corpus under a
   fresh tag/seed, preserving VG003/VG009/recovered-VG012/VG016 anchors.
   FlightSim, shadow, Training, and Submission remain forbidden.
+
+### VQ2 VG017-visited DAgger round 4 — VG019, 2026-07-30
+
+- Preregister one resumable offline collection tagged
+  `vq2_vg019_variable_gate_dagger_round4_vg017_visited_512`, seed `429093`.
+  Run 512 exact-uniform count-5--12 episodes for at most 1,024 steps. Require
+  at least 300,000 records and 95% Gate-1 reach.
+- VG017 SHA `6769476f...` emits every deterministic full-output recurrent plant
+  action. The SF016 oracle supplies query labels only. The unchanged legal
+  4,119-value observation includes the causal held `/16` public phase but no
+  native state or total-count value.
+- VG018's 168 crashes and near-zero later-gate reach are the distribution being
+  labeled, so crash/Gate-2/miss/timeout remain corpus diagnostics. Hard gates
+  retain exact episode/layout/count mass, finite enveloped labels, action-
+  history parity, held-phase timing, and zero ordering/action/wire/thrust fault.
+- Generic/wrapper/runner/test/preregistration SHA-256 values are
+  `cf0b8f6d...`/`61b6e594...`/`b838bcd7...`/`03b6a5c5...`/`b7ab6673...`.
+  Focused and adjacent tests pass `36/36`; both native regression suites pass,
+  and CLI/runner syntax checks pass. VG019 is offline-only and, if admitted,
+  authorizes only a five-source refit retaining all four prior anchors.

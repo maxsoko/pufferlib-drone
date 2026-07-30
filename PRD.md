@@ -10341,3 +10341,19 @@ For each training/eval block, record:
 - Never retry VG018 unchanged. Continue with a newly preregistered VG017-
   visited early-transition DAgger corpus retaining all prior admitted anchors;
   no live activity is authorized.
+
+### VQ2 VG017-visited DAgger round 4 — VG019, 2026-07-30
+
+- Run one source-locked offline corpus tagged
+  `vq2_vg019_variable_gate_dagger_round4_vg017_visited_512`, seed `429093`:
+  512 uniform count-5--12 episodes, 1,024-step bound, at least 300,000 records,
+  and at least 95% Gate-1 reach.
+- VG017 SHA `6769476f...` supplies every plant action; SF016 supplies labels
+  only. Crash, later-gate reach, miss, and timeout remain failure-distribution
+  diagnostics while all layout/count/phase/action/ordering safety predicates
+  stay hard.
+- Generic/wrapper/runner/test/preregistration hashes are `cf0b8f6d...`/
+  `61b6e594...`/`b838bcd7...`/`03b6a5c5...`/`b7ab6673...`; focused/adjacent
+  tests pass `36/36` and both native suites pass. Admission can authorize only
+  a five-source refit preserving VG003/VG009/recovered-VG012/VG016; live
+  authority remains zero.
