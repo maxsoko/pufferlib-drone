@@ -10520,3 +10520,35 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   native suites pass, and compilation/shell syntax pass. VG027 may authorize
   only a separately preregistered source-balanced refit retaining all prior
   anchors. FlightSim, shadow, Training, and Submission remain unauthorized.
+
+### VQ2 VG027 admission / VG028 seven-source refit — 2026-07-31
+
+- VG027 completed its sole seed-`429119` collection from source commit
+  `8045af9b...` without resume. It admits `1,541,730` legal records from 512
+  exact-uniform count-5--12 episodes in `1,099.075820 s`; episode length
+  min/mean/max is `564/3011.19140625/4096`.
+- Ordered Gate-1/Gate-2/Gate-3/Gate-4 reach is `512/197/2/0`. The corpus
+  contains `368,731` phase-2 records and `711` exact phase increments.
+  Crashes/misses/timeouts are `154/137/221` training-distribution diagnostics.
+  All 22 hard layout, phase, ordering, finite-action, envelope, and transport
+  predicates pass; teacher actions, student updates, FlightSim packets, and
+  sealed-test accesses are zero.
+- Report/metadata/state/archive/admission hashes are `08c78d66...`/
+  `cf1e9ba2...`/`1bc0c0ac...`/`c078a2df...`/`de2437f3...`. Completed-resume
+  exits zero and leaves output unchanged; the local archive, arrays, hashes,
+  shapes, dtypes, record count, and terminal layout verify exactly.
+- The 48-hour competitive-lap sprint deadline is
+  `2026-08-02T00:22:45-04:00`. Its authoritative goal prompt SHA-256 is
+  `03f085d3...`. It supersedes older Submission authority: VQ2 Submission is
+  forbidden without a new explicit user instruction.
+- Preregister exactly one VG028 seven-source recurrent refit from admitted
+  VG025 epoch 5, seed `429120`, six epochs, eight-agent source chunks,
+  256-step recurrence, AdamW `5e-6`, and four transition exposures. Every
+  update uses clean/VG009/recovered-VG012/VG016/VG019/VG024/VG027 at exact
+  weights `0.25/0.04/0.04/0.08/0.12/0.17/0.30`.
+- Numerical admission requires overall and VG027 validation improvement plus
+  preservation caps `0.02/0.02/0.06/0.05/0.04/0.04/0.10`, finite metrics,
+  exact source weights, and `4.0x` transition exposure. Trainer/runner/test/
+  preregistration hashes are `ceeddef8...`/`3584a80c...`/`77ae61f0...`/
+  `ce95bc2d...`. VG028 authorizes only a separately preregistered staged
+  teacher-free screen; shadow, Training, and Submission authority remain zero.

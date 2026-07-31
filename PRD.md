@@ -10529,3 +10529,28 @@ For each training/eval block, record:
 - Wrapper/runner/test/preregistration hashes are `cc630062...`/`1094f89f...`/
   `b2e8d62d...`/`adcfa165...`; `42/42` tests and both native suites pass.
   VG027 is offline-only and can authorize only a fresh all-anchor refit.
+
+### VQ2 VG027 admission and VG028 seven-source refit — 2026-07-31
+
+- VG027 completes once from source commit `8045af9b...` and admits
+  `1,541,730` legal records across 512 uniform count-5--12 episodes. Gate reach
+  is `512/197/2/0` through Gates 1--4; phase-2 contributes `368,731` records.
+  Crashes/misses/timeouts are `154/137/221` failure-distribution diagnostics,
+  while all 22 hard corpus predicates pass.
+- Report/metadata/state/archive/admission hashes are `08c78d66...`/
+  `cf1e9ba2...`/`1bc0c0ac...`/`c078a2df...`/`de2437f3...`. Remote completed
+  resume and the complete local archive/array/hash/layout audits pass. Oracle
+  actions label only; policy/student updates and FlightSim packets remain zero.
+- The new 48-hour goal prompt SHA is `03f085d3...`, with hard deadline
+  `2026-08-02T00:22:45-04:00`. VQ2 Submission remains prohibited without a
+  new explicit user instruction.
+- VG028 preregisters one six-epoch refit from admitted VG025 epoch 5 with seed
+  `429120`, eight-agent source chunks, 256-step recurrence, AdamW `5e-6`, and
+  four transition exposures. Each optimizer update uses all seven clean/
+  visited-state sources at weights
+  `0.25/0.04/0.04/0.08/0.12/0.17/0.30`.
+- Admission requires source-balanced and VG027 validation improvement,
+  per-source caps `0.02/0.02/0.06/0.05/0.04/0.04/0.10`, finite metrics,
+  exact weights, and `4.0x` transition exposure. Trainer/runner/test/
+  preregistration hashes are `ceeddef8...`/`3584a80c...`/`77ae61f0...`/
+  `ce95bc2d...`. VG028 can authorize only a staged teacher-free offline screen.
