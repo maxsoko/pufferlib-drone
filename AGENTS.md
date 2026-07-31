@@ -10805,3 +10805,24 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
 - Manifest/collector/runner/test/preregistration hashes are `900db1bd...`/
   `4eb20af4...`/`eadb9181...`/`d2c12dbf...`/`868ac0ac...`. VG039 is
   offline-only and may authorize only a separately preregistered refit.
+
+### VQ2 VG039 admission / VG040 nine-source refit — 2026-07-31
+
+- VG039 completed once from source commit `bb53f682...` in `99.634472 s`,
+  admitting `1,901,389` fresh legal labels from 512 exact-uniform count-5--12
+  episodes. Episode length min/mean/max is `582/3713.650391/4096`.
+- Ordered Gate-1/2/3/4/5 reach is `512/487/146/45/3`; phase-2/3/4/5 has
+  `1,022,122/158,365/26,044/240` records. All 27 hard corpus predicates
+  pass. Report/metadata/state/log hashes are `a0bdcd0d...`/`89134752...`/
+  `41702ed8...`/`40017203...`; completed resume is report-exact and leaves
+  state unchanged. Admission evidence SHA is `e01eb2e2...`.
+- Preregister VG040: one six-epoch recurrent refit from VG033 epoch 6, seed
+  `429153`, nine-agent source chunks, 256-step BPTT, AdamW `5e-6`, and four
+  transition exposures. Every update uses clean/VG009/recovered-VG012/VG016/
+  VG019/VG024/VG027/VG032/VG039 at exact weights
+  `0.22/0.02/0.02/0.04/0.05/0.05/0.08/0.12/0.40`.
+- Admission requires strict nine-source and VG039 validation improvement,
+  exact weights/exposure, finite metrics, and per-source caps
+  `0.02/0.02/0.06/0.05/0.04/0.04/0.10/0.12/0.12`. Trainer/runner/test/
+  preregistration hashes are `22682e75...`/`386e660b...`/`15470bc9...`/
+  `f7993252...`. VG040 remains offline-only.

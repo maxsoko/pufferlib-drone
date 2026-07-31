@@ -10769,3 +10769,19 @@ For each training/eval block, record:
 - Manifest/collector/runner/test/preregistration hashes are `900db1bd...`/
   `4eb20af4...`/`eadb9181...`/`d2c12dbf...`/`868ac0ac...`. No live authority
   is granted.
+
+### VQ2 VG039 admission and VG040 nine-source refit — 2026-07-31
+
+- VG039 admits `1,901,389` fresh labels from 512 uniform episodes in
+  `99.634472 s`. Gate-1/2/3/4/5 reach is `512/487/146/45/3`, with
+  phase-2/3/4/5 mass `1,022,122/158,365/26,044/240`.
+- All 27 hard predicates pass. Report/metadata/state/log hashes are
+  `a0bdcd0d...`/`89134752...`/`41702ed8...`/`40017203...`; exact completed
+  resume passes. Admission evidence SHA is `e01eb2e2...`.
+- VG040 preregisters one six-epoch full recurrent refit from VG033, seed
+  `429153`, 256-step BPTT, four transition exposures, and fixed nine-source
+  weights `0.22/0.02/0.02/0.04/0.05/0.05/0.08/0.12/0.40`.
+- Numerical admission requires nine-source and VG039 improvement plus caps
+  `0.02/0.02/0.06/0.05/0.04/0.04/0.10/0.12/0.12`. Trainer/runner/test/
+  preregistration hashes are `22682e75...`/`386e660b...`/`15470bc9...`/
+  `f7993252...`. No live authority is granted.
