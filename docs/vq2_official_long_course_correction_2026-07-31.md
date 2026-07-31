@@ -79,3 +79,8 @@ rollout and only `0.375917 s` in optimizer work; report SHA-256 is
 LC004 causally scales agents/buffers/threads/minibatch by four to occupy the
 full host and feed the GPU. It retains all throughput-only and no-checkpoint
 restrictions.
+
+LC004 stopped at wrapper import because the repository root was absent from
+`sys.path`; no environment, CUDA context, rollout, optimizer update, or report
+was created. LC005 repairs only that executable bootstrap, uses a fresh tag and
+seed 431050, and preserves the full LC004 scale and admission contract.

@@ -11096,3 +11096,6 @@ For each training/eval block, record:
   versus `0.375917 s` training). LC004 scales agents/buffers/threads/minibatch
   fourfold to `4096/64/256/65536`, uses a fresh seed, and preserves the same
   privileged throughput-only/no-checkpoint restriction and `10x` gate.
+- LC004 failed at wrapper import before environment or optimizer creation; no
+  report exists. LC005 adds the missing repository-root bootstrap only, uses a
+  fresh tag/seed, and reruns the unchanged full-host scale and admission gate.

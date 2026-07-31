@@ -11202,3 +11202,7 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   LC004 changes agents/buffers/threads/minibatch `1024/16/128/16384 ->
   4096/64/256/65536` with fresh seed 431040. It remains privileged,
   throughput-only, unsaved, and grants no deployment/live authority.
+- LC004 stopped before environment/CUDA/optimizer creation because its wrapper
+  omitted the repository root from `sys.path`; no report exists. LC005 repairs
+  only that import bootstrap, uses fresh tag/seed 431050, and preserves the
+  `4096/64/256/65536` scale and every throughput/no-checkpoint predicate.
