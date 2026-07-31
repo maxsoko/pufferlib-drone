@@ -102,6 +102,7 @@ PLANT_ACTION_CONTRACT = (
 FEATURE_QUERY_PHASE_MIN: int | None = None
 FEATURE_QUERY_PHASE_MAX_EXCLUSIVE: int | None = None
 TEACHER_PLANT_ENABLED = True
+RECORD_STOP: int | None = None
 
 
 FEATURE_DTYPE = np.dtype([
@@ -382,6 +383,7 @@ def collect(
     started = time.perf_counter()
     native_log: dict[str, Any] = {}
     vector_steps = 0
+    stopped_on_record_target = False
     try:
         vector.reset()
         with partial.open("wb") as feature_file, torch.no_grad():
@@ -482,6 +484,9 @@ def collect(
                         phase_index[selected], minlength=ENGINE_GATE_CAP + 1
                     )
                 done |= terminal
+                if RECORD_STOP is not None and feature_records >= RECORD_STOP:
+                    stopped_on_record_target = True
+                    break
             feature_file.flush()
             os.fsync(feature_file.fileno())
         native_log = dict(vector.log())
@@ -492,7 +497,7 @@ def collect(
     finally:
         vector.close()
 
-    if not done.all():
+    if not done.all() and not stopped_on_record_target:
         raise RuntimeError("VG062 did not observe one terminal episode per agent")
     expected_bytes = feature_records * FEATURE_DTYPE.itemsize
     if partial.stat().st_size != expected_bytes:
@@ -506,7 +511,10 @@ def collect(
         "source_commit": commit, "source_sha256": hashes,
         "runtime": {**current_runtime_manifest(), "compiled_extension": str(extension)},
         "config_overrides": overrides, "agents": AGENTS, "episodes": EPISODES,
+        "num_gates": int(config["env"].get("num_gates", 0)),
         "seed": SEED, "step_limit": STEP_LIMIT, "vector_steps": vector_steps,
+        "record_stop": RECORD_STOP,
+        "stopped_on_record_target": stopped_on_record_target,
         "wall_time_seconds": wall, "metrics": metrics,
         "parent_checkpoint_sha256": PARENT_CHECKPOINT_SHA256,
         "parent_best_epoch": payload.get("best_epoch"),
@@ -526,6 +534,8 @@ def collect(
         "query_steps_by_agent_min": int(query_steps_by_agent.min()),
         "query_steps_by_agent_mean": float(query_steps_by_agent.mean()),
         "query_steps_by_agent_max": int(query_steps_by_agent.max()),
+        "query_agents": int((query_steps_by_agent > 0).sum()),
+        "completed_agents": int(done.sum()),
         "teacher_query_actions_recorded": int(query_steps_by_agent.sum()),
         "feature_query_phase_min": FEATURE_QUERY_PHASE_MIN,
         "feature_query_phase_max_exclusive": FEATURE_QUERY_PHASE_MAX_EXCLUSIVE,
