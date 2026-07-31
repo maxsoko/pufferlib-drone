@@ -1,0 +1,13 @@
+{
+  "schema": "vq2_lc061_phase2_bias_full_course_rejection_v1",
+  "tag": "vq2_lc061_phase2_bias_full_course_001",
+  "rejected": true,
+  "unchanged_retry_forbidden": true,
+  "failure": "checkpoint-save TypeError after the full native vector closed because atomic_torch_save arguments were reversed",
+  "selection_predicates_reached": true,
+  "terminal_report_emitted": false,
+  "minimum_observed_external_wall_time_seconds": 45.369,
+  "flight_sim_packets_sent": 0,
+  "submission_authorized": false,
+  "next_authority": "Correct only the checkpoint-save call and rerun the source-locked pair under unique tag LC062."
+}

@@ -60,6 +60,7 @@ PREREGISTRATION = ROOT / "docs/vq2_lc061_phase2_bias_full_course_preregistration
 RUNNER = ROOT / "scripts/run_vq2_lc061_vast.sh"
 TEST = ROOT / "tests/test_eval_vq2_lc061_phase2_bias_full_course.py"
 DEFAULT_OUTPUT = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
+EXTRA_SOURCE_PATHS: tuple[Path, ...] = ()
 
 
 def group_slice(group: int) -> slice:
@@ -117,6 +118,7 @@ def source_identity() -> dict[str, Any]:
         ROOT / "ocean/drone_race/drone_race.c",
         ROOT / "ocean/drone_race/drone_race.h",
         ROOT / "ocean/drone_race/binding.c",
+        *EXTRA_SOURCE_PATHS,
     )
     extension = Path(_C.__file__).resolve()
     return {
@@ -351,7 +353,7 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
             },
         }
         checkpoint_path = output / "policy_selected.pt"
-        atomic_torch_save(checkpoint_payload, checkpoint_path)
+        atomic_torch_save(checkpoint_path, checkpoint_payload)
         candidate_checkpoint_sha256 = sha256_path(checkpoint_path)
     diagnostic_valid = bool(initial_groups_exact and all(item["transport_pass"] for item in items))
     report = {
