@@ -11211,3 +11211,51 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   six independent LC003-sized workers concurrently (seeds 431060--431065) to
   bypass buffer synchronization, target about 14 GB VRAM/168 active cores, and
   retain the aggregate `10x`/50%-GPU/no-checkpoint gates.
+
+### VQ2 accelerated 24-gate Puffer frontier — LC019--LC044, 2026-07-31
+
+- The official course is approximately 20 gates or more by direct operator
+  inspection. Do not reintroduce a six-gate completion assumption. The offline
+  admission proxy uses 24 gates; only official `race_finish_time_ns >= 0`
+  proves a simulator finish, regardless of the observed final index.
+- The efficient Vast layout is one persistent RTX 4090 job with 32 native
+  environment threads and batched CUDA inference. Native teacher/vector
+  generation measures roughly `193k--220k` agent steps/s; legal recurrent
+  rollout plus optimizer reaches `158k--162k` steps/s, including 10,010,624
+  steps in about `61.9 s`. Multiple independent workers regressed throughput
+  and are rejected. Collection now costs about `17--30 s`, isolated head fits
+  `2.6--8.7 s`, and an eight-candidate paired 24-gate screen about
+  `205--230 s`; screening, not training, is the current cycle bottleneck.
+- LC019--LC030 restore and refine the early residual heads. LC027 is the
+  retained phase-2 parent at mean progress `3.50`, raw index 6, and crash
+  `0.0625`; checkpoint SHA is `4cdd636a...`. A third phase-2 cycle, LC030,
+  selects nothing and stops that branch.
+- LC031--LC037 run two student-state phase-4 cycles. LC037 selects alpha
+  `0.005`, improves paired mean `3.59375 -> 3.71875`, advances raw index
+  `6 -> 7`, and halves crash `0.0625 -> 0.03125`. Aggregate/checkpoint SHA
+  values are `5678e455...`/`da1940dd...`.
+- LC038 exposed a legacy 16-phase Python counter and stopped before an
+  artifact. LC039 fixed the counter but is rejected because a function-default
+  capture started the training teacher at phase 1 instead of configured phase
+  4. LC040 passes the explicit-boundary fix and admits a reusable corpus of
+  `1,404,080` recurrent legal-observation labels covering every phase 4--23 in
+  `110.397454 s`. The LC037 Puffer owns all plant actions through held phase 3;
+  the native oracle owns only the training suffix. Corpus report/feature SHA
+  values are `7b814fab...`/`50ad981f...`. Teacher actions and privileged state
+  remain forbidden in every admission screen and runtime.
+- LC041 fits phases 5--23 together in `18.993618 s` but is rejected: phase 5
+  improves `1.587326x`, phase 6 regresses to `0.903007x`, and aggregate
+  admission fails. Report SHA is `b6c87b68...`; do not screen its checkpoint.
+- LC042 isolates phase 5 and passes with `1.557096x` held-out improvement in
+  `5.066445 s`. LC043 then selects alpha `0.005`: paired mean improves
+  `3.71875 -> 3.75`, raw index advances `7 -> 8`, and crash stays `0.03125`.
+  LC043 aggregate/checkpoint SHA values are `3dddf5bb...`/`d2f9c235...`.
+- LC044 isolates phase 6 but peaks at only `1.017337x`, below its preregistered
+  `1.02x` floor, and is rejected without a screen. Report SHA is
+  `d7592fa1...`. Retain LC043. The next useful branch must obtain phase-6
+  states owned by the student distribution or otherwise correct that state
+  mismatch; do not keep fitting the same teacher-distribution phase-6 rows.
+- No LC019--LC044 job sends FlightSim packets. No new Windows shadow, bounded
+  Training attempt, or Submission authority exists. Keep live commands frozen
+  until a substantially stronger whole-Puffer 24-gate policy passes larger
+  exact/perturbed replay screens and a zero-command Windows shadow.
