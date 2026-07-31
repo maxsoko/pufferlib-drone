@@ -1,0 +1,64 @@
+{
+  "schema": "vq2_vg070_nonlinear_residual_count5_scale_bracket_admission_v1",
+  "tag": "vq2_vg070_nonlinear_residual_count5_scale_bracket_001",
+  "completed": true,
+  "numerically_admitted": true,
+  "source_commit": "dbca04e1d8831e879eb4b3b81ce36a751505792d",
+  "artifact_sha256": {
+    "checkpoint": "8fb8979ba9f2b7ca21bbcd9372b5b0f40335d072e61212a43dfe27e6a703607c",
+    "report": "5a1582f22b523eeb3c4f0f80dc5c30c2c607bcb3c6cffa6033916be969bbabf8",
+    "state": "0bac871a16d1aacde2428bebd4a1c37c1fb10bddcd9712f83e2bae5e64497646"
+  },
+  "screen_contract": {
+    "episodes_per_scale": 64,
+    "episode_offset": 208,
+    "seed": 429204,
+    "num_gates": 5,
+    "max_steps": 23040,
+    "teacher_blend": 0.0,
+    "actor_class": "VQ2IndexedPhaseMLPResidualActor"
+  },
+  "selected": {
+    "alpha": 0.05,
+    "successes": 17,
+    "crashes": 14,
+    "misses": 24,
+    "timeouts": 9,
+    "mean_gates_passed": 3.234375,
+    "gate_reach": [64, 59, 37, 30, 17],
+    "hard_transport_pass": true,
+    "executed_action_max_error": 0.0
+  },
+  "parent": {
+    "alpha": 0.0,
+    "successes": 10,
+    "crashes": 28,
+    "misses": 21,
+    "timeouts": 5,
+    "mean_gates_passed": 3.109375,
+    "gate_reach": [64, 58, 36, 31, 10],
+    "hard_transport_pass": true,
+    "executed_action_max_error": 0.0
+  },
+  "admission_predicates": {
+    "more_complete_five_gate_episodes": true,
+    "crashes_not_increased": true,
+    "gate1_not_regressed": true,
+    "transport_clean": true
+  },
+  "authorized_successor": {
+    "tag": "vq2_vg071_nonlinear_residual_count5_multi_offset_001",
+    "scope": "One paired teacher-free alpha-zero versus selected-alpha count-5 screen on four fresh episode offsets.",
+    "rollout_authority": true,
+    "live_authority": false
+  },
+  "safety": {
+    "teacher_plant_actions": 0,
+    "runtime_teacher_actions": 0,
+    "flight_sim_packets_sent": 0,
+    "windows_shadow_packets_sent": 0,
+    "vq2_training_packets_sent": 0,
+    "submission_authorized": false
+  },
+  "live_authority": false
+}
