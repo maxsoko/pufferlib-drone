@@ -442,6 +442,10 @@ typedef struct {
     // observations and the final 34 are training-only decoder targets. Only
     // the drone_race_vision binding has sufficient observation capacity.
     int visual_observation;
+    // Default-off native PPO boundary. The policy-visible tensor retains its
+    // historical width for the CUDA engine, but every training-only tail value
+    // is zero and the legal step-dt slot carries public active_gate_index / 6.
+    int visual_policy_legal_only;
     float visual_camera_hz;
     float visual_focal_x_px;
     float visual_focal_y_px;

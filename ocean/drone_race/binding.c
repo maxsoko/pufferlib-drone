@@ -169,6 +169,8 @@ void my_init(Env* env, Dict* kwargs) {
         kwargs,
         "visual_observation",
         DRONE_RACE_OBS_SIZE == DRONE_RACE_VISUAL_OBS_SIZE ? 1 : 0);
+    env->visual_policy_legal_only = get_int(
+        kwargs, "visual_policy_legal_only", 0);
     if (env->visual_observation
             && DRONE_RACE_OBS_SIZE != DRONE_RACE_VISUAL_OBS_SIZE) {
         fprintf(

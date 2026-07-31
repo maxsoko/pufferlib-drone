@@ -1158,6 +1158,19 @@ static void compute_visual_observation(DroneRace* env, int agent_index) {
         }
         obs[value] = clampf(obs[value], -1.0f, 1.0f);
     }
+    if (env->visual_policy_legal_only) {
+        // Reuse the constant step-dt slot for the public race-status scalar.
+        // This keeps the CUDA ABI fixed while making every nonzero actor input
+        // reproducible from camera, IMU/actuator history, and official status.
+        obs[DRONE_RACE_VISUAL_DT_OFFSET] =
+            env->observable_gate_progress_unbounded
+                ? fmaxf(visual_gate_phase, 0.0f)
+                : clampf(visual_gate_phase, 0.0f, 1.0f);
+        memset(
+            obs + DRONE_RACE_VISUAL_PRIVILEGED_OFFSET,
+            0,
+            DRONE_RACE_VISUAL_PRIVILEGED_SIZE * sizeof(float));
+    }
 }
 #endif
 

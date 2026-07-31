@@ -182,6 +182,27 @@ static int test_asynchronous_camera_and_action_history(void) {
     return 0;
 }
 
+static int test_native_puffer_legal_only_boundary(void) {
+    DroneRace env = make_visual_env();
+    env.observable_gate_index_denominator = 6.0f;
+    env.observable_gate_progress_unbounded = 1;
+    env.visual_policy_legal_only = 1;
+    env.agents[0].current_gate = 1;
+    env.agents[0].step_count = 0;
+    compute_one_observation(&env, 0);
+    CHECK(fabsf(
+            env.observations[DRONE_RACE_VISUAL_DT_OFFSET] - 1.0f / 6.0f)
+            < 1e-7f,
+        "legal-only PPO input must expose public unbounded progress / 6");
+    for (int value = DRONE_RACE_VISUAL_PRIVILEGED_OFFSET;
+            value < DRONE_RACE_VISUAL_OBS_SIZE; value++) {
+        CHECK(env.observations[value] == 0.0f,
+            "legal-only PPO input must zero every training-only value");
+    }
+    free_visual_env(&env);
+    return 0;
+}
+
 static int test_privileged_intervention_cannot_change_legal_slice(void) {
     DroneRace env = make_visual_env();
     env.visual_camera_hz = 0.0f;
@@ -387,6 +408,7 @@ int main(void) {
     if (test_visual_schema_and_mask()) return 1;
     if (test_legal_visual_observation_is_count_agnostic()) return 1;
     if (test_asynchronous_camera_and_action_history()) return 1;
+    if (test_native_puffer_legal_only_boundary()) return 1;
     if (test_privileged_intervention_cannot_change_legal_slice()) return 1;
     if (test_ctbr_privileged_targets_follow_effective_plant()) return 1;
     if (test_ctbr_zero_action_is_hover_centered()) return 1;
