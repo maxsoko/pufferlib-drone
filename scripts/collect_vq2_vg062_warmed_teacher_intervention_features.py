@@ -26,7 +26,7 @@ from pufferlib.torch_pufferl import _cpu_tensor
 from pufferlib.vq2_informed import ACTION_HISTORY, ENV_OBS_SIZE, LEGAL_OBS_SIZE
 from pufferlib.vq2_oracle import alignment_oracle_action
 from pufferlib.vq2_public_phase import ENGINE_GATE_CAP, PUBLIC_STATUS_INTERVAL_STEPS
-from pufferlib.vq2_recurrent import ACTION_SIZE
+from pufferlib.vq2_recurrent import ACTION_SIZE, RecurrentActorOutput
 from scripts.collect_vq2_variable_gate_oracle_bc_dataset import (
     PHASE_PRIVILEGED_INDEX,
     update_held_phase,
@@ -103,6 +103,7 @@ FEATURE_QUERY_PHASE_MIN: int | None = None
 FEATURE_QUERY_PHASE_MAX_EXCLUSIVE: int | None = None
 TEACHER_PLANT_ENABLED = True
 RECORD_STOP: int | None = None
+ACTOR_INFERENCE_CHUNK_SIZE: int | None = None
 
 
 FEATURE_DTYPE = np.dtype([
@@ -308,6 +309,40 @@ def _load_actor(device: torch.device):
     return recurrent_evaluator.load_actor(device)
 
 
+def forward_actor_chunked(
+    actor: Any,
+    actor_input: torch.Tensor,
+    recurrent: torch.Tensor,
+    *,
+    chunk_size: int | None = ACTOR_INFERENCE_CHUNK_SIZE,
+) -> tuple[RecurrentActorOutput, torch.Tensor]:
+    """Run independent recurrent rows in fixed-size numerical batches."""
+
+    agents = int(actor_input.shape[0])
+    if recurrent.ndim != 3 or recurrent.shape[0] != 1 or recurrent.shape[1] != agents:
+        raise ValueError("actor input and recurrent batch dimensions do not align")
+    if chunk_size is None:
+        return actor.forward_step(actor_input, recurrent)
+    if chunk_size <= 0:
+        raise ValueError("actor inference chunk size must be positive")
+    outputs: list[RecurrentActorOutput] = []
+    states: list[torch.Tensor] = []
+    for start in range(0, agents, chunk_size):
+        stop = min(start + chunk_size, agents)
+        output, state = actor.forward_step(
+            actor_input[start:stop], recurrent[:, start:stop]
+        )
+        outputs.append(output)
+        states.append(state)
+    return RecurrentActorOutput(
+        mean=torch.cat([output.mean for output in outputs], dim=0),
+        pre_tanh_mean=torch.cat(
+            [output.pre_tanh_mean for output in outputs], dim=0
+        ),
+        log_std=torch.cat([output.log_std for output in outputs], dim=0),
+    ), torch.cat(states, dim=1)
+
+
 def collect(
     *, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda", resume: bool = False,
 ) -> dict[str, Any]:
@@ -343,6 +378,7 @@ def collect(
         "runtime": current_runtime_manifest(),
         "agents": AGENTS, "episodes": EPISODES, "seed": SEED,
         "step_limit": STEP_LIMIT, "intervention_phase_min": INTERVENTION_PHASE_MIN,
+        "actor_inference_chunk_size": ACTOR_INFERENCE_CHUNK_SIZE,
         "safety": {
             "training_only_teacher_plant_actions": True,
             "runtime_teacher_authorized": False,
@@ -410,7 +446,10 @@ def collect(
                 phase_tensor = torch.from_numpy(held_phase[:, None]).to(device)
                 actor_input = torch.cat((legal, phase_tensor), dim=1)
                 active_device = torch.from_numpy(active).to(device)
-                result, candidate = actor.forward_step(actor_input, recurrent)
+                result, candidate = forward_actor_chunked(
+                    actor, actor_input, recurrent,
+                    chunk_size=ACTOR_INFERENCE_CHUNK_SIZE,
+                )
                 recurrent = preserve_frozen_state(recurrent, candidate, active_device)
                 student = torch.where(
                     active_device[:, None], result.mean, torch.zeros_like(result.mean)
@@ -513,6 +552,7 @@ def collect(
         "config_overrides": overrides, "agents": AGENTS, "episodes": EPISODES,
         "num_gates": int(config["env"].get("num_gates", 0)),
         "seed": SEED, "step_limit": STEP_LIMIT, "vector_steps": vector_steps,
+        "actor_inference_chunk_size": ACTOR_INFERENCE_CHUNK_SIZE,
         "record_stop": RECORD_STOP,
         "stopped_on_record_target": stopped_on_record_target,
         "wall_time_seconds": wall, "metrics": metrics,

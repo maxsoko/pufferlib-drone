@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
+import torch
 
 import scripts.collect_vq2_vg062_warmed_teacher_intervention_features as collector
+from pufferlib.vq2_recurrent import RecurrentActorOutput
 
 from scripts.collect_vq2_vg062_warmed_teacher_intervention_features import (
     AGENTS,
@@ -85,3 +88,37 @@ def test_collection_admission_requires_training_only_successful_intervention() -
 
 def test_fixed_collection_shape() -> None:
     assert AGENTS == EPISODES == 512
+
+
+class _DummyActor:
+    def forward_step(self, observation, state):
+        pre_tanh = observation[:, :4] + state[0, :, :4]
+        output = RecurrentActorOutput(
+            mean=torch.tanh(pre_tanh),
+            pre_tanh_mean=pre_tanh,
+            log_std=torch.zeros_like(pre_tanh),
+        )
+        return output, state + observation[:, :1].unsqueeze(0)
+
+
+def test_chunked_actor_inference_preserves_row_order_and_state() -> None:
+    actor = _DummyActor()
+    observation = torch.arange(70, dtype=torch.float32).reshape(10, 7) / 70
+    state = torch.arange(60, dtype=torch.float32).reshape(1, 10, 6) / 60
+    direct, direct_state = actor.forward_step(observation, state)
+    chunked, chunked_state = collector.forward_actor_chunked(
+        actor, observation, state, chunk_size=4
+    )
+    torch.testing.assert_close(chunked.mean, direct.mean, rtol=0, atol=0)
+    torch.testing.assert_close(
+        chunked.pre_tanh_mean, direct.pre_tanh_mean, rtol=0, atol=0
+    )
+    torch.testing.assert_close(chunked.log_std, direct.log_std, rtol=0, atol=0)
+    torch.testing.assert_close(chunked_state, direct_state, rtol=0, atol=0)
+
+
+def test_chunked_actor_inference_rejects_invalid_chunk_size() -> None:
+    with pytest.raises(ValueError, match="must be positive"):
+        collector.forward_actor_chunked(
+            _DummyActor(), torch.zeros(2, 7), torch.zeros(1, 2, 6), chunk_size=0
+        )
