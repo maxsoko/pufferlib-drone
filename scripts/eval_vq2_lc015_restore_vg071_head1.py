@@ -88,6 +88,7 @@ MIN_MEAN_GATES = 1.09375
 MIN_MAXIMUM_INDEX = 2
 MAX_CRASH_RATE = 0.50
 EXTRA_EVIDENCE_PATHS: tuple[Path, ...] = ()
+CONVERSION_OPERATION: str | None = None
 
 
 def state_sha256(state: dict[str, torch.Tensor]) -> str:
@@ -233,7 +234,7 @@ def run(
 
     core.load_converted_actor = load_actor
     core.conversion_metadata = lambda _: {
-        "operation": (
+        "operation": CONVERSION_OPERATION or (
             "restore converted VG071 residual heads "
             + ",".join(str(phase) for phase in RESTORED_PHASES)
         ),
