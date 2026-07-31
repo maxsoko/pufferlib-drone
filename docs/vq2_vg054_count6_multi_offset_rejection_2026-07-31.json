@@ -1,0 +1,44 @@
+{
+  "schema": "vq2_vg054_count6_multi_offset_rejection_v1",
+  "tag": "vq2_vg054_vg053_count6_multi_offset_001",
+  "completed": true,
+  "qualified": false,
+  "source_commit": "26012df2e2b016a45c9a93cd2cead2e6d305cec7",
+  "checkpoint_sha256": "f0a9812f55ce95d437af06a043c64d75a3ea757ac6965df9e3cdf64f30563ce5",
+  "artifact_sha256": {
+    "report": "2124dc087701ea1d3243a71a7fcc5b39f887bd7f31dd068728f82d96c527309f",
+    "state": "e9c67d4ede88cc909023f61e3d443c4ae56f219be42390e0c0a545173a7eb809",
+    "runner_log": "2a3d7282e0e2a531cc7e79a70d17763f4bbb3492a91248e91e0263fe2b7f7120",
+    "completed_resume": "2124dc087701ea1d3243a71a7fcc5b39f887bd7f31dd068728f82d96c527309f"
+  },
+  "parent": {
+    "gate_reach": {"1": 256, "2": 241, "3": 52, "4": 5, "5": 0, "6": 0},
+    "successes": 0,
+    "crashes": 17,
+    "misses": 22,
+    "mean_gates_passed": 2.1640625
+  },
+  "candidate": {
+    "gate_reach": {"1": 256, "2": 226, "3": 46, "4": 1, "5": 0, "6": 0},
+    "successes": 0,
+    "crashes": 10,
+    "misses": 32,
+    "mean_gates_passed": 2.06640625
+  },
+  "qualification_predicates": {
+    "hard_transport_pass": true,
+    "gate1_not_regressed": true,
+    "gate2_not_regressed": false,
+    "crashes_not_regressed": true,
+    "strict_downstream_improvement": false
+  },
+  "unchanged_retry_forbidden": true,
+  "next_authority": "one_source_locked_VG033_to_VG053_fraction_bracket_on_new_offsets",
+  "live_authority": false,
+  "safety": {
+    "teacher_plant_actions": 0,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "submission_authorized": false
+  }
+}

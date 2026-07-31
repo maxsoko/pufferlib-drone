@@ -11078,3 +11078,18 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
 - VG054 manifest/evaluator/runner/generic-test/focused-test/preregistration
   hashes are `001e385a...`/`c0fb4710...`/`8a68ff33...`/`c1cf8ffb...`/
   `952754b8...`/`9835f2f2...`. No live authority exists.
+- VG054 rejects the full VG053 update. Across offsets `0/8/16/24`, VG033
+  versus VG053 Gate-1--6 reach changes
+  `256/241/52/5/0/0 -> 256/226/46/1/0/0`; crashes improve `17 -> 10`, but
+  misses regress `22 -> 32` and mean gates regress
+  `2.1640625 -> 2.06640625`. Report/state/log hashes are `2124dc08...`/
+  `e9c67d4e...`/`2a3d7282...`; rejection SHA is `bb78f928...`. Never retry
+  VG054 unchanged and retain VG033.
+- VG055 preregisters fractions
+  `0/0.025/0.05/0.10/0.20/0.35/0.50/0.75/1.0` on new offsets
+  `32/40/48/56`, 32 episodes per offset. Qualification requires hard
+  transport, Gate-1/2 and crash preservation, plus strict downstream
+  progress over the alpha-zero parent. Evaluator/runner/test/preregistration
+  hashes are `0a876b34...`/`8998f64e...`/`625930c2...`/`9cfa9d7d...`.
+  A selection remains offline-only pending a larger independent screen; no
+  live authority exists.

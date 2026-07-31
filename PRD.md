@@ -11000,3 +11000,15 @@ For each training/eval block, record:
   focused-test hashes are `001e385a...`/`c0fb4710...`/`8a68ff33...`/
   `c1cf8ffb...`/`952754b8...`; preregistration is `9835f2f2...`. No live
   authority exists.
+- VG054 rejects VG053 on deployment-shaped rollout. Aggregate Gate-1--6 reach
+  regresses `256/241/52/5/0/0 -> 256/226/46/1/0/0`; crashes improve
+  `17 -> 10`, while misses regress `22 -> 32` and mean gates regress
+  `2.1640625 -> 2.06640625`. Report/state/log/rejection hashes are
+  `2124dc08...`/`e9c67d4e...`/`2a3d7282...`/`bb78f928...`. Retain VG033 and
+  never retry VG054 unchanged.
+- VG055 screens VG033-to-VG053 fractions
+  `0/0.025/0.05/0.10/0.20/0.35/0.50/0.75/1.0` over new episode offsets
+  `32/40/48/56`, 32 episodes each. It requires hard transport, no Gate-1/2
+  or crash regression, and strict downstream progress. Evaluator/runner/test/
+  preregistration hashes are `0a876b34...`/`8998f64e...`/`625930c2...`/
+  `9cfa9d7d...`. No live authority exists.
