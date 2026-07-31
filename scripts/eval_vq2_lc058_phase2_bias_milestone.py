@@ -76,6 +76,7 @@ NEXT_AUTHORITY_SELECTED = (
     "do not promote from this screen alone."
 )
 NEXT_AUTHORITY_NONE = "Reject the constant-bias family and retain LC048."
+VECTORIZED_CHECKPOINT_SURGERY = "phase-2 indexed output bias before tanh"
 
 
 def group_slice(group: int) -> slice:
@@ -114,6 +115,37 @@ def candidate_state(
     row = state["indexed_phase_residual_output_bias"]
     row[TARGET_PHASE].add_(torch.tensor(bias, dtype=row.dtype))
     return state
+
+
+def build_candidate_context(
+    payload: dict[str, Any], *, device: torch.device
+) -> Any:
+    del payload
+    return bias_matrix(device=device)
+
+
+def apply_candidate_actions(
+    actor_output: Any,
+    next_recurrent: torch.Tensor,
+    held_progress: torch.Tensor,
+    context: Any,
+) -> torch.Tensor:
+    del next_recurrent
+    return apply_phase2_bias(actor_output.pre_tanh_mean, held_progress, context)
+
+
+def candidate_state_for_index(
+    parent_state: dict[str, torch.Tensor], candidate_index: int
+) -> dict[str, torch.Tensor]:
+    return candidate_state(parent_state, BIAS_CANDIDATES[candidate_index][1])
+
+
+def candidate_metadata_for_index(candidate_index: int) -> dict[str, Any]:
+    bias = BIAS_CANDIDATES[candidate_index][1]
+    return {
+        "bias": list(bias),
+        "bias_l2": float(np.linalg.norm(np.asarray(bias, dtype=np.float64))),
+    }
 
 
 def choose_candidate(items: list[dict[str, Any]]) -> dict[str, Any] | None:
@@ -264,7 +296,7 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
     terminals = _cpu_tensor(vector.terminals_ptr, (TOTAL_AGENTS,), torch.float32)
     actions_cpu = torch.zeros((TOTAL_AGENTS, ACTION_SIZE), dtype=torch.float32)
     recurrent = actor.initial_state(TOTAL_AGENTS, device=device)
-    deltas = bias_matrix(device=device)
+    candidate_context = build_candidate_context(payload, device=device)
     done = torch.zeros(TOTAL_AGENTS, dtype=torch.bool)
     resolved = np.zeros(TOTAL_AGENTS, dtype=bool)
     passed = np.zeros(TOTAL_AGENTS, dtype=bool)
@@ -332,7 +364,9 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
                 inference_started = time.perf_counter()
                 actor_output, next_recurrent = actor.forward_step(actor_input, recurrent)
                 recurrent = preserve_frozen_state(recurrent, next_recurrent, active)
-                action = apply_phase2_bias(actor_output.pre_tanh_mean, progress, deltas)
+                action = apply_candidate_actions(
+                    actor_output, next_recurrent, progress, candidate_context
+                )
                 action = torch.where(active[:, None], action, torch.zeros_like(action))
                 inference_seconds += time.perf_counter() - inference_started
                 if not bool(torch.isfinite(action[active]).all()):
@@ -380,7 +414,8 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
         selected = group_slice(group)
         baseline_passed = passed[group_slice(0)]
         candidate_passed = passed[selected]
-        candidate = candidate_state(parent_state, bias)
+        candidate = candidate_state_for_index(parent_state, group)
+        candidate_metadata = candidate_metadata_for_index(group)
         milestone_index = np.minimum(maximum_raw_index[selected], TARGET_RAW_INDEX)
         distribution = {
             str(index): int((milestone_index == index).sum())
@@ -397,8 +432,7 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
         )
         pass_steps = resolve_step[selected][passed[selected]]
         items.append({
-            "candidate_index": group, "name": name, "bias": list(bias),
-            "bias_l2": float(np.linalg.norm(np.asarray(bias, dtype=np.float64))),
+            "candidate_index": group, "name": name, **candidate_metadata,
             "candidate_state_sha256": state_sha256(candidate),
             "gate3_passes": int(passed[selected].sum()),
             "gate3_pass_rate": float(passed[selected].mean()),
@@ -438,7 +472,7 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
         "wall_time_seconds": wall, "inference_seconds": inference_seconds,
         "initial_seed_groups_exact": initial_groups_exact,
         "single_cuda_context": True, "single_native_vector": True,
-        "vectorized_checkpoint_surgery": "phase-2 indexed output bias before tanh",
+        "vectorized_checkpoint_surgery": VECTORIZED_CHECKPOINT_SURGERY,
         "items": items, "loader_overrides": overrides,
         "parent_checkpoint_sha256": PARENT_CHECKPOINT_SHA256,
         "source_identity": identity,
