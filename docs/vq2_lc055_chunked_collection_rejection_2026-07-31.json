@@ -1,0 +1,21 @@
+{
+  "schema": "vq2_lc055_chunked_collection_rejection_v1",
+  "tag": "vq2_lc055_index7_chunked_student_features_001",
+  "rejected": true,
+  "unchanged_retry_forbidden": true,
+  "source_commit": "2a8b0538de5025bea74bf1eeb40f9947d3afd8d3",
+  "state_sha256": "43e9ff50c5f4964ffd167a08193783d3b20a8cb7d0158949a2f554158bbd10e8",
+  "agents": 2048,
+  "actor_inference_chunk_size": 1024,
+  "minimum_observed_wall_time_seconds": 514,
+  "feature_bytes": 0,
+  "comparison": {
+    "lc052_agents": 1024,
+    "lc052_wall_time_seconds": 408.9140789299272,
+    "lc052_feature_records": 10000,
+    "lc052_query_agents": 6
+  },
+  "reason": "The widened native vector exceeded LC052's complete collection wall time by more than 105 seconds without reaching one phase-7 query. Fixed 1024-row CUDA chunks do not overcome the rare-survivor native tail.",
+  "flight_sim_packets_sent": 0,
+  "submission_authorized": false
+}
