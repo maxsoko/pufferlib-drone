@@ -61,6 +61,51 @@ RUNNER = ROOT / "scripts/run_vq2_lc061_vast.sh"
 TEST = ROOT / "tests/test_eval_vq2_lc061_phase2_bias_full_course.py"
 DEFAULT_OUTPUT = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
 EXTRA_SOURCE_PATHS: tuple[Path, ...] = ()
+CANDIDATE_NAME = "pitch_m0p0025"
+NEXT_AUTHORITY_SELECTED = (
+    "Retain the whole-Puffer checkpoint as the offline phase-2 frontier and "
+    "rediagnose its next bottleneck."
+)
+NEXT_AUTHORITY_NONE = "Reject the candidate and retain the parent checkpoint."
+
+
+def build_candidate_context(
+    payload: dict[str, Any], *, device: torch.device
+) -> torch.Tensor:
+    del payload
+    deltas = torch.zeros((TOTAL_AGENTS, ACTION_SIZE), dtype=torch.float32, device=device)
+    deltas[group_slice(1)] = torch.tensor(BIAS, dtype=torch.float32, device=device)
+    return deltas
+
+
+def apply_candidate_actions(
+    actor_output: Any,
+    next_recurrent: torch.Tensor,
+    held_progress: torch.Tensor,
+    context: Any,
+) -> torch.Tensor:
+    del next_recurrent
+    return milestone.apply_phase2_bias(actor_output.pre_tanh_mean, held_progress, context)
+
+
+def build_selected_candidate_state(
+    parent_state: dict[str, torch.Tensor]
+) -> dict[str, torch.Tensor]:
+    return milestone.candidate_state(parent_state, BIAS)
+
+
+def selected_candidate_metadata() -> dict[str, Any]:
+    return {"bias": list(BIAS)}
+
+
+def checkpoint_surgery_metadata(candidate_state_sha256: str) -> dict[str, Any]:
+    return {
+        "operation": "phase2_pre_tanh_output_bias",
+        "parent_checkpoint_sha256": PARENT_CHECKPOINT_SHA256,
+        "target_phase": TARGET_PHASE,
+        "pre_tanh_output_bias_delta": list(BIAS),
+        "candidate_state_sha256": candidate_state_sha256,
+    }
 
 
 def group_slice(group: int) -> slice:
@@ -193,8 +238,7 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
     terminals = _cpu_tensor(vector.terminals_ptr, (TOTAL_AGENTS,), torch.float32)
     actions_cpu = torch.zeros((TOTAL_AGENTS, ACTION_SIZE), dtype=torch.float32)
     recurrent = actor.initial_state(TOTAL_AGENTS, device=device)
-    deltas = torch.zeros((TOTAL_AGENTS, ACTION_SIZE), dtype=torch.float32, device=device)
-    deltas[group_slice(1)] = torch.tensor(BIAS, dtype=torch.float32, device=device)
+    candidate_context = build_candidate_context(payload, device=device)
     done = torch.zeros(TOTAL_AGENTS, dtype=torch.bool)
     held = np.zeros(TOTAL_AGENTS, dtype=np.float32)
     previous_held = held.copy()
@@ -252,7 +296,9 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
                 inference_started = time.perf_counter()
                 actor_output, next_recurrent = actor.forward_step(actor_input, recurrent)
                 recurrent = preserve_frozen_state(recurrent, next_recurrent, active)
-                action = milestone.apply_phase2_bias(actor_output.pre_tanh_mean, progress, deltas)
+                action = apply_candidate_actions(
+                    actor_output, next_recurrent, progress, candidate_context
+                )
                 action = torch.where(active[:, None], action, torch.zeros_like(action))
                 inference_seconds += time.perf_counter() - inference_started
                 if not bool(torch.isfinite(action[active]).all()):
@@ -288,7 +334,7 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
     wall = time.perf_counter() - started
 
     items: list[dict[str, Any]] = []
-    for group, name in enumerate(("parent", "pitch_m0p0025")):
+    for group, name in enumerate(("parent", CANDIDATE_NAME)):
         selected = group_slice(group)
         metrics = flatten_log(pufferl, group_logs[group])
         distribution = {
@@ -312,10 +358,13 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
             and raw_encoding_max_error[group] <= 1e-6
             and metrics.get("env/out_of_order") == 0.0
         )
-        candidate_bias = (0.0, 0.0, 0.0, 0.0) if group == 0 else BIAS
-        state = milestone.candidate_state(payload["model_state"], candidate_bias)
+        state = (
+            {key: value.detach().cpu().clone() for key, value in payload["model_state"].items()}
+            if group == 0 else build_selected_candidate_state(payload["model_state"])
+        )
+        metadata = {"bias": [0.0, 0.0, 0.0, 0.0]} if group == 0 else selected_candidate_metadata()
         items.append({
-            "candidate_index": group, "name": name, "bias": list(candidate_bias),
+            "candidate_index": group, "name": name, **metadata,
             "candidate_state_sha256": milestone.state_sha256(state),
             "mean_gates_passed": float(metrics["env/gates_passed"]),
             "maximum_raw_index": int(maximum_index),
@@ -336,7 +385,7 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
     selected = choose_candidate(items[0], items[1])
     candidate_checkpoint_sha256 = None
     if selected:
-        checkpoint_state = milestone.candidate_state(payload["model_state"], BIAS)
+        checkpoint_state = build_selected_candidate_state(payload["model_state"])
         checkpoint_payload = {
             **payload,
             "schema": CHECKPOINT_SCHEMA,
@@ -345,12 +394,9 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
             "best_epoch": 0,
             "optimizer_updates": 0,
             "numerically_admitted": True,
-            "phase2_bias_surgery": {
-                "parent_checkpoint_sha256": PARENT_CHECKPOINT_SHA256,
-                "target_phase": TARGET_PHASE,
-                "pre_tanh_output_bias_delta": list(BIAS),
-                "candidate_state_sha256": items[1]["candidate_state_sha256"],
-            },
+            "phase2_surgery": checkpoint_surgery_metadata(
+                items[1]["candidate_state_sha256"]
+            ),
         }
         checkpoint_path = output / "policy_selected.pt"
         atomic_torch_save(checkpoint_path, checkpoint_payload)
@@ -376,8 +422,7 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
             "flight_sim_packets_sent": 0, "submission_authorized": False,
         },
         "next_authority": (
-            "Retain the LC061 whole-Puffer checkpoint as the offline phase-2 frontier and rediagnose its next bottleneck."
-            if selected else "Reject the bias candidate and retain LC048."
+            NEXT_AUTHORITY_SELECTED if selected else NEXT_AUTHORITY_NONE
         ),
     }
     write_json_once(report_path, report)
