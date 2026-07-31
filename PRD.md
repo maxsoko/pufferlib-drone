@@ -10888,3 +10888,14 @@ For each training/eval block, record:
   any selection authorizes only a new paired offline confirmation.
 - Evaluator/runner/test/preregistration hashes are `e1429cd9...`/
   `71866d22...`/`5cc56347...`/`5e179943...`. No live authority is granted.
+- VG044 completes and selects alpha `0.10`: versus VG033 on 64 shared
+  seed-`429158` episodes, Gate-1/2/3 reach changes
+  `64/62/11 -> 64/63/13`, crashes `5 -> 4`, misses `6 -> 3`, and mean gates
+  `2.140625 -> 2.1875`; all hard predicates pass.
+- Selected checkpoint/report/state hashes are `d7ba25a6...`/`c6fb4544...`/
+  `c8158c26...`; admission is `85f1baf2...`. Completed resume is exact.
+- VG045 is one 64-versus-64 fresh seed-`429159` paired count-5 confirmation.
+  It requires Gate-1/2 and crash preservation plus strict Gate-3-or-finish
+  improvement. Comparator/runner/test/preregistration hashes are
+  `12657474...`/`862e2418...`/`a595f295...`/`5a28bc64...`. Passing grants
+  only a count-11 offline diagnostic.

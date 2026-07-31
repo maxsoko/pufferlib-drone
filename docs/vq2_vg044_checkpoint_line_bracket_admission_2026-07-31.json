@@ -1,0 +1,109 @@
+{
+  "schema": "vq2_vg044_checkpoint_line_bracket_admission_v1",
+  "tag": "vq2_vg044_vg033_to_vg042_checkpoint_line_bracket_001",
+  "date": "2026-07-31",
+  "source_commit": "bf58b3fc467af0288d5fd533e6b64c270fe8795b",
+  "completed": true,
+  "numerically_admitted": true,
+  "exit_code": 0,
+  "selected_alpha": 0.1,
+  "optimizer_updates": 0,
+  "minimum_transition_window_exposure": 4.0,
+  "equal_source_weight_audit": true,
+  "fixture": {
+    "seed": 429158,
+    "episodes_per_alpha": 64,
+    "num_threads": 4,
+    "max_steps": 2560,
+    "alphas": [
+      0.0,
+      0.01,
+      0.025,
+      0.05,
+      0.1,
+      0.2,
+      0.35,
+      0.5
+    ]
+  },
+  "parent_summary": {
+    "gate_reach": {
+      "1": 64,
+      "2": 62,
+      "3": 11,
+      "4": 0,
+      "5": 0
+    },
+    "crashes": 5,
+    "misses": 6,
+    "successes": 0,
+    "mean_gates_passed": 2.140625,
+    "hard_transport_pass": true
+  },
+  "selected_summary": {
+    "gate_reach": {
+      "1": 64,
+      "2": 63,
+      "3": 13,
+      "4": 0,
+      "5": 0
+    },
+    "crashes": 4,
+    "misses": 3,
+    "successes": 0,
+    "mean_gates_passed": 2.1875,
+    "hard_transport_pass": true
+  },
+  "delta": {
+    "gate1_reach": 0,
+    "gate2_reach": 1,
+    "gate3_reach": 2,
+    "crashes": -1,
+    "misses": -3,
+    "successes": 0,
+    "mean_gates_passed": 0.046875
+  },
+  "artifact_sha256": {
+    "checkpoint": "d7ba25a6a73ab6bb2cda44bcb5490feb1325e7bf268f506beb30ca9cd6255e65",
+    "report": "c6fb4544265342e2b33974196d25dba5dba4f18fd1039691f7f9ed2155b9a84f",
+    "completed_state": "c8158c268332f05417676cb1dda6c610935d6b343f39a46955493cfcce7b81d3",
+    "parent_count": "dc6eb06b1871cbf6686317cef091e53e9d0e0904c60d4b002583f78a7e70418b",
+    "selected_count": "b8de9576f4559895e4d54b2aef5086ee2771a70c3de596c565f7ec53d1382811",
+    "runner_log": "b5aa44dd294b34b443b2ec56c8503181ec61e8d388e6c4f5d8edc4ee7916d77c",
+    "completed_resume_log": "c6fb4544265342e2b33974196d25dba5dba4f18fd1039691f7f9ed2155b9a84f"
+  },
+  "input_sha256": {
+    "goal_prompt": "03f085d32a217889f56600ac2600bead24e087ee47322eb5aa2e208f231f2aa1",
+    "preregistration": "5e1799435e3e6c0b72f10f30650ec3e514baed55cada9c4661721ef626853ec9",
+    "parent_checkpoint": "56a8e3b84770c1a54afbf11ac2503478221f7829c28723da0f7dfcfa2a7aac26",
+    "update_checkpoint": "876b0ecc4dae769f6a9dd04a0114e9623961cf46397499a41d326bdc74141ddc",
+    "vg043_rejection": "f396c3774b4bbf059ef79285481ed4a93da0be0c643d68a004312650fba2e87c",
+    "evaluator": "e1429cd95cf147c56fbc294993394c1a88c399d7e1b40c0b212b646d361503cc",
+    "runner": "71866d225a2af10d59d21cc754cef0788c704982b33671dc854e3bbe067910c7",
+    "test": "5cc5634725e6f34107fa1b09dcd0cbca5171248c6d81ea0a368f88e57fb1308c"
+  },
+  "verification": {
+    "all_eight_fractions_completed": true,
+    "selection_criteria_pass": true,
+    "remote_completed_resume_state_unchanged": true,
+    "remote_completed_resume_output_equals_report": true,
+    "remote_to_local_artifact_hashes_exact": true,
+    "all_source_hashes_embedded": true
+  },
+  "runtime": {
+    "python": "3.12.3",
+    "torch": "2.10.0a0+a36e1d39eb.nv26.01.42222806",
+    "torch_cuda": "13.1",
+    "numpy": "2.1.0",
+    "machine": "x86_64"
+  },
+  "safety": {
+    "actor_input_privileged_values": 0,
+    "teacher_blend": 0.0,
+    "teacher_plant_actions": 0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "submission_authorized": false
+  },
+  "next_authority": "One separately preregistered fresh-seed paired count-5 teacher-free confirmation against VG033; no shadow or live activity is authorized."
+}

@@ -10943,3 +10943,16 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   confirmation.
 - Evaluator/runner/test/preregistration SHA-256 values are
   `e1429cd9...`/`71866d22...`/`5cc56347...`/`5e179943...`.
+- VG044 completes all eight fractions and selects alpha `0.10`. On 64
+  seed-`429158` episodes, VG033 versus selected Gate-1/2/3 reach is
+  `64/62/11 -> 64/63/13`; crashes improve `5 -> 4`, misses `6 -> 3`, and
+  mean gates `2.140625 -> 2.1875`. Every hard predicate passes.
+- Selected checkpoint/report/state SHA-256 values are `d7ba25a6...`/
+  `c6fb4544...`/`c8158c26...`; completed resume is immutable and exact.
+  Admission SHA is `85f1baf2...`.
+- Preregister VG045 as the sole fresh confirmation: VG033 versus VG044,
+  64 concurrent seed-`429159` count-5 episodes each, four threads, 2,560
+  steps. Require no Gate-1/2/crash regression and strict Gate-3-or-finish
+  improvement. Comparator/runner/test/preregistration hashes are
+  `12657474...`/`862e2418...`/`a595f295...`/`5a28bc64...`. No live
+  authority exists.
