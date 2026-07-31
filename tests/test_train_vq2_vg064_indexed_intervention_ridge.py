@@ -6,6 +6,7 @@ import torch
 from pufferlib.vq2_recurrent_phase_residual import VQ2IndexedPhaseResidualActor
 from scripts.train_vq2_vg064_indexed_intervention_ridge import (
     ACTION_SIZE,
+    FEATURE_DTYPE,
     HIDDEN_SIZE,
     TARGET_PHASES,
     ridge_solution,
@@ -41,3 +42,12 @@ def test_indexed_actor_has_one_independent_head_per_target_phase() -> None:
     actor = VQ2IndexedPhaseResidualActor(hidden_size=HIDDEN_SIZE)
     assert actor.indexed_phase_action_residual.shape == (17, ACTION_SIZE, HIDDEN_SIZE)
     assert TARGET_PHASES == tuple(range(1, 12))
+
+
+def test_structured_feature_fields_require_contiguous_copies() -> None:
+    records = np.zeros(3, dtype=FEATURE_DTYPE)
+    assert records["base_pre_tanh"].strides[0] == FEATURE_DTYPE.itemsize
+    contiguous = np.array(records["base_pre_tanh"], dtype=np.float32, copy=True)
+    assert contiguous.flags.c_contiguous
+    tensor = torch.from_numpy(contiguous)
+    assert tensor.shape == (3, ACTION_SIZE)

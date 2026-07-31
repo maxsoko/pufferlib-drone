@@ -1,0 +1,24 @@
+{
+  "schema": "vq2_vg064_memmap_stride_infrastructure_repair_v1",
+  "tag": "vq2_vg064_indexed_intervention_ridge_001",
+  "failure_source_commit": "d4738971ff214396c4873670c1bca88429c5c3ee",
+  "failure_state_sha256": "18926428ab7e4c97232256b6ee02ad48ffa7e08b2ba19d4a028824d93381fb42",
+  "failure": "PyTorch rejected a zero-copy view of structured float32 action fields because the 550-byte record stride is not divisible by four.",
+  "failure_scope": {
+    "normal_equation_updates_completed": 0,
+    "optimizer_updates_completed": 0,
+    "checkpoint_written": false,
+    "report_written": false,
+    "dataset_mutated": false,
+    "flight_sim_packets_sent": 0
+  },
+  "repair": "Create explicit contiguous NumPy copies of hidden, base-pre-tanh, and teacher-action fields before constructing Torch tensors. Add a focused structured-record regression test.",
+  "repaired_source_sha256": {
+    "trainer": "276688d0d11df0bb40068ae44196d43bd4e2fcfbc5f21a6049cf2865d21a22b0",
+    "test": "852e4ccaec5aaf6a4d3906505a5523b509f6497b99b0e0509e1470605dc7a9c5"
+  },
+  "resume_authorized": true,
+  "reason": "This is a pre-update infrastructure repair of the same immutable data and mathematical contract, not a numerical retry or changed experiment.",
+  "live_authority": false,
+  "submission_authorized": false
+}

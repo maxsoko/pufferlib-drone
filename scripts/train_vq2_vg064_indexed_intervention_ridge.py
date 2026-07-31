@@ -67,12 +67,14 @@ GOAL_SHA256 = "03f085d32a217889f56600ac2600bead24e087ee47322eb5aa2e208f231f2aa1"
 PREREGISTRATION = ROOT / "docs/vq2_vg064_indexed_intervention_ridge_preregistration_2026-07-31.md"
 RUNNER = ROOT / "scripts/run_vq2_vg064_vast.sh"
 TEST = ROOT / "tests/test_train_vq2_vg064_indexed_intervention_ridge.py"
+INFRASTRUCTURE_REPAIR = ROOT / "docs/vq2_vg064_memmap_stride_infrastructure_repair_2026-07-31.json"
 DEFAULT_OUTPUT = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
 
 
 def source_paths() -> tuple[Path, ...]:
     return (
-        Path(__file__).resolve(), PREREGISTRATION, RUNNER, TEST, GOAL,
+        Path(__file__).resolve(), PREREGISTRATION, RUNNER, TEST,
+        INFRASTRUCTURE_REPAIR, GOAL,
         PARENT_CHECKPOINT, PARENT_REPORT, DATASET_REPORT, FEATURES,
         DATASET_ADMISSION, ROOT / "pufferlib/vq2_recurrent_phase_residual.py",
         ROOT / "pufferlib/vq2_recurrent_phase.py",
@@ -211,9 +213,15 @@ def fit(
         chunk = records[start : min(start + CHUNK_ROWS, count)]
         phase_np = np.asarray(chunk["phase_index"], dtype=np.int64)
         validation_np = validation_mask(chunk["agent_index"])
-        hidden = torch.from_numpy(np.asarray(chunk["hidden"], dtype=np.float32)).to(device)
-        base = torch.from_numpy(np.asarray(chunk["base_pre_tanh"], dtype=np.float32)).to(device)
-        teacher = torch.from_numpy(np.asarray(chunk["teacher_action"], dtype=np.float32)).to(device)
+        hidden = torch.from_numpy(
+            np.array(chunk["hidden"], dtype=np.float32, copy=True)
+        ).to(device)
+        base = torch.from_numpy(
+            np.array(chunk["base_pre_tanh"], dtype=np.float32, copy=True)
+        ).to(device)
+        teacher = torch.from_numpy(
+            np.array(chunk["teacher_action"], dtype=np.float32, copy=True)
+        ).to(device)
         target = target_pre_tanh_residual(base, teacher)
         for phase in TARGET_PHASES:
             phase_mask_np = phase_np == phase
@@ -244,9 +252,15 @@ def fit(
         chunk = records[start : min(start + CHUNK_ROWS, count)]
         phase_np = np.asarray(chunk["phase_index"], dtype=np.int64)
         validation_np = validation_mask(chunk["agent_index"])
-        hidden = torch.from_numpy(np.asarray(chunk["hidden"], dtype=np.float32)).to(device)
-        base = torch.from_numpy(np.asarray(chunk["base_pre_tanh"], dtype=np.float32)).to(device)
-        teacher = torch.from_numpy(np.asarray(chunk["teacher_action"], dtype=np.float32)).to(device)
+        hidden = torch.from_numpy(
+            np.array(chunk["hidden"], dtype=np.float32, copy=True)
+        ).to(device)
+        base = torch.from_numpy(
+            np.array(chunk["base_pre_tanh"], dtype=np.float32, copy=True)
+        ).to(device)
+        teacher = torch.from_numpy(
+            np.array(chunk["teacher_action"], dtype=np.float32, copy=True)
+        ).to(device)
         for phase in TARGET_PHASES:
             chosen_np = (phase_np == phase) & validation_np
             if not chosen_np.any():
