@@ -1,0 +1,15 @@
+{
+  "schema": "vq2_lc056_concurrent_vector_rejection_v1",
+  "tag": "vq2_lc056_single_context_concurrent_bracket_001",
+  "rejected": true,
+  "unchanged_retry_forbidden": true,
+  "source_commit": "76add2f9ab30105d28035d6be62a2c09a1ffa900",
+  "completed_report_written": false,
+  "minimum_observed_wall_time_seconds": 235,
+  "sequential_lc050_wall_time_seconds": 111.75675652897917,
+  "minimum_required_speedup": 2.0,
+  "observed_process_cpu_percent": 3452,
+  "reason": "Four separate native vectors in Python threads serialized or contended at approximately one 32-agent OpenMP team's CPU occupancy and exceeded twice the complete sequential baseline wall time.",
+  "flight_sim_packets_sent": 0,
+  "submission_authorized": false
+}

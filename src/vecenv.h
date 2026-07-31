@@ -129,6 +129,8 @@ void static_vec_reset(StaticVec* vec);
 void static_vec_close(StaticVec* vec);
 void static_vec_log(StaticVec* vec, Dict* out);
 void static_vec_eval_log(StaticVec* vec, Dict* out);
+void static_vec_eval_log_range(
+    StaticVec* vec, Dict* out, int env_start, int env_count);
 void create_static_threads(StaticVec* vec, int num_threads, int horizon,
     void* ctx, net_callback_fn net_callback, thread_init_fn thread_init);
 void static_vec_omp_step(StaticVec* vec);
@@ -341,6 +343,12 @@ Env* my_vec_init(int* num_envs_out, int* buffer_env_starts, int* buffer_env_coun
     int total_agents = (int)dict_get(vec_kwargs, "total_agents")->value;
     int num_buffers = (int)dict_get(vec_kwargs, "num_buffers")->value;
     int agents_per_buffer = total_agents / num_buffers;
+    DictItem* seed_group_item = dict_get_unsafe(
+        vec_kwargs, "env_seed_group_size");
+    int env_seed_group_size = seed_group_item == NULL
+        ? 0
+        : (int)seed_group_item->value;
+    if (env_seed_group_size < 0) env_seed_group_size = 0;
 
     // Allocate max possible envs (1 agent per env worst case)
     Env* envs = (Env*)calloc(total_agents, sizeof(Env));
@@ -348,8 +356,11 @@ Env* my_vec_init(int* num_envs_out, int* buffer_env_starts, int* buffer_env_coun
     int num_envs = 0;
     int agents_created = 0;
     while (agents_created < total_agents) {
-        srand(num_envs);
-        envs[num_envs].rng = num_envs;
+        int env_seed_index = env_seed_group_size > 0
+            ? num_envs % env_seed_group_size
+            : num_envs;
+        srand(env_seed_index);
+        envs[num_envs].rng = (unsigned int)env_seed_index;
         my_init(&envs[num_envs], env_kwargs);
         agents_created += envs[num_envs].num_agents;
         num_envs++;
@@ -595,6 +606,30 @@ void static_vec_eval_log(StaticVec* vec, Dict* out) {
     float n = static_vec_aggregate_logs(vec, &aggregate);
     if (n == 0) {
         return;
+    }
+    my_log(&aggregate, out);
+    dict_set(out, "n", n);
+}
+
+void static_vec_eval_log_range(
+        StaticVec* vec, Dict* out, int env_start, int env_count) {
+    if (env_start < 0 || env_count <= 0 || env_start + env_count > vec->size) {
+        return;
+    }
+    Env* envs = (Env*)vec->envs;
+    Log aggregate;
+    memset(&aggregate, 0, sizeof(Log));
+    int num_keys = sizeof(Log) / sizeof(float);
+    for (int i = env_start; i < env_start + env_count; i++) {
+        if (envs[i].log.n == 0) continue;
+        for (int j = 0; j < num_keys; j++) {
+            ((float*)&aggregate)[j] += ((float*)&envs[i].log)[j];
+        }
+    }
+    float n = aggregate.n;
+    if (n == 0.0f) return;
+    for (int j = 0; j < num_keys; j++) {
+        ((float*)&aggregate)[j] /= n;
     }
     my_log(&aggregate, out);
     dict_set(out, "n", n);

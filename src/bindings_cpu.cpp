@@ -151,6 +151,21 @@ static py::dict vec_log(VecEnv& ve) {
     return result;
 }
 
+static py::dict vec_eval_log_range(VecEnv& ve, int env_start, int env_count) {
+    if (env_start < 0 || env_count <= 0 || env_start + env_count > ve.vec->size) {
+        throw std::runtime_error("evaluation log range is outside the vector");
+    }
+    Dict* out = create_dict(ENV_LOG_DICT_CAPACITY);
+    static_vec_eval_log_range(ve.vec, out, env_start, env_count);
+    py::dict result;
+    for (int i = 0; i < out->size; i++) {
+        result[out->items[i].key] = out->items[i].value;
+    }
+    free(out->items);
+    free(out);
+    return result;
+}
+
 static void vec_close(VecEnv& ve) {
     static_vec_close(ve.vec);
     ve.vec = nullptr;
@@ -183,5 +198,6 @@ PYBIND11_MODULE(_C, m) {
         .def("cpu_step", &cpu_vec_step_py)
         .def("render", [](VecEnv& ve, int env_id) { static_vec_render(ve.vec, env_id); })
         .def("log", &vec_log)
+        .def("eval_log_range", &vec_eval_log_range)
         .def("close", &vec_close);
 }
