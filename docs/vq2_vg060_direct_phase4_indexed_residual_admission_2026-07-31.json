@@ -1,0 +1,32 @@
+{
+  "schema": "vq2_vg060_direct_phase4_indexed_residual_admission_v1",
+  "tag": "vq2_vg060_direct_phase4_indexed_residual_001",
+  "completed": true,
+  "numerically_admitted": true,
+  "source_commit": "b60f4646e429a2f52bb0f8755342f68a290d3476",
+  "best_epoch": 12,
+  "optimizer_updates": 935,
+  "target_phase_index": 4,
+  "base_parameters_exact": true,
+  "non_target_heads_exact_zero": true,
+  "head4_l2": 0.8360705375671387,
+  "baseline_phase4_weighted_mse": 0.12432894509758437,
+  "selected_phase4_weighted_mse": 0.06951713558677135,
+  "phases0_through3_validation_exact": true,
+  "artifact_sha256": {
+    "checkpoint": "32aba1580844d20b51ddf7930892bf5367d79a44ec0d6d4d5e316fdf10246a26",
+    "report": "68f5295328f8453824f3e3fa3dc6e0053afcf68ad0f5757fdeaebf95ce083f82",
+    "state": "76c59c238e17fc9f504d965f1a9093596113e05cacbe2a14bf5c6c6645855874",
+    "runner_log": "a9ced7eaa211b1ac1c6cdcf0930dac29432892c266e85d860b815b9d4010749f",
+    "completed_resume": "68f5295328f8453824f3e3fa3dc6e0053afcf68ad0f5757fdeaebf95ce083f82"
+  },
+  "next_authority": "one_source_locked_teacher_free_phase4_indexed_residual_scale_bracket",
+  "live_authority": false,
+  "safety": {
+    "actor_input_privileged_values": 0,
+    "teacher_blend": 0.0,
+    "teacher_plant_actions": 0,
+    "flight_sim_packets_sent": 0,
+    "submission_authorized": false
+  }
+}

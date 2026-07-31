@@ -11165,3 +11165,14 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   and phase-4 MSE must improve. Generalized-core/wrapper/runner/test/
   preregistration hashes are `46052481...`/`576a07e4...`/`c1f97021...`/
   `070b2e24...`/`ec89ea3c...`. A pass authorizes only offline scale screening.
+- VG060 completes in 12 epochs/`935` updates and selects epoch 12. Phase-4
+  validation MSE improves `0.124328945 -> 0.069517136`, while phases 0--3,
+  every base parameter, and all non-target heads are exact; head-4 L2 is
+  `0.836071`. Checkpoint/report/state/log hashes are `32aba158...`/
+  `68f52953...`/`76c59c23...`/`a9ced7ea...`; completed resume is report-exact
+  and admission SHA is `13f6c301...`.
+- VG061 brackets direct head-4 scales
+  `0/0.1/0.25/0.5/0.75/1/1.5/2/3` on 256 fresh episodes each at offsets
+  `160/168/176/184`. Require hard transport, exact Gate-1--4 reach, no crash
+  regression, and new Gate-5 reach. Wrapper/runner/test/preregistration hashes
+  are `290cc9be...`/`3839657d...`/`d9daa1bf...`/`330f3eed...`. No live authority.

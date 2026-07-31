@@ -11066,3 +11066,11 @@ For each training/eval block, record:
   wrapper/runner/test/preregistration hashes are `46052481...`/`576a07e4...`/
   `c1f97021...`/`070b2e24...`/`ec89ea3c...`. Numerical admission grants only offline
   scale screening and no live authority.
+- VG060 selects epoch 12 after `935` updates. Phase-4 validation improves
+  `0.124328945 -> 0.069517136`, with phases 0--3 and all non-target parameters
+  exact. Checkpoint/report/state/log/admission hashes are `32aba158...`/
+  `68f52953...`/`76c59c23...`/`a9ced7ea...`/`13f6c301...`.
+- VG061 brackets nine direct-head scales over 256 fresh six-gate episodes per
+  scale at offsets `160/168/176/184`, requiring exact Gate-1--4 reach and new
+  Gate-5 reach. Wrapper/runner/test/preregistration hashes are `290cc9be...`/
+  `3839657d...`/`d9daa1bf...`/`330f3eed...`. No live authority exists.
