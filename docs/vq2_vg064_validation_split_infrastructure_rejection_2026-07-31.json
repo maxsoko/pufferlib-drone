@@ -1,0 +1,32 @@
+{
+  "schema": "vq2_vg064_validation_split_infrastructure_rejection_v1",
+  "tag": "vq2_vg064_indexed_intervention_ridge_001",
+  "terminally_rejected": true,
+  "source_commits": [
+    "d4738971ff214396c4873670c1bca88429c5c3ee",
+    "6cf4d76fc337dd4a44973cca52438cb2fd2d8952"
+  ],
+  "failures": [
+    "The initial structured memmap zero-copy action view had a 550-byte stride incompatible with float32 Torch tensors.",
+    "After the contiguous-copy repair, the preregistered agent-index-modulo-8 holdout aliased the native course-count assignment and contained zero phase-11 rows."
+  ],
+  "phase_unique_agent_modulo_8_counts": {
+    "1": [64, 64, 64, 64, 64, 64, 64, 64],
+    "5": [64, 64, 0, 64, 64, 64, 64, 64],
+    "9": [64, 64, 0, 0, 0, 0, 0, 64],
+    "10": [64, 64, 0, 0, 0, 0, 0, 0],
+    "11": [0, 64, 0, 0, 0, 0, 0, 0]
+  },
+  "last_state_sha256": "f6e8f4624513d56875f7fb61fb43c844a648c62b50ce4578399e4da892070857",
+  "artifact_status": {
+    "checkpoint_written": false,
+    "report_written": false,
+    "dataset_mutated": false,
+    "student_policy_written": false,
+    "flight_sim_packets_sent": 0
+  },
+  "unchanged_retry_forbidden": true,
+  "next_authority": "one_distinct_source_locked_fit_using_group_stratified_agent_holdout_where_floor(agent_index_div_8)_mod_8_equals_zero",
+  "live_authority": false,
+  "submission_authorized": false
+}

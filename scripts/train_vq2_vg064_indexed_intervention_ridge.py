@@ -39,6 +39,7 @@ SEED = 429199
 TARGET_PHASES = tuple(range(1, 12))
 VALIDATION_AGENT_MODULUS = 8
 VALIDATION_AGENT_REMAINDER = 0
+VALIDATION_AGENT_GROUP_SIZE = 8
 CHUNK_ROWS = 65536
 RIDGES = (1e-4, 1e-3, 1e-2, 1e-1, 1.0, 10.0, 100.0)
 TARGET_ACTION_CLIP = 0.999
@@ -69,6 +70,7 @@ RUNNER = ROOT / "scripts/run_vq2_vg064_vast.sh"
 TEST = ROOT / "tests/test_train_vq2_vg064_indexed_intervention_ridge.py"
 INFRASTRUCTURE_REPAIR = ROOT / "docs/vq2_vg064_memmap_stride_infrastructure_repair_2026-07-31.json"
 DEFAULT_OUTPUT = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
+EXTRA_SOURCE_PATHS: tuple[Path, ...] = ()
 
 
 def source_paths() -> tuple[Path, ...]:
@@ -79,6 +81,7 @@ def source_paths() -> tuple[Path, ...]:
         DATASET_ADMISSION, ROOT / "pufferlib/vq2_recurrent_phase_residual.py",
         ROOT / "pufferlib/vq2_recurrent_phase.py",
         ROOT / "scripts/collect_vq2_vg062_warmed_teacher_intervention_features.py",
+        *EXTRA_SOURCE_PATHS,
     )
 
 
@@ -137,7 +140,8 @@ def source_identity() -> tuple[str, dict[str, str]]:
 
 def validation_mask(agent_index: np.ndarray) -> np.ndarray:
     return (
-        np.asarray(agent_index, dtype=np.int64) % VALIDATION_AGENT_MODULUS
+        (np.asarray(agent_index, dtype=np.int64) // VALIDATION_AGENT_GROUP_SIZE)
+        % VALIDATION_AGENT_MODULUS
         == VALIDATION_AGENT_REMAINDER
     )
 
@@ -342,6 +346,7 @@ def fit(
         "feature_records": count, "feature_sha256": FEATURES_SHA256,
         "dataset_success_rate": dataset_report["metrics"]["env/success_rate"],
         "validation_split": {"agent_modulus": VALIDATION_AGENT_MODULUS,
+                             "agent_group_size": VALIDATION_AGENT_GROUP_SIZE,
                              "validation_remainder": VALIDATION_AGENT_REMAINDER},
         "target_action_clip": TARGET_ACTION_CLIP,
         "ridge_grid": list(RIDGES), "target_phases": list(TARGET_PHASES),

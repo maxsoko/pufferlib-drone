@@ -19,7 +19,9 @@ def test_validation_split_is_agent_stable() -> None:
     agents = np.arange(512, dtype=np.uint16)
     selected = validation_mask(agents)
     assert selected.sum() == 64
-    assert np.array_equal(np.flatnonzero(selected), np.arange(0, 512, 8))
+    expected = np.concatenate([np.arange(start, start + 8) for start in range(0, 512, 64)])
+    assert np.array_equal(np.flatnonzero(selected), expected)
+    assert set((agents[selected] % 8).tolist()) == set(range(8))
 
 
 def test_pre_tanh_target_round_trips_unsaturated_teacher() -> None:
