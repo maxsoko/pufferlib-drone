@@ -22,6 +22,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from pufferlib.vq2_informed import ENV_OBS_SIZE, LEGAL_OBS_SIZE
+from pufferlib.vq2_recurrent import ACTION_SIZE
 from scripts.eval_vq2_lc001_long_course_oracle import (
     long_course_environment,
     sha256_path,
@@ -48,6 +49,12 @@ CHECKPOINT_INTERVAL_STEPS = 2_000_000
 HIDDEN_SIZE = 256
 SEED = 431160
 PUBLIC_PROGRESS_INPUT_INDEX = LEGAL_OBS_SIZE - 1
+INITIAL_LOG_STD: float | None = None
+TRAIN_NUM_GATES_MIN = 1
+TRAIN_NUM_GATES_MAX = 24
+NEXT_AUTHORITY = (
+    "Teacher-free deterministic full-start screens of the saved Puffer checkpoints."
+)
 
 
 def source_identity() -> dict[str, Any]:
@@ -199,6 +206,27 @@ def run(*, output: Path = DEFAULT_OUTPUT) -> dict[str, Any]:
     identity = source_identity()
     output.mkdir(parents=True)
     engine = _C.create_pufferl(config)
+    initialization_checkpoint: dict[str, Any] | None = None
+    if INITIAL_LOG_STD is not None:
+        initial_path = output / "policy_initial_logstd.bin"
+        _C.save_weights(engine, str(initial_path))
+        values = np.memmap(initial_path, mode="r+", dtype="<f4")
+        log_std_offset = (
+            HIDDEN_SIZE * ENV_OBS_SIZE
+            + (ACTION_SIZE + 1) * HIDDEN_SIZE
+        )
+        if values.size != int(engine.num_params()):
+            raise RuntimeError("native initialization checkpoint size changed")
+        values[log_std_offset : log_std_offset + ACTION_SIZE] = INITIAL_LOG_STD
+        values.flush()
+        del values
+        _C.load_weights(engine, str(initial_path))
+        initialization_checkpoint = {
+            "path": initial_path.name,
+            "sha256": sha256_path(initial_path),
+            "bytes": initial_path.stat().st_size,
+            "log_std": INITIAL_LOG_STD,
+        }
     logs: list[dict[str, Any]] = []
     checkpoints: list[dict[str, Any]] = []
     boundary_checked = False
@@ -266,7 +294,8 @@ def run(*, output: Path = DEFAULT_OUTPUT) -> dict[str, Any]:
             "numpy": np.__version__, "omp_num_threads": os.environ.get("OMP_NUM_THREADS"),
         },
         "configuration": {
-            "num_gates_max": 24, "num_gates_min": 1,
+            "num_gates_max": TRAIN_NUM_GATES_MAX,
+            "num_gates_min": TRAIN_NUM_GATES_MIN,
             "official_course_count_hardcoded": False,
             "total_agents": TOTAL_AGENTS, "num_buffers": NUM_BUFFERS,
             "num_threads": NUM_THREADS, "horizon": HORIZON,
@@ -274,11 +303,13 @@ def run(*, output: Path = DEFAULT_OUTPUT) -> dict[str, Any]:
             "requested_timesteps": TOTAL_TIMESTEPS,
             "visual_policy_legal_only": 1,
             "public_progress_input_index": PUBLIC_PROGRESS_INPUT_INDEX,
+            "initial_log_std": INITIAL_LOG_STD,
         },
         "agent_steps": exact_steps, "wall_time_seconds": wall,
         "agent_steps_per_second": exact_steps / wall,
         "num_params": num_params, "logs": logs,
         "checkpoints": checkpoints,
+        "initialization_checkpoint": initialization_checkpoint,
         "privileged_policy_input_max_abs": privileged_max_abs,
         "public_progress_encoding_max_error": progress_encoding_max_error,
         "policy_input_contract": (
@@ -308,7 +339,7 @@ def run(*, output: Path = DEFAULT_OUTPUT) -> dict[str, Any]:
     ]
     report["training_admitted"] = all(predicates.values())
     report["next_authority"] = (
-        "Teacher-free deterministic full-start screens of the saved Puffer checkpoints."
+        NEXT_AUTHORITY
         if report["training_admitted"]
         else "Reject LC016 and diagnose the failed native-training predicate."
     )
