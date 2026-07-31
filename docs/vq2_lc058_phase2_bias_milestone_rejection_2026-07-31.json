@@ -1,0 +1,12 @@
+{
+  "schema": "vq2_lc058_phase2_bias_milestone_rejection_v1",
+  "tag": "vq2_lc058_phase2_bias_milestone_001",
+  "rejected": true,
+  "unchanged_retry_forbidden": true,
+  "failure": "report assembly TypeError after the native vector closed because a local Tensor shadowed candidate_state()",
+  "terminal_report_emitted": false,
+  "minimum_observed_wall_time_seconds": 23.207154167,
+  "flight_sim_packets_sent": 0,
+  "submission_authorized": false,
+  "next_authority": "Correct the name shadowing and rerun the preregistered family under the unique LC059 tag."
+}

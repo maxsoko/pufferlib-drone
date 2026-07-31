@@ -70,6 +70,7 @@ PREREGISTRATION = ROOT / "docs/vq2_lc058_phase2_bias_milestone_preregistration_2
 RUNNER = ROOT / "scripts/run_vq2_lc058_vast.sh"
 TEST = ROOT / "tests/test_eval_vq2_lc058_phase2_bias_milestone.py"
 DEFAULT_OUTPUT = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
+EXTRA_SOURCE_PATHS: tuple[Path, ...] = ()
 
 
 def group_slice(group: int) -> slice:
@@ -172,6 +173,7 @@ def source_identity() -> dict[str, Any]:
         ROOT / "ocean/drone_race/drone_race.c",
         ROOT / "ocean/drone_race/drone_race.h",
         ROOT / "ocean/drone_race/binding.c",
+        *EXTRA_SOURCE_PATHS,
     )
     extension = Path(_C.__file__).resolve()
     return {
@@ -323,8 +325,8 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
                 actor_input = torch.cat((legal, progress), dim=1)
                 active = active_cpu.to(device)
                 inference_started = time.perf_counter()
-                actor_output, candidate_state = actor.forward_step(actor_input, recurrent)
-                recurrent = preserve_frozen_state(recurrent, candidate_state, active)
+                actor_output, next_recurrent = actor.forward_step(actor_input, recurrent)
+                recurrent = preserve_frozen_state(recurrent, next_recurrent, active)
                 action = apply_phase2_bias(actor_output.pre_tanh_mean, progress, deltas)
                 action = torch.where(active[:, None], action, torch.zeros_like(action))
                 inference_seconds += time.perf_counter() - inference_started
