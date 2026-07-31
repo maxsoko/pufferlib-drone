@@ -8,7 +8,7 @@ cd "$VQ2_WORKSPACE_PATH"
 test "$(git rev-parse HEAD)" = "$VQ2_EXPECTED_COMMIT"
 test -z "$(git status --porcelain --untracked-files=no)"
 source .venv/bin/activate
-python -m pytest -q \
+OMP_NUM_THREADS=1 OMP_DYNAMIC=FALSE MKL_NUM_THREADS=1 python -m pytest -q \
     tests/test_vq2_public_phase.py \
     tests/test_vq2_recurrent_phase_residual.py
 OMP_NUM_THREADS=32 OMP_DYNAMIC=FALSE MKL_NUM_THREADS=1 \
