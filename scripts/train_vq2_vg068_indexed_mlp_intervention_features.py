@@ -86,6 +86,20 @@ class TrainConfig:
 
 
 CONFIG = TrainConfig()
+MODEL_CLASS_NAME = "VQ2IndexedPhaseMLPResidualActor"
+NEXT_AUTHORITY_ADMITTED = (
+    "One source-locked teacher-free nonlinear residual scale diagnostic."
+)
+
+
+def checkpoint_model_contract(
+    parent: dict[str, Any], config: TrainConfig
+) -> dict[str, Any]:
+    return {
+        **parent["model"],
+        "class": MODEL_CLASS_NAME,
+        "residual_size": config.residual_size,
+    }
 
 
 def source_paths() -> tuple[Path, ...]:
@@ -480,8 +494,7 @@ def fit(
     checkpoint = {
         **parent,
         "schema": CHECKPOINT_SCHEMA, "tag": TAG,
-        "model": {**parent["model"], "class": "VQ2IndexedPhaseMLPResidualActor",
-                  "residual_size": config.residual_size},
+        "model": checkpoint_model_contract(parent, config),
         "model_state": {name: value.detach().cpu() for name, value in model.state_dict().items()},
         "train_config": asdict(config), "best_epoch": best_epoch,
         "numerically_admitted": admitted,
@@ -512,7 +525,7 @@ def fit(
         "safety": {"teacher_plant_actions": 0, "runtime_teacher_actions": 0,
                    "flight_sim_packets_sent": 0, "submission_authorized": False},
         "next_authority": (
-            "One source-locked teacher-free nonlinear residual scale diagnostic."
+            NEXT_AUTHORITY_ADMITTED
             if admitted else "Reject VG068 without rollout authority."
         ),
     }
