@@ -11106,3 +11106,18 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   gain and nonzero Gate-5 reach to break the established bottleneck.
   Evaluator/runner/test/preregistration hashes are `e354477c...`/
   `8b35810b...`/`e7f6c8b2...`/`483736a7...`. No live authority exists.
+- VG056 rejects the VG053/VG055 update line. On 256 new episodes, VG033
+  versus VG055 Gate-1--6 reach is
+  `255/229/41/1/0/0 -> 255/236/37/1/0/0`; crashes improve `14 -> 11` and
+  misses `36 -> 24`, but Gate-3 regresses and Gate-5 remains zero. Report/
+  state/log/rejection hashes are `f1613090...`/`af60d5a3...`/`eca6cfca...`/
+  `c97082e4...`; completed resume is report-exact. Never retry VG056 or the
+  interpolation line unchanged.
+- VG057 is a causally distinct learned-policy repair. It loads VG033 into the
+  existing `VQ2PhaseResidualActor`, preserves every base parameter exactly,
+  and trains only the zero-initialized 1,024-weight phase-gated joint action
+  residual on VG039's full-start, actor-visited warmed sequences. Six epochs
+  use phase weights `0/0.25/0.5/2/32/32...`; phase 4 directly targets Gate 5.
+  Trainer/runner/test/preregistration hashes are `6ae24e73...`/`729a7040...`/
+  `040b7703...`/`f92648c1...`. Numerical admission authorizes only a teacher-free
+  residual-scale bracket; no live authority exists.

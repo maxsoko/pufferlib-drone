@@ -1,0 +1,40 @@
+{
+  "schema": "vq2_vg056_count6_paired_confirmation_rejection_v1",
+  "tag": "vq2_vg056_vg055_count6_paired_confirmation_001",
+  "completed": true,
+  "numerically_admitted": false,
+  "source_commit": "e24b7fe4c8bb62250b98264a47df48452bd41a32",
+  "parent": {
+    "gate_reach": {"1": 255, "2": 229, "3": 41, "4": 1, "5": 0, "6": 0},
+    "successes": 0,
+    "crashes": 14,
+    "misses": 36,
+    "mean_gates_passed": 2.0546875
+  },
+  "candidate": {
+    "gate_reach": {"1": 255, "2": 236, "3": 37, "4": 1, "5": 0, "6": 0},
+    "successes": 0,
+    "crashes": 11,
+    "misses": 24,
+    "mean_gates_passed": 2.06640625
+  },
+  "failed_predicates": {
+    "gate5_reach_improves": false,
+    "strict_downstream_improvement": false
+  },
+  "artifact_sha256": {
+    "report": "f16130909cc982133e3a5be1b52239dd8388917ef4e6debd62b674177728e1c6",
+    "state": "af60d5a3d838f608095458fe2a2564978c3c2515d407f14a760cb1c949ee6682",
+    "runner_log": "eca6cfca774dd9dccb5edf3b7489f7612fd84a5432a0a3ea1c9b53b730101ae5",
+    "completed_resume": "f16130909cc982133e3a5be1b52239dd8388917ef4e6debd62b674177728e1c6"
+  },
+  "unchanged_retry_forbidden": true,
+  "next_authority": "one_source_locked_phase_gated_learned_residual_fit_on_VG039_full_start_warmed_sequences",
+  "live_authority": false,
+  "safety": {
+    "teacher_plant_actions": 0,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "submission_authorized": false
+  }
+}

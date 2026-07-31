@@ -11023,3 +11023,14 @@ For each training/eval block, record:
   regression, strict downstream gain, and nonzero Gate-5 reach. Evaluator/
   runner/test/preregistration hashes are `e354477c...`/`8b35810b...`/
   `e7f6c8b2...`/`483736a7...`. No live authority exists.
+- VG056 rejects VG055: Gate-1--6 reach changes
+  `255/229/41/1/0/0 -> 255/236/37/1/0/0`; crashes improve `14 -> 11` and
+  misses `36 -> 24`, but Gate-3 regresses and Gate-5 remains zero. Report/
+  state/log/rejection hashes are `f1613090...`/`af60d5a3...`/`eca6cfca...`/
+  `c97082e4...`. Close the interpolation line.
+- VG057 fits only the 1,024-weight phase-gated learned action residual on
+  VG039's full-start, VG033-visited warmed histories while holding every base
+  parameter exact. Six epochs heavily weight phase 4. Trainer/runner/test/
+  preregistration hashes are `6ae24e73...`/`729a7040...`/`040b7703...`/
+  `f92648c1...`. A numerical pass grants only a residual-scale rollout bracket and
+  no live authority.
