@@ -41,6 +41,7 @@ AGENTS = 32
 EPISODES = 32
 THREADS = 4
 MAX_STEPS = 3072
+NUM_GATES = 6
 
 PARENT_CHECKPOINT = (
     ROOT / "logs/drone_race_full_policy_six_gate_bootstrap"
@@ -207,7 +208,7 @@ def aggregate_items(items: list[dict[str, Any]]) -> dict[str, Any]:
         "misses": sum(item["summary"]["misses"] for item in items),
         "gate_reach": {
             str(gate): sum(int(item["summary"]["gate_reach"][str(gate)]) for item in items)
-            for gate in range(1, 7)
+            for gate in range(1, NUM_GATES + 1)
         },
         "mean_gates_passed": sum(item["summary"]["mean_gates_passed"] * EPISODES for item in items) / total,
         "all_hard_transport_pass": all(item["summary"]["hard_transport_pass"] for item in items),
@@ -245,7 +246,8 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda", resume: boo
         "schema": STATE_SCHEMA, "tag": TAG, "alphas": list(ALPHAS),
         "offsets": list(OFFSETS), "seeds": list(SEEDS), "agents": AGENTS,
         "episodes_per_offset": EPISODES, "threads": THREADS,
-        "max_steps": MAX_STEPS, "parent_checkpoint_sha256": PARENT_CHECKPOINT_SHA256,
+        "max_steps": MAX_STEPS, "num_gates": NUM_GATES,
+        "parent_checkpoint_sha256": PARENT_CHECKPOINT_SHA256,
         "update_checkpoint_sha256": UPDATE_CHECKPOINT_SHA256,
         "source_identity": identity,
     }
@@ -290,7 +292,7 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda", resume: boo
             for offset, seed in zip(OFFSETS, SEEDS, strict=True):
                 path = alpha_dir / f"offset_{offset}.json"
                 evaluator.TAG = f"{TAG}_a{label}_o{offset}"
-                evaluator.SEEDS = {6: seed}
+                evaluator.SEEDS = {NUM_GATES: seed}
                 evaluator.CHECKPOINT_SHA256 = state_hashes[alpha]
                 evaluator.teacher_free_config = offset_config(original, offset=offset)
                 def load_actor(target: torch.device, *, model_state: dict[str, torch.Tensor] = states[alpha], selected_alpha: float = alpha) -> tuple[VQ2PhaseRecurrentActor, dict[str, Any]]:
@@ -308,9 +310,9 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda", resume: boo
                     if count.get("source_identity") != identity or count.get("checkpoint_sha256") != state_hashes[alpha]:
                         raise RuntimeError(f"VG055 alpha/offset changed: {alpha}/{offset}")
                 else:
-                    count = evaluator.run_count(num_gates=6, device=torch.device(device_name), source_identity=identity)
+                    count = evaluator.run_count(num_gates=NUM_GATES, device=torch.device(device_name), source_identity=identity)
                     write_json_once(path, count)
-                offset_items.append({"offset": offset, "seed": seed, "count_path": str(path.relative_to(output)), "count_sha256": sha256_path(path), "summary": summarizer.summarize_count(count, num_gates=6)})
+                offset_items.append({"offset": offset, "seed": seed, "count_path": str(path.relative_to(output)), "count_sha256": sha256_path(path), "summary": summarizer.summarize_count(count, num_gates=NUM_GATES)})
             results.append({"alpha": alpha, "state_sha256": state_hashes[alpha], "aggregate": aggregate_items(offset_items), "items": offset_items})
             state["completed_alphas"] = [item["alpha"] for item in results]
             write_json_atomic(state_path, state)

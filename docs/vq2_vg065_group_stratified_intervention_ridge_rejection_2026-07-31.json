@@ -1,0 +1,36 @@
+{
+  "schema": "vq2_vg065_group_stratified_intervention_ridge_rejection_v1",
+  "tag": "vq2_vg065_group_stratified_intervention_ridge_001",
+  "completed": true,
+  "numerically_admitted": false,
+  "source_commit": "8cec48ecc8e682fa87fd930064502cea451a7d44",
+  "finding": "Independent learned heads improve held-out teacher-action MSE strongly at public phases 1--3, but heads 4 and 6--11 regress an already-close VG033 base on teacher-intervention histories. Reject the all-head checkpoint; preserve only a synthetic sparse heads-1--3 diagnostic authority.",
+  "phase_improvement_factor": {
+    "1": 3.157525399167062,
+    "2": 2.1059711500647724,
+    "3": 1.9692022385037502,
+    "4": 0.9502423704059862,
+    "5": 1.1975099874262065,
+    "6": 0.4028671048060784,
+    "7": 0.37638601612814165,
+    "8": 0.34435596061363233,
+    "9": 0.34912749311903746,
+    "10": 0.5031108530566113,
+    "11": 0.48203615940758887
+  },
+  "artifact_sha256": {
+    "checkpoint": "486256dd4c56687c2da123aef384bb213dccaa54eb48a37b437a1121608773d0",
+    "report": "db129cc1275b58839d169eab1ac451bd454dc60ab115c35bcc89442d88211620",
+    "state": "2d6ba24972a23a5bbc4ab55fba32074c5e72725b1d25048f9c9834cc2cfdb98e",
+    "completed_resume": "db129cc1275b58839d169eab1ac451bd454dc60ab115c35bcc89442d88211620"
+  },
+  "unchanged_retry_forbidden": true,
+  "next_authority": "one_source_locked_teacher_free_count5_scale_diagnostic_of_a_synthetic_sparse_heads1_through3_Puffer_child_with_all_other_residual_heads_zero",
+  "live_authority": false,
+  "safety": {
+    "teacher_plant_actions": 0,
+    "runtime_teacher_actions": 0,
+    "flight_sim_packets_sent": 0,
+    "submission_authorized": false
+  }
+}
