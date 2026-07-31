@@ -73,6 +73,7 @@ RUNNER = ROOT / "scripts/run_vq2_lc038_vast.sh"
 DEFAULT_OUTPUT = (
     ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
 )
+EXTRA_SOURCE_PATHS: tuple[Path, ...] = ()
 
 
 def source_paths() -> tuple[Path, ...]:
@@ -89,6 +90,7 @@ def source_paths() -> tuple[Path, ...]:
         ROOT / "ocean/drone_race/drone_race.c",
         ROOT / "ocean/drone_race/drone_race.h",
         ROOT / "ocean/drone_race/binding.c",
+        *EXTRA_SOURCE_PATHS,
     )
 
 
@@ -257,6 +259,7 @@ def configure() -> None:
     base.PARENT_REPORT_SHA256 = PARENT_REPORT_SHA256
     base.PREREGISTRATION, base.RUNNER = PREREGISTRATION, RUNNER
     base.DEFAULT_OUTPUT = DEFAULT_OUTPUT
+    base.ENGINE_GATE_CAP = LONG_COURSE_GATE_CAP
     base.PHASE_INDEX_SCALE = OFFICIAL_PROGRESS_SCALE
     base.FEATURE_QUERY_PHASE_MIN = FEATURE_QUERY_PHASE_MIN
     base.FEATURE_QUERY_PHASE_MAX_EXCLUSIVE = FEATURE_QUERY_PHASE_MAX_EXCLUSIVE
