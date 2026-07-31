@@ -10918,3 +10918,28 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
 - Parent/candidate manifest, runner, test, and preregistration hashes are
   `ecb6dc36...`/`c74dd150...`/`197006cd...`/`931631e2...`/`d6250ba7...`.
   VG043 is offline-only; no shadow, Training, or Submission authority exists.
+
+### VQ2 VG043 rejection / update-fraction bracket — 2026-07-31
+
+- VG043 completed once on fresh seed `429157`. VG042 is rejected for rollout
+  and VG033 remains the parent: Gate-1/2/3 reach regresses
+  `32/31/8 -> 32/28/2`, crashes regress `1 -> 2`, misses regress `0 -> 1`,
+  and mean gates regress `2.21875 -> 1.9375`.
+- Both actors retain exact deterministic action, history, public-phase,
+  ordering, envelope, and transport contracts. Aggregate/parent/candidate/
+  state hashes are `074c44e3...`/`d2702ecb...`/`0ddb23d4...`/
+  `098be195...`,`410d3c6f...`; completed resume is aggregate-exact. Never
+  retry VG043 unchanged.
+- The phase-balanced update direction has useful held-out label evidence but
+  its full magnitude crosses the rollout stability boundary. Before any new
+  gradient training or collection, preregister a small checkpoint
+  interpolation bracket from VG033 toward VG042, then require a separate
+  fresh-seed confirmation of any selected fraction. No live authority exists.
+- VG044 source-locks that bracket at fractions
+  `0/0.01/0.025/0.05/0.10/0.20/0.35/0.50`, 64 shared seed-`429158`
+  count-5 episodes per fraction, four threads, and 2,560 steps. Gate-1/2
+  reach and crashes may not regress; Gate-3 reach or finishes must strictly
+  improve. A qualifying fraction remains offline-only until a fresh paired
+  confirmation.
+- Evaluator/runner/test/preregistration SHA-256 values are
+  `e1429cd9...`/`71866d22...`/`5cc56347...`/`5e179943...`.

@@ -1,0 +1,102 @@
+{
+  "schema": "vq2_vg043_paired_count5_diagnostic_rejection_v1",
+  "tag": "vq2_vg043_vg042_paired_count5_diagnostic_001",
+  "date": "2026-07-31",
+  "source_commit": "efffbcfa9bb76b641cbe9083be225b794013bd69",
+  "completed": true,
+  "qualified_for_count11_diagnostic": false,
+  "seed": 429157,
+  "num_gates": 5,
+  "episodes_per_actor": 32,
+  "num_threads_per_actor": 4,
+  "max_steps": 2560,
+  "parent": {
+    "actor": "VG033",
+    "checkpoint_sha256": "56a8e3b84770c1a54afbf11ac2503478221f7829c28723da0f7dfcfa2a7aac26",
+    "successes": 0,
+    "crashes": 1,
+    "misses": 0,
+    "timeouts": 31,
+    "mean_gates_passed": 2.21875,
+    "gate_reach": {
+      "1": 32,
+      "2": 31,
+      "3": 8,
+      "4": 0,
+      "5": 0
+    },
+    "hard_transport_pass": true
+  },
+  "candidate": {
+    "actor": "VG042",
+    "checkpoint_sha256": "876b0ecc4dae769f6a9dd04a0114e9623961cf46397499a41d326bdc74141ddc",
+    "successes": 0,
+    "crashes": 2,
+    "misses": 1,
+    "timeouts": 29,
+    "mean_gates_passed": 1.9375,
+    "gate_reach": {
+      "1": 32,
+      "2": 28,
+      "3": 2,
+      "4": 0,
+      "5": 0
+    },
+    "hard_transport_pass": true
+  },
+  "delta_candidate_minus_parent": {
+    "successes": 0,
+    "crashes": 1,
+    "misses": 1,
+    "mean_gates_passed": -0.28125,
+    "gate1_reach": 0,
+    "gate2_reach": -3,
+    "gate3_reach": -6,
+    "gate4_reach": 0
+  },
+  "criteria": {
+    "same_seed_and_episode_count": true,
+    "both_hard_transport_pass": true,
+    "gate1_not_regressed": true,
+    "crash_count_not_regressed": false,
+    "ordered_gate3_or_finish_signal": true,
+    "downstream_improves_parent": false
+  },
+  "artifact_sha256": {
+    "aggregate": "074c44e33c7c3b5ee4148cd2acc10719baafd2dee83498d66793e5e19cf09bf6",
+    "parent_count_report": "d2702ecb75eea67d764675aabd96917eb8057bfcdd3235cd5e26f1ddad5d2883",
+    "candidate_count_report": "0ddb23d483ed675d805b65257ddaecc4ab9dc20433dad3023f868770ed13276f",
+    "parent_state": "098be19529a6b306410d8744fae4237efb22fd6169f2c543eb208dd7e027abe6",
+    "candidate_state": "410d3c6f2b277f097c341a9bbfc8c17449e33f0372bf359cc355660ae29c298b",
+    "runner_log": "29fbf3466e7f11e6cbf6c3ba7743f58448a26e75cf907183dfd4c703b8f6e1f2",
+    "completed_resume_log": "074c44e33c7c3b5ee4148cd2acc10719baafd2dee83498d66793e5e19cf09bf6",
+    "completed_resume_exit": "53c234e5e8472b6ac51c1ae1cab3fe06fad053beb8ebfd8977b010655bfdd3c3"
+  },
+  "input_sha256": {
+    "parent_manifest": "ecb6dc3601dafe13eb1007f84c5dd517ecce8672df3186ed4e7e5999c56990be",
+    "candidate_manifest": "c74dd150391f9efe0f8097860659c75d2cf2572aa13b7c08d1681cb4628c6584",
+    "preregistration": "d6250ba70bb825d8098939aee7346babcd072d910ad5291deb35fef34c77b0f3",
+    "runner": "197006cdab4245181b90d67cc6789261ed66fb7ecdf9239e8373f8901d05aa6a",
+    "component": "925ee589351318ffa8d93449c9fc5a5f2f184f16503fc59c71b38158a7bd3de8",
+    "comparator": "53d30a1e6a93f9432c075a075b54180a00edf22df6473e26d63a6699d706113a",
+    "test": "931631e2d7c93944ca49edbebdf1963ca77dab22faae921504be3682cbaf1e02"
+  },
+  "verification": {
+    "remote_completed_resume_exit_two": true,
+    "remote_completed_resume_output_equals_aggregate": true,
+    "remote_to_local_artifact_hashes_exact": true,
+    "both_component_reports_complete": true,
+    "both_action_histories_exact": true,
+    "both_public_phase_contracts_exact": true
+  },
+  "safety": {
+    "teacher_plant_actions": 0,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "shadow_authorized": false,
+    "training_authorized": false,
+    "submission_authorized": false
+  },
+  "next_authority": "Reject VG042 for rollout, never retry VG043 unchanged, retain VG033, and preregister a small update-fraction interpolation bracket before any further training."
+}

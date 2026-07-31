@@ -10867,3 +10867,24 @@ For each training/eval block, record:
 - Parent/candidate manifest, runner, test, and preregistration hashes are
   `ecb6dc36...`/`c74dd150...`/`197006cd...`/`931631e2...`/`d6250ba7...`.
   No live authority is granted.
+
+### VQ2 VG043 rejection and update-fraction bracket — 2026-07-31
+
+- VG043 rejects VG042 on fresh seed `429157`. VG042 versus VG033 Gate-1/2/3
+  reach is `32/28/2` versus `32/31/8`; crashes are `2` versus `1`, misses
+  are `1` versus `0`, and mean gates are `1.9375` versus `2.21875`.
+- Both actors pass every hard policy/phase/action/transport check.
+  Aggregate/parent/candidate/state hashes are `074c44e3...`/`d2702ecb...`/
+  `0ddb23d4...`/`098be195...`,`410d3c6f...`; completed resume reproduces
+  the rejection exactly. Never retry VG043 unchanged and retain VG033.
+- The update direction improves held-out later-phase labels but its full
+  magnitude destabilizes rollout. The next causally distinct offline step is
+  a preregistered small interpolation-fraction bracket followed by an
+  independent fresh-seed confirmation of any selected fraction. No live
+  authority is granted.
+- VG044 fixes fractions `0/0.01/0.025/0.05/0.10/0.20/0.35/0.50` and screens
+  each on 64 identical fresh seed-`429158` count-5 episodes. Selection
+  requires no Gate-1/2 or crash regression and strict Gate-3-or-finish gain;
+  any selection authorizes only a new paired offline confirmation.
+- Evaluator/runner/test/preregistration hashes are `e1429cd9...`/
+  `71866d22...`/`5cc56347...`/`5e179943...`. No live authority is granted.
