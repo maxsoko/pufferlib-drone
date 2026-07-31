@@ -222,6 +222,20 @@ def select_intervention_plant_actions(
     return plant, teacher_mask
 
 
+def select_configured_intervention_plant_actions(
+    student: np.ndarray,
+    teacher: np.ndarray,
+    active: np.ndarray,
+    phase_index: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Apply the current experiment's phase boundary, not the module default."""
+
+    return select_intervention_plant_actions(
+        student, teacher, active, phase_index,
+        phase_min=INTERVENTION_PHASE_MIN,
+    )
+
+
 def collection_predicates(report: dict[str, Any]) -> dict[str, bool]:
     metrics = report.get("metrics", {})
     phases = report.get("feature_phase_records", [])
@@ -402,7 +416,7 @@ def collect(
                 student_np = student.cpu().numpy().astype(np.float32, copy=False)
                 teacher = alignment_oracle_action(current)
                 if TEACHER_PLANT_ENABLED:
-                    plant, teacher_mask = select_intervention_plant_actions(
+                    plant, teacher_mask = select_configured_intervention_plant_actions(
                         student_np, teacher, active, phase_index
                     )
                 else:

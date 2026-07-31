@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import numpy as np
 
+import scripts.collect_vq2_vg062_warmed_teacher_intervention_features as collector
+
 from scripts.collect_vq2_vg062_warmed_teacher_intervention_features import (
     AGENTS,
     EPISODES,
@@ -30,6 +32,20 @@ def test_selector_changes_only_active_public_phase_one_and_later() -> None:
     np.testing.assert_array_equal(plant[~mask], student[~mask])
     np.testing.assert_array_equal(plant[mask], teacher[mask])
     assert INTERVENTION_PHASE_MIN == 1
+
+
+def test_configured_selector_reads_runtime_phase_boundary(monkeypatch) -> None:
+    student = np.arange(20, dtype=np.float32).reshape(5, 4) / 20
+    teacher = -student
+    active = np.ones(5, dtype=bool)
+    phase = np.array([0, 1, 3, 4, 16])
+    monkeypatch.setattr(collector, "INTERVENTION_PHASE_MIN", 4)
+    plant, mask = collector.select_configured_intervention_plant_actions(
+        student, teacher, active, phase
+    )
+    np.testing.assert_array_equal(mask, [False, False, False, True, True])
+    np.testing.assert_array_equal(plant[~mask], student[~mask])
+    np.testing.assert_array_equal(plant[mask], teacher[mask])
 
 
 def test_collection_admission_requires_training_only_successful_intervention() -> None:
