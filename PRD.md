@@ -10665,3 +10665,23 @@ For each training/eval block, record:
   `0.02/0.02/0.06/0.05/0.04/0.04/0.10/0.12`. Core/trainer/runner/tests/
   preregistration hashes are `c76902c8...`/`cb2f4287...`/`3e85240b...`/
   `065f147c...`,`335a5e10...`/`bc013468...`. VG033 remains offline-only.
+
+### VQ2 VG033 admission and VG034 paired count-5 diagnostic — 2026-07-31
+
+- VG033 completes its sole six-epoch seed-`429132` refit from source commit
+  `0f76d945...` in `3,407.805697 s`, selecting epoch 6 after `35,070`
+  updates. Balanced validation improves `0.057872192702 -> 0.029448763167`
+  (`1.965182x`); VG032 improves `0.122915181429 -> 0.042820791151`
+  (`2.870456x`).
+- Every old-source cap also passes. Exact source weights and `4.0x`
+  transition exposure hold in all six epochs. Checkpoint/report/state/log/
+  exit hashes are `56a8e3b8...`/`033a7f1f...`/`b7bd08d7...`/
+  `aa993727...`/`9a271f2a...`; completed resume and local tensor identity
+  checks pass. Admission SHA is `dbf0fbb4...`.
+- VG034 compares VG028 and VG033 concurrently on 32 identical fresh count-5
+  episodes, seed `429133`, four threads, and 2,560 steps. It requires strict
+  Gate-3-or-finish improvement, no Gate-1/crash regression, and zero hard
+  action/phase/ordering/transport fault.
+- Parent/candidate manifest, runner, dedicated test, and preregistration
+  hashes are `601a1706...`/`3dc5a6d7...`/`a941ec38...`/`13f33e5b...`/
+  `65195bab...`. This remains offline-only.

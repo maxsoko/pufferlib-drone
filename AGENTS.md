@@ -10678,3 +10678,28 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   trainer-test/preregistration hashes are `c76902c8...`/`cb2f4287...`/
   `3e85240b...`/`065f147c...`/`335a5e10...`/`bc013468...`. VG033 can
   authorize only a fresh paired offline diagnostic; no live authority exists.
+
+### VQ2 VG033 admission / VG034 paired count-5 diagnostic — 2026-07-31
+
+- VG033 completed its sole seed-`429132` six-epoch refit from source commit
+  `0f76d945...` in `3,407.805697 s` and `35,070` optimizer updates. Epoch 6
+  is selected at balanced validation MSE `0.029448763167`, improving the
+  VG028 baseline `0.057872192702` by `1.965182x`.
+- VG032 validation improves `0.122915181429 -> 0.042820791151`
+  (`2.870456x`). Selected clean/VG009/recovered-VG012/VG016/VG019/VG024/
+  VG027 values are `0.004864186/0.007957505/0.030903256/0.038210876/
+  0.017964366/0.014296200/0.060050992`; every cap passes. All six epochs
+  prove exact source weights and `4.0x` transition exposure.
+- Checkpoint/report/completed-state/runner-log/exit hashes are
+  `56a8e3b8...`/`033a7f1f...`/`b7bd08d7...`/`aa993727...`/`9a271f2a...`.
+  Completed resume is byte-identical to the report and state-immutable;
+  local checkpoint tensors exactly equal the saved epoch-6 best state.
+  Admission evidence SHA-256 is `dbf0fbb4...`.
+- Preregister VG034: one concurrent same-seed paired count-5 diagnostic of
+  VG028 versus VG033, 32 episodes each, seed `429133`, four threads, and
+  2,560 steps. Qualify only with zero hard fault, no Gate-1/crash regression,
+  nonzero Gate-3-or-finish signal, and strict downstream improvement.
+- Parent/candidate manifest, runner, dedicated test, and preregistration
+  hashes are `601a1706...`/`3dc5a6d7...`/`a941ec38...`/`13f33e5b...`/
+  `65195bab...`. VG034 is offline-only; no shadow, Training, or Submission
+  authority is granted.
