@@ -1,0 +1,44 @@
+{
+  "schema": "vq2_vg055_count6_fraction_bracket_admission_v1",
+  "tag": "vq2_vg055_vg033_to_vg053_count6_fraction_bracket_001",
+  "completed": true,
+  "numerically_admitted": true,
+  "source_commit": "4cf43b59d68049275f6a055bc283a0590c106f07",
+  "selected_alpha": 0.75,
+  "parent": {
+    "gate_reach": {"1": 128, "2": 110, "3": 18, "4": 0, "5": 0, "6": 0},
+    "successes": 0,
+    "crashes": 6,
+    "misses": 22,
+    "mean_gates_passed": 2.0
+  },
+  "candidate": {
+    "gate_reach": {"1": 128, "2": 114, "3": 25, "4": 1, "5": 0, "6": 0},
+    "successes": 0,
+    "crashes": 5,
+    "misses": 17,
+    "mean_gates_passed": 2.09375
+  },
+  "qualification_predicates": {
+    "hard_transport_pass": true,
+    "gate1_not_regressed": true,
+    "gate2_not_regressed": true,
+    "crashes_not_regressed": true,
+    "strict_downstream_improvement": true
+  },
+  "artifact_sha256": {
+    "checkpoint": "d4076edd16bc9b1f648a12c3003e1a1bfde33560b7eaa6cbf17817435d2bbc74",
+    "report": "bb0269801f61f81c296941cfe12c673a0efa423a04e91f4bc3bac105ca75e62d",
+    "state": "79414b9bf56ba033efd96318a30c1d2cb4bc10261f3887c937ade8c5d93ca560",
+    "runner_log": "3d19ab9c6c17d39d9776254aefd01495815c20e1bb8af34fd542bda8f1aaab6e",
+    "completed_resume": "bb0269801f61f81c296941cfe12c673a0efa423a04e91f4bc3bac105ca75e62d"
+  },
+  "next_authority": "one_source_locked_larger_independent_multi_offset_six_gate_screen",
+  "live_authority": false,
+  "safety": {
+    "teacher_plant_actions": 0,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "submission_authorized": false
+  }
+}

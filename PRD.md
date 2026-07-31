@@ -11012,3 +11012,14 @@ For each training/eval block, record:
   or crash regression, and strict downstream progress. Evaluator/runner/test/
   preregistration hashes are `0a876b34...`/`8998f64e...`/`625930c2...`/
   `9cfa9d7d...`. No live authority exists.
+- VG055 selects alpha `0.75` on offsets `32/40/48/56`. Versus VG033,
+  Gate-1--6 reach changes `128/110/18/0/0/0 -> 128/114/25/1/0/0`, crashes
+  improve `6 -> 5`, misses improve `22 -> 17`, and every hard predicate
+  passes. Checkpoint/report/state/log/admission hashes are `d4076edd...`/
+  `bb026980...`/`79414b9b...`/`3d19ab9c...`/`ae892d09...`. The result is
+  offline-only and too sparse for live promotion.
+- VG056 pairs VG033 and VG055 over 256 new episodes at offsets
+  `64/72/80/88`. It requires exact hard transport, no Gate-1/2 or crash
+  regression, strict downstream gain, and nonzero Gate-5 reach. Evaluator/
+  runner/test/preregistration hashes are `e354477c...`/`8b35810b...`/
+  `e7f6c8b2...`/`483736a7...`. No live authority exists.
