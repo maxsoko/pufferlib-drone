@@ -1,0 +1,40 @@
+{
+  "schema": "vq2_vg042_preflight_abort_v1",
+  "tag": "vq2_vg042_variable_gate_phase_balanced_refit_001",
+  "date": "2026-07-31",
+  "source_commit": "b4251d80fb7319c4ccd3f548359782e2817e3b04",
+  "training_started": false,
+  "initial_state_written": false,
+  "optimizer_updates": 0,
+  "checkpoint_written": false,
+  "report_written": false,
+  "failure": {
+    "stage": "fixed baseline evaluation before output creation",
+    "type": "AttributeError",
+    "message": "The phase-balanced evaluator referenced _agent_batches through the seven-source core module, which does not export that helper."
+  },
+  "preflight": {
+    "native_regressions_passed": true,
+    "vision_native_regressions_passed": true,
+    "sm89_float32_build_passed": true,
+    "focused_tests_passed": 71,
+    "focused_tests_failed": 0
+  },
+  "artifact_sha256": {
+    "bootstrap_log": "a1e7381d8cde6c22eea33b9c88801559871a38641ec2cd84af1b665c65a15d1e"
+  },
+  "input_sha256": {
+    "trainer": "a1891cd593515f38811c157cc71ae27269fd82f89e8fc5ef94066c62218ea3a1",
+    "runner": "211bbf8939d89afcdafe8deeddcac78a404d56c4e1fca67bebe1a73024c5e531",
+    "preregistration": "832953d073e013a5a735d71df1840cac9bd3ae16c180745bb0bb137491040263"
+  },
+  "repair_contract": "Import _agent_batches directly from its defining variable-gate recurrent BC module, exercise that path in the dedicated unit test, bind this abort evidence, and relaunch before any training state exists.",
+  "safety": {
+    "actor_input_privileged_values": 0,
+    "teacher_blend": 0.0,
+    "teacher_plant_actions": 0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "submission_authorized": false
+  }
+}

@@ -62,6 +62,15 @@ unchanged retry.
 
 ## Source lock and remote gate
 
+The first source-locked preflight on commit `b4251d80...` passed both native
+suites, the SM89 build, and `71/71` tests, then stopped during fixed baseline
+evaluation before output creation because `_agent_batches` was referenced
+through a module that does not export it. It wrote no state, checkpoint,
+report, or optimizer update. The repaired source imports the helper from its
+defining module, adds a direct helper-path test, and binds abort evidence
+SHA-256
+`a66277e69f10fca99f9d0fb702560a4c6bea168b1ce7abfc17de2e0973ec9b15`.
+
 Before training, bind the exact pushed commit; goal; VG033 checkpoint/report/
 admission; VG039 report/metadata/admission and arrays; VG041 rejection
 evidence SHA-256
@@ -76,13 +85,13 @@ Source SHA-256 values:
 - nine-source configuration:
   `c959096bad1b0acc1cde810c80fc4ea5e8e7d674ebd3c3fbad0d614827fa5c44`
 - VG042 trainer:
-  `a1891cd593515f38811c157cc71ae27269fd82f89e8fc5ef94066c62218ea3a1`
+  `4959f5c2638a0911a4a7c92e6375d78baffa6ae8eeace6cec97549d11a9ba46d`
 - runner:
-  `211bbf8939d89afcdafe8deeddcac78a404d56c4e1fca67bebe1a73024c5e531`
+  `d9ec5e93ff25fac0635f608f804fe2b29f134f85275e6b8da0f63bea78ec0b4b`
 - existing core test:
   `065f147cd45f5b2e93d8ad28e05279cc2ac6ace08f56d2abfa6c74f221f44a0e`
 - VG042 test:
-  `efa3ee924393a8858096b46f902e4d434648ace8f9de84b9512a4a401e7bf576`
+  `1b81716ecd85f58ba11586e94704d35e9097abeab100c5ba7b425aaec69a55c5`
 
 Require the retained Vast environment, CUDA, at least 32 visible CPUs, about
 64 GiB RAM, 15 GiB free disk, Clang/OpenMP, ccache, both native regression

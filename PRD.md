@@ -10837,5 +10837,12 @@ For each training/eval block, record:
   no phase-3 regression, strict phase-4 improvement, ordinary VG039 MSE at
   most `0.12`, all anchor caps, exact weights, and finite source identity.
 - Core/nine-source/trainer/runner/test/preregistration hashes are
-  `6b0ff918...`/`c959096b...`/`a1891cd5...`/`211bbf89...`/`efa3ee92...`/
-  `832953d0...`. No live authority is granted.
+  `6b0ff918...`/`c959096b...`/`4959f5c2...`/`d9ec5e93...`/`1b81716e...`;
+  the repaired preregistration binds the preflight abort. No live authority
+  is granted.
+- The first preflight on commit `b4251d80...` passed both native suites, the
+  SM89 build, and `71/71` tests, then stopped before state/output creation
+  because `_agent_batches` was referenced through the wrong module. It made
+  zero optimizer updates. Abort evidence SHA is `a66277e6...`; the repair
+  imports and directly tests the defining-module helper. Repaired
+  preregistration SHA is `06be595b...`.

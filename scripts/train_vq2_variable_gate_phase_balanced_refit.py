@@ -20,6 +20,7 @@ if str(ROOT) not in sys.path:
 
 from pufferlib.vq2_recurrent_phase import PHASE_LEGAL_OBS_SIZE
 from scripts.train_vq2_variable_gate_recurrent_bc import (
+    _agent_batches,
     sha256_path,
     source_label,
 )
@@ -42,6 +43,10 @@ REJECTION = (
 )
 REJECTION_SHA256 = (
     "a9eb3079c7e59cf52594ce89c07182356724d99a0ab545c7e96eb9f954a55dd9"
+)
+PREFLIGHT_ABORT = ROOT / "docs/vq2_vg042_preflight_abort_2026-07-31.json"
+PREFLIGHT_ABORT_SHA256 = (
+    "a66277e69f10fca99f9d0fb702560a4c6bea168b1ce7abfc17de2e0973ec9b15"
 )
 DEFAULT_OUTPUT = (
     ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
@@ -110,6 +115,7 @@ def source_paths() -> list[Path]:
         PREREGISTRATION,
         RUNNER,
         REJECTION,
+        PREFLIGHT_ABORT,
     ]
 
 
@@ -129,9 +135,12 @@ def verify_inputs() -> None:
     vg040.verify_inputs()
     if sha256_path(REJECTION) != REJECTION_SHA256:
         raise RuntimeError("VG042 rejection evidence hash mismatch")
+    if sha256_path(PREFLIGHT_ABORT) != PREFLIGHT_ABORT_SHA256:
+        raise RuntimeError("VG042 preflight-abort evidence hash mismatch")
     if not PREREGISTRATION.is_file():
         raise RuntimeError("VG042 preregistration is missing")
     rejection = json.loads(REJECTION.read_text())
+    preflight_abort = json.loads(PREFLIGHT_ABORT.read_text())
     if (
         rejection.get("schema")
         != "vq2_vg041_paired_count5_diagnostic_rejection_v1"
@@ -143,6 +152,13 @@ def verify_inputs() -> None:
         or rejection.get("criteria", {}).get("downstream_improves_parent")
     ):
         raise RuntimeError("VG041 rejection does not authorize VG042")
+    if (
+        preflight_abort.get("schema") != "vq2_vg042_preflight_abort_v1"
+        or preflight_abort.get("training_started")
+        or preflight_abort.get("initial_state_written")
+        or preflight_abort.get("optimizer_updates") != 0
+    ):
+        raise RuntimeError("VG042 preflight repair evidence changed")
 
 
 def phase_row_weights(
@@ -183,7 +199,7 @@ def evaluate_phase_balanced(
 
     model.eval()
     with torch.no_grad():
-        for batch_agents in core._agent_batches(agents, config.agent_batch_size):
+        for batch_agents in _agent_batches(agents, config.agent_batch_size):
             state = model.initial_state(len(batch_agents), device=device)
             maximum = int(dataset.lengths[batch_agents].max())
             for start in range(0, maximum, config.sequence_chunk):

@@ -55,6 +55,14 @@ def test_vg042_row_weights_decode_only_public_phase() -> None:
         vg042.phase_row_weights(observation, valid)
 
 
+def test_vg042_phase_evaluator_imports_agent_batches_from_defining_module() -> None:
+    batches = list(vg042._agent_batches(torch.arange(5).numpy(), 2))
+    assert [batch.tolist() for batch in batches] == [[0, 1], [2, 3], [4]]
+    source = inspect.getsource(vg042.evaluate_phase_balanced)
+    assert "for batch_agents in _agent_batches(" in source
+    assert "core._agent_batches" not in source
+
+
 def test_refit_core_applies_row_weights_inside_one_source_only() -> None:
     config = core.SevenSourceConfig(smoothness_weight=0.0)
     names = tuple(core.SOURCE_WEIGHTS)

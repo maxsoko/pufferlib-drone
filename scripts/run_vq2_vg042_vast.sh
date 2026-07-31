@@ -11,6 +11,7 @@ VQ2_VG039_ADMISSION="$VQ2_WORKSPACE_PATH/docs/vq2_vg039_variable_gate_dagger_rou
 VQ2_PARENT="$VQ2_WORKSPACE_PATH/logs/drone_race_full_policy_six_gate_bootstrap/vq2_vg033_variable_gate_eight_source_refit_001"
 VQ2_PARENT_ADMISSION="$VQ2_WORKSPACE_PATH/docs/vq2_vg033_eight_source_refit_admission_2026-07-31.json"
 VQ2_REJECTION="$VQ2_WORKSPACE_PATH/docs/vq2_vg041_paired_count5_diagnostic_rejection_2026-07-31.json"
+VQ2_PREFLIGHT_ABORT="$VQ2_WORKSPACE_PATH/docs/vq2_vg042_preflight_abort_2026-07-31.json"
 VQ2_GOAL="$VQ2_WORKSPACE_PATH/docs/vq2_48h_competitive_lap_goal_prompt_2026-07-31.md"
 
 run_training() {
@@ -82,6 +83,8 @@ test "$(sha256sum "$VQ2_VG039_ADMISSION" | cut -d" " -f1)" = \
     e01eb2e28c65f827cfb39916c28d56320c57a4c23513ee61553447bd236b11cc
 test "$(sha256sum "$VQ2_REJECTION" | cut -d" " -f1)" = \
     a9eb3079c7e59cf52594ce89c07182356724d99a0ab545c7e96eb9f954a55dd9
+test "$(sha256sum "$VQ2_PREFLIGHT_ABORT" | cut -d" " -f1)" = \
+    a66277e69f10fca99f9d0fb702560a4c6bea168b1ce7abfc17de2e0973ec9b15
 test "$(sha256sum "$VQ2_GOAL" | cut -d" " -f1)" = \
     03f085d32a217889f56600ac2600bead24e087ee47322eb5aa2e208f231f2aa1
 

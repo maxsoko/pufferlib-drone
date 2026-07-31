@@ -10886,6 +10886,13 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   preservation caps, exact source weights, and finite source-bound evidence.
   Numerical admission may authorize only a fresh paired diagnostic.
 - Core/nine-source/trainer/runner/test/preregistration hashes are
-  `6b0ff918...`/`c959096b...`/`a1891cd5...`/`211bbf89...`/`efa3ee92...`/
-  `832953d0...`. VG042 is offline-only; FlightSim, shadow, Training, and
-  Submission remain unauthorized.
+  `6b0ff918...`/`c959096b...`/`4959f5c2...`/`d9ec5e93...`/`1b81716e...`;
+  the repaired preregistration binds the preflight abort. VG042 is
+  offline-only; FlightSim, shadow, Training, and Submission remain
+  unauthorized.
+- The first VG042 preflight on commit `b4251d80...` passed both native suites,
+  the SM89 build, and `71/71` tests, then stopped before output/state creation
+  because its evaluator referenced `_agent_batches` through the wrong module.
+  No optimizer update occurred. Abort evidence SHA is `a66277e6...`; the
+  repaired trainer imports the helper from its defining module and directly
+  tests that path. Repaired preregistration SHA is `06be595b...`.
