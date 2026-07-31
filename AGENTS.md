@@ -11038,3 +11038,21 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   The native C/header/binding hashes are `246997f5...`/`6c1093b1...`/
   `65c1e297...`. VG052 is offline-only and may authorize only a separately
   preregistered trust-region refit; no live authority exists.
+- VG052 completes once from commit `e9f9ca24...` in `45.352140 s` and admits
+  `548,255` legal rows: phases 3/4/5 contain
+  `63,023/255,090/230,142`. All 512 resets use the requested local range;
+  all 21 hard predicates pass, action-history error is zero, and teacher
+  actions remain zero. The Puffer actor finishes 95 local suffix episodes,
+  while `89/217/111` crash/miss/timeout outcomes characterize the training
+  distribution and are not deployment admission. Report/metadata/state/log
+  hashes are `687141ac...`/`03b71103...`/`5cf79b0b...`/`b5b41f0f...`;
+  completed resume is report-exact. Admission SHA is `95c3f6e6...`.
+- VG053 preregisters one anchor-heavy trust-region refit from VG033: one epoch,
+  AdamW `5e-7`, 256-step BPTT, four transition exposures, and exact ten-source
+  weights `0.30/0.03/0.03/0.06/0.08/0.08/0.12/0.15/0.05/0.10`.
+  Pre-VG039 anchors retain `0.85` mass and VG052 receives `0.10`. Numerical
+  admission requires strict overall/VG052 improvement and every prior cap;
+  it authorizes only a fresh multi-offset six-gate screen.
+- VG053 trainer/runner/test/preregistration hashes are
+  `a91640c5...`/`92fd257c...`/`1d7efeb1...`/`4afa4c7e...`.
+  No live authority exists.

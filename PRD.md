@@ -10970,3 +10970,17 @@ For each training/eval block, record:
 - Manifest/collector/runner/test/preregistration hashes are
   `7e246d5e...`/`a3e12b9d...`/`9e84b4fd...`/`72021570...`/`7958566e...`.
   VG052 is offline-only and grants no live authority.
+- VG052 admits `548,255` legal records from commit `e9f9ca24...`, including
+  phase-3/4/5 mass `63,023/255,090/230,142`. All 21 hard predicates pass,
+  action-history parity is exact, and teacher actions are zero. VG033 finishes
+  95 local suffix episodes; crash/miss/timeout counts `89/217/111` remain
+  training diagnostics. Report/metadata/state/log hashes are
+  `687141ac...`/`03b71103...`/`5cf79b0b...`/`b5b41f0f...`; admission SHA is
+  `95c3f6e6...`.
+- VG053 preregisters one anchor-heavy refit from VG033: one epoch, AdamW
+  `5e-7`, 256-step BPTT, four transition exposures, and ten-source weights
+  `0.30/0.03/0.03/0.06/0.08/0.08/0.12/0.15/0.05/0.10`. Numerical admission
+  requires strict aggregate and VG052 validation improvement while retaining
+  every old cap, then authorizes only a fresh six-gate multi-offset rollout.
+  Trainer/runner/test/preregistration hashes are
+  `a91640c5...`/`92fd257c...`/`1d7efeb1...`/`4afa4c7e...`.

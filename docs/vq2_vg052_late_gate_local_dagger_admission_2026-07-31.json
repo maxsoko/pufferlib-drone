@@ -1,0 +1,43 @@
+{
+  "schema": "vq2_vg052_late_gate_local_dagger_admission_v1",
+  "tag": "vq2_vg052_late_gate_local_dagger_vg033_visited_512",
+  "completed": true,
+  "admitted": true,
+  "source_commit": "e9f9ca249f0ccd17bef7096a4067c33b3638b920",
+  "artifact_sha256": {
+    "report": "687141acf2ac95449772666ecda6a9deed2f59a77a23d666c17330c39070fa91",
+    "metadata": "03b71103b956a660f32888ed8a9290c1a2251f214f736497e1d53b209ede1895",
+    "state": "5cf79b0b6d3bc696e4fc44f14cca2c17c4e06e534a3817ed931bb8cf6d0978ef",
+    "runner_log": "b5b41f0f0d3c561d4cddf7c6c64cfd1cccb54dd76b280c75ff3b55dd27df0b16",
+    "completed_resume": "687141acf2ac95449772666ecda6a9deed2f59a77a23d666c17330c39070fa91"
+  },
+  "records": 548255,
+  "phase_records": {
+    "3": 63023,
+    "4": 255090,
+    "5": 230142
+  },
+  "episodes": 512,
+  "gate_local_start_rate": 1.0,
+  "local_suffix_successes": 95,
+  "local_suffix_success_rate": 0.185546875,
+  "crashes": 89,
+  "misses": 217,
+  "timeouts": 111,
+  "hard_predicates_passed": 21,
+  "hard_predicates_failed": 0,
+  "executed_action_max_error": 0.0,
+  "query_nonfinite": 0,
+  "query_action_envelope_violations": 0,
+  "stored_training_only_privileged_values_per_record": 0,
+  "stored_total_gate_count_values_per_record": 0,
+  "next_authority": "one_separately_preregistered_trust_region_offline_refit_from_VG033",
+  "live_authority": false,
+  "safety": {
+    "student_actions_executed": 548255,
+    "teacher_actions_executed": 0,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "submission_authorized": false
+  }
+}
