@@ -11091,3 +11091,8 @@ For each training/eval block, record:
   asynchronous persistent-buffer rollout-plus-optimizer path. It is explicitly
   throughput-only, consumes privileged training observations, saves no policy,
   and grants no deployment or live authority.
+- LC003 rejects at `87,337` complete train SPS (`2.627739x`) and 19% peak GPU;
+  report SHA is `7646bea6...`. Its profile is rollout-bound (`10.926120 s`
+  versus `0.375917 s` training). LC004 scales agents/buffers/threads/minibatch
+  fourfold to `4096/64/256/65536`, uses a fresh seed, and preserves the same
+  privileged throughput-only/no-checkpoint restriction and `10x` gate.

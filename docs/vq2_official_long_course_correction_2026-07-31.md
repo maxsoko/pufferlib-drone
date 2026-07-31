@@ -71,3 +71,11 @@ is rejected as the requested Puffer throughput proof. LC003 now measures the
 actual persistent-buffer CUDA rollout-plus-optimizer path; it is explicitly
 throughput-only because its native benchmark actor consumes the privileged
 training suffix and no weight is saved.
+
+LC003 confirms actual CUDA training but rejects at `87,337` end-to-end SPS,
+`2.627739x` baseline, and 19% peak GPU. Its profile spends `10.926120 s` in
+rollout and only `0.375917 s` in optimizer work; report SHA-256 is
+`7646bea6d071aaa02c0ef92844c7be6e37e65c30151754233a5e677ae6a07383`.
+LC004 causally scales agents/buffers/threads/minibatch by four to occupy the
+full host and feed the GPU. It retains all throughput-only and no-checkpoint
+restrictions.

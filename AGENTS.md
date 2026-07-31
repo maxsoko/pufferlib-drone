@@ -11196,3 +11196,9 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   at 1,024 agents/16 buffers/128 threads. Its actor consumes the privileged
   training suffix, so no checkpoint may be written and it has no deployment or
   live authority regardless of speed.
+- LC003 rejects at `87,337` end-to-end rollout-plus-train SPS (`2.627739x`),
+  with 19% peak GPU. Profile time is `10.926120 s` rollout versus `0.375917 s`
+  train, so environment scale starves the 4090. Report SHA is `7646bea6...`.
+  LC004 changes agents/buffers/threads/minibatch `1024/16/128/16384 ->
+  4096/64/256/65536` with fresh seed 431040. It remains privileged,
+  throughput-only, unsaved, and grants no deployment/live authority.
