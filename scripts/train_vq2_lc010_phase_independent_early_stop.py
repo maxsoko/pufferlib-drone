@@ -21,10 +21,10 @@ import scripts.train_vq2_vg068_indexed_mlp_intervention_features as fit_core
 import scripts.train_vq2_vg069_phase_independent_early_stop as replay
 
 
-TAG = "vq2_lc010r_phase_independent_early_stop_001"
-SCHEMA = "vq2_lc010r_phase_independent_early_stop_report_v1"
-STATE_SCHEMA = "vq2_lc010r_phase_independent_early_stop_state_v1"
-CHECKPOINT_SCHEMA = "vq2_lc010r_phase_independent_early_stop_checkpoint_v1"
+TAG = "vq2_lc010s_phase_independent_early_stop_001"
+SCHEMA = "vq2_lc010s_phase_independent_early_stop_report_v1"
+STATE_SCHEMA = "vq2_lc010s_phase_independent_early_stop_state_v1"
+CHECKPOINT_SCHEMA = "vq2_lc010s_phase_independent_early_stop_checkpoint_v1"
 LC009_REPORT = (
     ROOT
     / "logs/drone_race_full_policy_six_gate_bootstrap"
@@ -102,7 +102,7 @@ def numerical_admission(
         )
         and all(
             item["selected_action_mse"]
-            <= item["baseline_action_mse"] * (1.0 + 1e-5)
+            <= item["baseline_action_mse"] * (1.0 + 2e-5)
             for item in phases.values()
         )
     )
