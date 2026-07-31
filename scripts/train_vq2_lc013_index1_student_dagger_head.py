@@ -221,7 +221,7 @@ def numerically_admitted(
     metrics: dict[str, Any], *, base_exact: bool, non_target_zero: bool,
     trainable_l2: float, config: base.TrainConfig = CONFIG,
 ) -> bool:
-    phase = metrics["phases"]["1"]
+    phase = metrics["phases"][str(TARGET_PHASES[0])]
     return bool(
         base_exact
         and non_target_zero

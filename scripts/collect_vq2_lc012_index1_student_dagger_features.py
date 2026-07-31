@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Collect compact oracle labels on LC010S-owned public-index-1 states."""
+"""Collect compact oracle labels on student-owned states at one public phase."""
 
 from __future__ import annotations
 
@@ -68,6 +68,11 @@ RUNNER = ROOT / "scripts/run_vq2_lc012_vast.sh"
 DEFAULT_OUTPUT = (
     ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
 )
+TARGET_PHASE = 1
+CHECKPOINT_SCHEMA_EXPECTED = (
+    "vq2_lc010s_phase_independent_early_stop_checkpoint_v1"
+)
+EXTRA_SOURCE_PATHS: tuple[Path, ...] = ()
 
 
 def source_paths() -> tuple[Path, ...]:
@@ -82,6 +87,7 @@ def source_paths() -> tuple[Path, ...]:
         ROOT / "ocean/drone_race/drone_race.c",
         ROOT / "ocean/drone_race/drone_race.h",
         ROOT / "ocean/drone_race/binding.c",
+        *EXTRA_SOURCE_PATHS,
     )
 
 
@@ -167,12 +173,11 @@ def load_actor(
     payload = torch.load(CHECKPOINT, map_location="cpu", weights_only=False)
     contract = payload.get("model", {})
     if (
-        payload.get("schema")
-        != "vq2_lc010s_phase_independent_early_stop_checkpoint_v1"
+        payload.get("schema") != CHECKPOINT_SCHEMA_EXPECTED
         or not payload.get("numerically_admitted")
         or contract.get("class") != "VQ2UnboundedProgressMLPResidualActor"
     ):
-        raise RuntimeError("LC012 Puffer contract changed")
+        raise RuntimeError("student-state collector Puffer contract changed")
     actor = VQ2UnboundedProgressMLPResidualActor(
         hidden_size=256, residual_size=64,
         initial_std=float(contract["initial_std"]),
@@ -192,7 +197,9 @@ def predicates(report: dict[str, Any]) -> dict[str, bool]:
     return {
         "exact_episode_count": metrics.get("env/n") == float(EPISODES),
         "fixed_24_gate_course": metrics.get("env/gate_count24_episode") == 1.0,
-        "gate_1_reached": metrics.get("env/ordered_gate0_sampled", 0.0) >= 0.90,
+        "target_phase_reached": metrics.get(
+            f"env/ordered_gate{TARGET_PHASE - 1}_sampled", 0.0
+        ) >= 0.90,
         "zero_hard_native_fault": not any(
             metrics.get(f"env/{name}", math.inf) != 0.0
             for name in required_zero
@@ -201,10 +208,13 @@ def predicates(report: dict[str, Any]) -> dict[str, bool]:
         "records_match_queries": (
             report.get("feature_records") == report.get("teacher_query_actions_recorded")
         ),
-        "only_index_1_recorded": (
+        "only_target_phase_recorded": (
             len(phases) == LONG_COURSE_GATE_CAP + 1
-            and phases[1] == report.get("feature_records")
-            and sum(phases[2:]) == 0
+            and phases[TARGET_PHASE] == report.get("feature_records")
+            and sum(
+                value for index, value in enumerate(phases)
+                if index != TARGET_PHASE
+            ) == 0
         ),
         "student_owns_every_plant_action": (
             report.get("teacher_plant_actions_executed") == 0
@@ -212,10 +222,11 @@ def predicates(report: dict[str, Any]) -> dict[str, bool]:
             == report.get("total_plant_actions_executed")
         ),
         "query_bounds_exact": (
-            report.get("feature_query_phase_min") == 1
-            and report.get("feature_query_phase_max_exclusive") == 2
-            and report.get("minimum_teacher_phase_index") == 1
-            and report.get("maximum_teacher_phase_index") == 1
+            report.get("feature_query_phase_min") == TARGET_PHASE
+            and report.get("feature_query_phase_max_exclusive")
+            == TARGET_PHASE + 1
+            and report.get("minimum_teacher_phase_index") == TARGET_PHASE
+            and report.get("maximum_teacher_phase_index") == TARGET_PHASE
         ),
         "plant_action_history_exact": (
             report.get("executed_action_max_error", math.inf)
@@ -247,7 +258,7 @@ def configure() -> None:
     base.EPISODES = EPISODES
     base.SEED = SEED
     base.STEP_LIMIT = STEP_LIMIT
-    base.INTERVENTION_PHASE_MIN = 1
+    base.INTERVENTION_PHASE_MIN = TARGET_PHASE
     base.MINIMUM_RECORDS = MINIMUM_RECORDS
     base.ENGINE_GATE_CAP = LONG_COURSE_GATE_CAP
     base.PHASE_INDEX_SCALE = OFFICIAL_PROGRESS_SCALE
@@ -256,12 +267,12 @@ def configure() -> None:
     base.PREREGISTRATION = PREREGISTRATION
     base.RUNNER = RUNNER
     base.DEFAULT_OUTPUT = DEFAULT_OUTPUT
-    base.FEATURE_QUERY_PHASE_MIN = 1
-    base.FEATURE_QUERY_PHASE_MAX_EXCLUSIVE = 2
+    base.FEATURE_QUERY_PHASE_MIN = TARGET_PHASE
+    base.FEATURE_QUERY_PHASE_MAX_EXCLUSIVE = TARGET_PHASE + 1
     base.TEACHER_PLANT_ENABLED = False
     base.PLANT_ACTION_CONTRACT = (
-        "LC010S deterministic mean owns every plant action; the offline oracle "
-        "labels only held public-index-1 Puffer states"
+        "The deterministic recurrent Puffer owns every plant action; the "
+        f"offline oracle labels only held public-index-{TARGET_PHASE} states"
     )
     base.verify_inputs = verify_inputs
     base.source_identity = source_identity
