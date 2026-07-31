@@ -90,6 +90,7 @@ MODEL_CLASS_NAME = "VQ2IndexedPhaseMLPResidualActor"
 NEXT_AUTHORITY_ADMITTED = (
     "One source-locked teacher-free nonlinear residual scale diagnostic."
 )
+EQUAL_AGENT_WEIGHTING = False
 
 
 def checkpoint_model_contract(
@@ -316,6 +317,34 @@ def validation_metrics(
     }
 
 
+def phase_training_loss(
+    prediction: torch.Tensor,
+    teacher: torch.Tensor,
+    agent_index: np.ndarray,
+    agent_record_counts: np.ndarray,
+    *,
+    equal_agent_weighting: bool = EQUAL_AGENT_WEIGHTING,
+) -> torch.Tensor:
+    """Return ordinary record MSE or an equal-trajectory weighted MSE."""
+
+    per_record = torch.square(prediction - teacher).mean(dim=1)
+    if not equal_agent_weighting:
+        return per_record.mean()
+    indices = np.asarray(agent_index, dtype=np.int64)
+    if indices.ndim != 1 or indices.size != per_record.shape[0]:
+        raise ValueError("agent indices do not align with phase predictions")
+    counts = np.asarray(agent_record_counts, dtype=np.int64)
+    if indices.size == 0 or indices.min() < 0 or indices.max() >= counts.size:
+        raise ValueError("agent index is outside the corpus count table")
+    selected_counts = counts[indices]
+    if np.any(selected_counts <= 0):
+        raise ValueError("equal-agent weighting encountered an empty trajectory")
+    weights = torch.from_numpy(
+        (1.0 / selected_counts.astype(np.float64)).astype(np.float32)
+    ).to(device=per_record.device, dtype=per_record.dtype)
+    return torch.sum(per_record * weights) / torch.sum(weights)
+
+
 def numerically_admitted(
     metrics: dict[str, Any], *, base_exact: bool, non_target_zero: bool,
     trainable_l2: float, config: TrainConfig = CONFIG,
@@ -362,6 +391,9 @@ def fit(
     device = torch.device(device_name)
     model, parent = load_model(device, config)
     records = np.memmap(FEATURES, mode="r", dtype=FEATURE_DTYPE)
+    agent_record_counts = np.bincount(
+        np.asarray(records["agent_index"], dtype=np.int64), minlength=1
+    )
     # Measure the frozen parent before any resumable child state is restored.
     # This keeps admission identical for uninterrupted and resumed fits.
     baseline = validation_metrics(model, records, device, config)
@@ -379,6 +411,7 @@ def fit(
         "schema": STATE_SCHEMA, "tag": TAG,
         "source_commit": commit, "source_sha256": hashes,
         "runtime": runtime_manifest(), "train_config": asdict(config),
+        "equal_agent_weighting": EQUAL_AGENT_WEIGHTING,
         "feature_records": int(records.shape[0]),
         "feature_sha256": FEATURES_SHA256,
         "safety": {"teacher_plant_actions": 0, "runtime_teacher_actions": 0,
@@ -428,7 +461,13 @@ def fit(
                     np.array(chunk["teacher_action"][indices], dtype=np.float32, copy=True)
                 ).to(device)
                 prediction = phase_action_prediction(model, hidden, base, phase)
-                phase_losses.append(torch.square(prediction - teacher).mean())
+                phase_losses.append(phase_training_loss(
+                    prediction,
+                    teacher,
+                    np.asarray(chunk["agent_index"][indices], dtype=np.int64),
+                    agent_record_counts,
+                    equal_agent_weighting=EQUAL_AGENT_WEIGHTING,
+                ))
             if not phase_losses:
                 continue
             loss = torch.stack(phase_losses).mean()
@@ -497,6 +536,7 @@ def fit(
         "model": checkpoint_model_contract(parent, config),
         "model_state": {name: value.detach().cpu() for name, value in model.state_dict().items()},
         "train_config": asdict(config), "best_epoch": best_epoch,
+        "equal_agent_weighting": EQUAL_AGENT_WEIGHTING,
         "numerically_admitted": admitted,
         "source_commit": commit, "source_sha256": hashes,
         "dataset_report_sha256": DATASET_REPORT_SHA256,
@@ -513,6 +553,7 @@ def fit(
         "numerically_admitted": admitted,
         "source_commit": commit, "source_sha256": hashes,
         "runtime": runtime_manifest(), "train_config": asdict(config),
+        "equal_agent_weighting": EQUAL_AGENT_WEIGHTING,
         "wall_time_seconds": time.perf_counter() - started,
         "feature_records": int(records.shape[0]), "feature_sha256": FEATURES_SHA256,
         "dataset_success_rate": dataset_report["metrics"]["env/success_rate"],
