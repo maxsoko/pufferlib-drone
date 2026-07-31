@@ -1,0 +1,15 @@
+{
+  "schema": "vq2_lc051_batch2048_rejection_v1",
+  "tag": "vq2_lc051_index7_capped_student_features_001",
+  "rejected": true,
+  "unchanged_retry_forbidden": true,
+  "reason": "The 2048-agent recurrent inference batch produced zero phase-7 feature bytes after more than 440 seconds, beyond the expected Gate-8 arrival window. The brittle recurrent policy's trajectory distribution changed with batch-numerical layout.",
+  "agents": 2048,
+  "minimum_observed_wall_time_seconds": 440,
+  "feature_bytes": 0,
+  "feature_records": 0,
+  "state_sha256": "51d8d3b3719f7fea01b4b2a0dcd755399b75612e76a5250063b25802d2e2c263",
+  "flight_sim_packets_sent": 0,
+  "submission_authorized": false,
+  "next_authority": "Return to the previously productive 1024-agent numerical layout with a smaller deterministic record target."
+}
