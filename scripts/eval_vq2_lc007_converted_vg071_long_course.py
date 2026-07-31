@@ -72,6 +72,17 @@ PHASE_PRIVILEGED_INDEX = LEGAL_OBS_SIZE + PRIVILEGED_NAMES.index(
     "ordered_gate_phase"
 )
 MAX_EXECUTED_ACTION_ERROR = 5e-5
+MAX_STEPS_OVERRIDE: int | None = None
+EXTRA_SOURCE_PATHS: tuple[Path, ...] = ()
+
+
+def conversion_metadata(payload: dict[str, Any]) -> dict[str, Any]:
+    del payload
+    return {
+        "source_encoding": "clamp(active_gate_index,0,16)/16",
+        "target_encoding": "active_gate_index/6",
+        "legacy_indices_0_through_16_preserved": True,
+    }
 
 
 def source_identity() -> dict[str, Any]:
@@ -86,6 +97,7 @@ def source_identity() -> dict[str, Any]:
         ROOT / "ocean/drone_race/drone_race.c",
         ROOT / "ocean/drone_race/drone_race.h",
         ROOT / "ocean/drone_race/binding.c",
+        *EXTRA_SOURCE_PATHS,
     )
     extension = Path(_C.__file__).resolve()
     return {
@@ -173,6 +185,11 @@ def run_count(
         "teacher_alignment_governor": 0,
         "w_action_teacher": 0.0,
     })
+    if MAX_STEPS_OVERRIDE is not None:
+        if MAX_STEPS_OVERRIDE <= 0:
+            raise RuntimeError("long-course step override must be positive")
+        environment["max_steps"] = MAX_STEPS_OVERRIDE
+        environment["time_limit_seconds"] = MAX_STEPS_OVERRIDE / 64.0
     if any(float(environment[name]) != 0.0 for name in (
         "teacher_action_blend", "teacher_course_spline",
         "teacher_segment_minimum_jerk", "teacher_alignment_governor",
@@ -294,11 +311,7 @@ def run_count(
         "inference_seconds": inference_seconds, "loader_overrides": overrides,
         "checkpoint_sha256": CHECKPOINT_SHA256,
         "checkpoint_best_epoch": payload.get("best_epoch"),
-        "conversion": {
-            "source_encoding": "clamp(active_gate_index,0,16)/16",
-            "target_encoding": "active_gate_index/6",
-            "legacy_indices_0_through_16_preserved": True,
-        },
+        "conversion": conversion_metadata(payload),
         "actor_input_width": PHASE_LEGAL_OBS_SIZE,
         "actor_input_privileged_values": 0,
         "teacher_action_blend": float(environment["teacher_action_blend"]),
