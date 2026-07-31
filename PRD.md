@@ -10508,3 +10508,24 @@ For each training/eval block, record:
   `e0df8de3...`/`48985cdf...`/`13771ba9...`/`720fcb6b...`/
   `7cb6c936...`/`155396ec...`; local gates pass `40/40` plus both native
   suites. This grants no shadow, Training, or Submission authority.
+
+### VQ2 VG026 rejection and VG027 long-horizon DAgger — 2026-07-30
+
+- VG026 rejects at `0/256` finishes with `168` crashes, `88` misses, and no
+  timeout. Ordered Gate-1/Gate-2/Gate-3/Gate-4 reach is `256/97/2/0`; Gate-2
+  reach at counts 5/8/11/12 is `30/22/22/23` of 64. Versus VG023, Gate-2 reach
+  rises by 71 and crashes fall by 25, but lateral/XY crashes remain `96`.
+- Every policy action, public-phase transition, ordering check, and command
+  envelope is exact. The failure is the post-Gate-1 turn/recovery across course
+  lengths, not an execution or transport mismatch. Aggregate/rejection hashes
+  are `324634e2...`/`866e240c...`; unchanged retry is forbidden.
+- The source-locked thread-parity screen is numerically exact, but 32 threads
+  provide only `1.019054x` speedup over 4. The terminal screen sustains only
+  `4.806522` vector steps/s, confirming this native rollout path is CPU-bound.
+- VG027 collects 512 VG025-visited episodes with seed `429119`, uniform gate
+  counts 5--12 and a 4,096-step horizon. Admission requires at least one million
+  legal labels, 95% Gate-1 reach, 20% Gate-2 reach, and nonzero phase-2 labels.
+  VG025 alone drives the plant; the admitted SF016 oracle only supplies labels.
+- Wrapper/runner/test/preregistration hashes are `cc630062...`/`1094f89f...`/
+  `b2e8d62d...`/`adcfa165...`; `42/42` tests and both native suites pass.
+  VG027 is offline-only and can authorize only a fresh all-anchor refit.

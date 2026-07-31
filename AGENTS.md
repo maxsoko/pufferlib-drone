@@ -10489,3 +10489,34 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   `7cb6c936...`/`155396ec...`. Both native suites, compilation/shell checks,
   and `40/40` focused tests pass. VG026 is offline-only; shadow, VQ2 Training,
   and Submission remain unauthorized.
+
+### VQ2 VG026 rejection / VG027 long-horizon DAgger — 2026-07-30
+
+- VG026 is terminally rejected without unchanged retry. It records `0/256`
+  finishes, `168` crashes (`72` low and `96` lateral/XY), `88` misses, and no
+  timeout. Gate-1/Gate-2/Gate-3/Gate-4 reach is `256/97/2/0`; count-5/8/11/12
+  Gate-2 reach is `30/22/22/23` of 64. This improves VG023 Gate-2 reach by 71
+  and crashes by 25, but remains far outside deployment safety.
+- Transport and policy execution are exact: maximum action error, public-phase
+  off-tick/decrease/skip, raw phase error, ordering, non-finite, action/wire/
+  thrust envelope, teacher-action, and optimizer faults are all zero. Similar
+  reach across course counts localizes the failure to the post-Gate-1 turn and
+  recovery rather than total course length.
+- The source-locked 4-vs-32-thread parity probe is numerically exact, but the
+  32-thread wall-time speedup is only `1.019054x`. The 51,987-step screen takes
+  `10,815.929732 s` at `4.806522` vector steps/s, so this Vast host's native
+  rollout remains CPU-bound despite additional OpenMP threads.
+- Aggregate/state/bootstrap-log/exit hashes are `324634e2...`/`de296580...`/
+  `cb5ef584...`/`53c234e5...`; completed-resume returns `2` and leaves state
+  unchanged. Rejection evidence SHA is `866e240c...`.
+- Preregister one VG025-visited collection tagged
+  `vq2_vg027_variable_gate_dagger_round6_vg025_visited_512`, seed `429119`:
+  512 exact-uniform count-5--12 episodes, a 4,096-step bound, at least one
+  million labels, `>=95%` Gate-1 reach, `>=20%` Gate-2 reach, and at least one
+  stored phase-2 record. VG025 supplies every deterministic plant action;
+  SF016 supplies training labels only.
+- Wrapper/runner/test/preregistration hashes are `cc630062...`/`1094f89f...`/
+  `b2e8d62d...`/`adcfa165...`. Focused and adjacent tests pass `42/42`, both
+  native suites pass, and compilation/shell syntax pass. VG027 may authorize
+  only a separately preregistered source-balanced refit retaining all prior
+  anchors. FlightSim, shadow, Training, and Submission remain unauthorized.
