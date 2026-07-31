@@ -54,6 +54,32 @@ PHASE_PARAMETER_NAMES = (
     "indexed_phase_residual_output",
     "indexed_phase_residual_output_bias",
 )
+NEXT_AUTHORITY_ADMITTED = (
+    "One source-locked teacher-free nonlinear residual scale diagnostic."
+)
+
+
+def checkpoint_model_contract(
+    parent: dict[str, Any], config: Any
+) -> dict[str, Any]:
+    return {
+        **parent["model"],
+        "class": "VQ2IndexedPhaseMLPResidualActor",
+        "residual_size": config.residual_size,
+    }
+
+
+def numerical_admission(
+    metrics: dict[str, Any], *, base_exact: bool, non_target_zero: bool,
+    trainable_l2: float, config: Any,
+) -> bool:
+    return vg068.numerically_admitted(
+        metrics,
+        base_exact=base_exact,
+        non_target_zero=non_target_zero,
+        trainable_l2=trainable_l2,
+        config=config,
+    )
 
 
 def source_paths() -> tuple[Path, ...]:
@@ -309,7 +335,7 @@ def fit(
     non_target_zero = vg068.non_target_outputs_zero(composed)
     admitted = bool(
         replay_error <= 1e-12
-        and vg068.numerically_admitted(
+        and numerical_admission(
             selected, base_exact=base_exact, non_target_zero=non_target_zero,
             trainable_l2=trainable_l2, config=CONFIG,
         )
@@ -317,8 +343,7 @@ def fit(
     output.mkdir(parents=True, exist_ok=True)
     checkpoint = {
         **parent, "schema": CHECKPOINT_SCHEMA, "tag": TAG,
-        "model": {**parent["model"], "class": "VQ2IndexedPhaseMLPResidualActor",
-                  "residual_size": CONFIG.residual_size},
+        "model": checkpoint_model_contract(parent, CONFIG),
         "model_state": {
             name: value.detach().cpu() for name, value in composed.state_dict().items()
         },
@@ -349,7 +374,7 @@ def fit(
         "safety": {"teacher_plant_actions": 0, "runtime_teacher_actions": 0,
                    "flight_sim_packets_sent": 0, "submission_authorized": False},
         "next_authority": (
-            "One source-locked teacher-free nonlinear residual scale diagnostic."
+            NEXT_AUTHORITY_ADMITTED
             if admitted else "Reject VG069 without rollout authority."
         ),
     }
