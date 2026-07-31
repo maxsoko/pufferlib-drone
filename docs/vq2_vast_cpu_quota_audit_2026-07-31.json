@@ -1,0 +1,18 @@
+{
+  "schema": "vq2_vast_cpu_quota_audit_v1",
+  "observed_date": "2026-07-31",
+  "advertised_logical_cpus_from_nproc": 255,
+  "process_affinity": "0-254",
+  "cgroup_version": 1,
+  "cpu_cfs_quota_us": 3497142,
+  "cpu_cfs_period_us": 100000,
+  "effective_quota_cores": 34.97142,
+  "cpu_shares": 138,
+  "representative_process_cpu_percent": {
+    "lc055": 3475,
+    "lc056": 3452,
+    "lc057": 3438
+  },
+  "conclusion": "The retained single-process native layout consumes approximately 98 percent of the CPU quota. Wider vectors and independent workers cannot use the 255 affinity-visible CPUs because CFS throttles the container near 35 cores.",
+  "operational_decision": "Use one CUDA context and at most 32 native environment threads. Reduce candidate count and reject weak fits before rollout; do not attempt further width-based scale-up on this instance."
+}

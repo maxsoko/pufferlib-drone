@@ -11259,3 +11259,45 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   Training attempt, or Submission authority exists. Keep live commands frozen
   until a substantially stronger whole-Puffer 24-gate policy passes larger
   exact/perturbed replay screens and a zero-command Windows shadow.
+
+### VQ2 late-state and cycle-time audit — LC045--LC057, 2026-07-31
+
+- LC045 collects `189,009` phase-6 records from 1,024 student-owned
+  trajectories in `452.405 s`. LC046 improves held phase-6 action MSE
+  `1.336398x` in `3.792 s`; LC048's recovered single-context bracket selects
+  alpha `0.0025`, improving paired mean progress `3.75 -> 3.8125` while
+  preserving raw index `8` and crash `0.03125`. Retain LC048 checkpoint SHA
+  `5a2046a856aa...`; aggregate report SHA is `0f5849a41f...`.
+- LC047's eight separate CUDA processes produce no child report in more than
+  `660 s` and are rejected. LC048's eight sequential candidates finish in
+  `218.288 s`. LC050 proves a four-candidate screen in `111.757 s`, about
+  `1.95x` faster, and rejects all phase-7 teacher-suffix updates. Use reduced
+  brackets only after a numerical fit passes; never screen a failed fit.
+- LC052 is the only admitted phase-7 student-state corpus: 1,024 agents need
+  `408.914 s` to yield exactly `10,000` records from only six trajectories.
+  LC053's record-weighted fit regresses held MSE to `0.958511x`; LC054's exact
+  equal-trajectory objective still regresses it to `0.996466x` in `2.152 s`.
+  Both are rejected without rollout. Six trajectories are insufficient; stop
+  fitting or screening this corpus unchanged.
+- LC055 advances 2,048 native environments while preserving 1,024-row Puffer
+  inference chunks. It exceeds `514 s` with zero phase-7 records and is
+  rejected. LC056's four separate vectors in one CUDA process exceed `235 s`;
+  LC057's one grouped 128-env vector exceeds `149 s`. Both fail the `2x`
+  cycle gate and are rejected without completed reports.
+- The Vast container advertises 255 logical CPUs and affinity `0-254`, but its
+  cgroup-v1 quota is `3497142/100000 = 34.97142` cores with only `138` CPU
+  shares. LC055--LC057 consume `34.38--34.75` core-equivalents, so the retained
+  one-process layout is using roughly 98% of the actual CPU allocation. The
+  RTX 4090 remains lightly utilized because native visual physics is the
+  bottleneck. Wider vectors/workers cannot improve throughput under this
+  quota. Audit: `docs/vq2_vast_cpu_quota_audit_2026-07-31.json`.
+- Production cycle decision: one CUDA context, at most 32 native environment
+  threads, cheap source-locked fitting, no rollout for a failed held-out gate,
+  and normally a two-point paired screen (parent plus the single strongest
+  preregistered proposal). Four-candidate screens are diagnostic exceptions.
+  Seek gains by reducing simulated candidate-steps, not parallel width.
+- Retain LC048, but stop chasing phase 7 while 13/32 paired trajectories still
+  terminate at raw index 2. The next policy branch should address the earliest
+  high-mass Gate-3/phase-2 bottleneck with a causally new whole-Puffer training
+  objective, then use the reduced cycle above. No LC045--LC057 job sends a
+  FlightSim packet; live Training and Submission remain unauthorized.

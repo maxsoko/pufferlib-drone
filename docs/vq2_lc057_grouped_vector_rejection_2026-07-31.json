@@ -1,0 +1,17 @@
+{
+  "schema": "vq2_lc057_grouped_vector_rejection_v1",
+  "tag": "vq2_lc057_grouped_single_vector_bracket_001",
+  "rejected": true,
+  "unchanged_retry_forbidden": true,
+  "source_commit": "ebd42896c990eca5b4ab0efb60f7fd067cddd2bd",
+  "completed_report_written": false,
+  "minimum_observed_wall_time_seconds": 149,
+  "sequential_lc050_wall_time_seconds": 111.75675652897917,
+  "minimum_required_speedup": 2.0,
+  "observed_process_cpu_percent": 3438,
+  "cpu_quota_cores": 34.97142,
+  "reason": "The single 128-env vector exceeded both the 55.878-second promotion ceiling and the full sequential LC050 baseline while CFS-throttled at the container's 34.97-core quota.",
+  "compiled_extension_sha256": "95eeb9acd79991e63cfabaf190b422ce2d69079ca814b6863ae68cac26f1b518",
+  "flight_sim_packets_sent": 0,
+  "submission_authorized": false
+}
