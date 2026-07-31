@@ -10745,3 +10745,22 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
 - Wrapper/runner/test/preregistration hashes are `0cddd9b1...`/
   `eb9217be...`/`4c8209cc...`/`2e3e49fe...`. VG036 is offline-only and
   grants no shadow, VQ2 Training, or Submission authority.
+
+### VQ2 VG036 infrastructure abort / VG037 bounded-thread screen — 2026-07-31
+
+- VG036 was stopped before its first count completed and has no policy result.
+  Its final runner command omitted the `OMP_NUM_THREADS=4`/
+  `MKL_NUM_THREADS=1` limits used by both fast paired diagnostics, creating a
+  machine-wide PyTorch CPU pool and reproducing VG031's multi-thousand-second
+  count behavior. Do not resume or retry VG036 unchanged.
+- Both native suites, the SM89 float32 build, and `46/46` focused tests passed.
+  No count or aggregate report was written; only source-bound state and log
+  artifacts exist, SHA-256 `9e98f004...`/`e0c33fe3...`. Abort evidence SHA is
+  `c5dc3287...`; it has no policy conclusion and sent zero FlightSim packets.
+- Preregister VG037 on fresh seeds `429143/429146/429149/429150`. It retains
+  VG036's 64 episodes at each count 5/8/11/12, four native vector threads,
+  2,560 steps, `231/256` finish floor, and zero-crash/hard-fault gate, while
+  binding both global thread limits before every evaluator process.
+- Wrapper/runner/test/preregistration hashes are `5c6f9278...`/
+  `f86f65a4...`/`d75ecf54...`/`1eef10b5...`. VG037 remains offline-only;
+  shadow, Training, and Submission authority are zero.

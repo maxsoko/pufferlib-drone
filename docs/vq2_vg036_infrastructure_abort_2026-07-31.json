@@ -1,0 +1,47 @@
+{
+  "schema": "vq2_vg036_infrastructure_abort_v1",
+  "tag": "vq2_vg036_vg033_variable_gate_recurrent_teacher_free_256",
+  "date": "2026-07-31",
+  "source_commit": "6768068dc2972f1d448ab77d6621c23f42000b2d",
+  "status": "aborted_before_first_completed_count",
+  "reason": "The final runner command omitted the OMP_NUM_THREADS=4 and MKL_NUM_THREADS=1 limits used by the parity-proven staged diagnostics. Machine-wide PyTorch CPU-pool oversubscription reproduced VG031's multi-thousand-second count behavior.",
+  "policy_conclusion": "none",
+  "completed_counts": [],
+  "count_reports_written": 0,
+  "aggregate_report_written": false,
+  "resume_or_retry_unchanged_authorized": false,
+  "preflight": {
+    "native_regression_suites_passed": true,
+    "float32_sm89_build_passed": true,
+    "focused_pytest_passed": true,
+    "focused_pytest_count": 46
+  },
+  "observed_runtime": {
+    "evaluator_pid": 71937,
+    "cpu_percent_approximately": 3463,
+    "visible_cpus": 255,
+    "process_cpu_affinity": "0-254",
+    "published_count_artifacts": 0
+  },
+  "artifact_sha256": {
+    "screen_state": "9e98f004287a507de474331c8bf4b25f6550b8c50c0a306bf0d741bb01411455",
+    "bootstrap_log": "e0c33fe3f86e8562cd85a8ebdeb87f19ac2f9cc69c564edab9bcfc9df9ebb4ce"
+  },
+  "source_sha256": {
+    "wrapper": "0cddd9b1c18b3773bf2d575a41e081977632be2340b53062f07b5552df8c46bf",
+    "runner": "eb9217be5d07a9917d1216c4c7fe5b517103640ba97288740c5cdcd7664599fe",
+    "test": "4c8209cce0f2e8311fa110f7d302418f55f39180b6392f39f299af1db5c4e96c",
+    "preregistration": "2e3e49febceaed6921629b122043469ec9bccecd84a0b2f38ce934e7e009586c",
+    "vg035_admission": "7c7676b72429157c8434761bf39ec790eb00a53abb76b4733128b980d8d95d98"
+  },
+  "safety": {
+    "teacher_plant_actions": 0,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "shadow_authorized": false,
+    "training_authorized": false,
+    "submission_authorized": false
+  },
+  "next_authority": "One separately preregistered fresh-seed offline screen with explicit four-thread PyTorch limits; no live activity is authorized."
+}

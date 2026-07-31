@@ -10719,3 +10719,18 @@ For each training/eval block, record:
   finishes and zero crash or hard action/phase/ordering/transport fault.
 - Wrapper/runner/test/preregistration hashes are `0cddd9b1...`/
   `eb9217be...`/`4c8209cc...`/`2e3e49fe...`. No live authority is granted.
+
+### VQ2 VG036 infrastructure abort and VG037 screen — 2026-07-31
+
+- VG036 has no policy result. It was stopped before the first count artifact
+  after the final runner command omitted the global four-thread limits and
+  recreated VG031's severe PyTorch CPU-pool oversubscription. Native suites,
+  float32 build, and `46/46` tests passed; no policy/plant contract failed.
+- State/bootstrap hashes are `9e98f004...`/`e0c33fe3...`; immutable abort
+  evidence SHA is `c5dc3287...`. VG036 cannot resume or retry unchanged.
+- VG037 uses fresh seeds `429143/429146/429149/429150` and retains the exact
+  64-episode counts 5/8/11/12 matrix, 2,560-step horizon, `231/256` finish
+  floor, and zero hard-fault contract, while binding
+  `OMP_NUM_THREADS=4`/`MKL_NUM_THREADS=1` before all evaluator processes.
+- Wrapper/runner/test/preregistration hashes are `5c6f9278...`/
+  `f86f65a4...`/`d75ecf54...`/`1eef10b5...`. No live authority is granted.
