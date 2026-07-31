@@ -11176,3 +11176,16 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   `160/168/176/184`. Require hard transport, exact Gate-1--4 reach, no crash
   regression, and new Gate-5 reach. Wrapper/runner/test/preregistration hashes
   are `290cc9be...`/`3839657d...`/`d9daa1bf...`/`330f3eed...`. No live authority.
+- The operator directly inspected official VQ2 and reports approximately 20
+  gates, possibly more. Exact count remains runtime-authoritative; only a
+  nonnegative `race_finish_time_ns` proves completion. Six-/5--12-gate results,
+  including VG070/VG071, are short-curriculum diagnostics only. The native gate
+  ceiling is now 32 and the new long-course actor preserves legacy indices
+  exactly while accepting unsaturated public `active_gate_index/6` progress.
+- LC001 proves the training-only alignment teacher and native metric surface on
+  fresh 20- and 24-gate courses: both pass `64/64`, zero crash/timeout, with
+  mean completion `370.688721/447.664062 s` and progress sources `20/6` and
+  `24/6`. The aggregate SHA is `c4fa43cf...`. Its launcher-wide OMP=1 setting
+  limits measured vector speedup to `1.177568x`, so throughput is rejected and
+  cannot be relabeled. LC002 uses fresh seeds, explicit 32-thread vector jobs,
+  and a `10x` measured speedup gate. No FlightSim packet or live authority.

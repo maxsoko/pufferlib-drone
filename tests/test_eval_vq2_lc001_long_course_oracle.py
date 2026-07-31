@@ -45,7 +45,11 @@ def _report(path: Path, *, gates: int, agents: int, wall: float) -> None:
         "admitted": True,
         "source_commit": "a" * 40,
         "source_sha256": {"source": "same"},
-        "runtime": {"runtime": "same"},
+        "runtime": {
+            "runtime": "same",
+            "omp_num_threads": "1" if agents == 1 else "32",
+            "omp_dynamic": "FALSE",
+        },
         "safety": {"flight_sim_packets_sent": 0},
     }))
 
@@ -64,4 +68,5 @@ def test_aggregate_reports_measured_projected_speedup(tmp_path: Path) -> None:
     )
     assert report["projected_wall_clock_speedup"] == 16.0
     assert report["throughput_gate_passed"] is True
+    assert report["omp_contract_exact"] is True
     assert report["puffer_throughput_admitted"] is True

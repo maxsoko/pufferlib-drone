@@ -11074,3 +11074,14 @@ For each training/eval block, record:
   scale at offsets `160/168/176/184`, requiring exact Gate-1--4 reach and new
   Gate-5 reach. Wrapper/runner/test/preregistration hashes are `290cc9be...`/
   `3839657d...`/`d9daa1bf...`/`330f3eed...`. No live authority exists.
+- Official VQ2 is now treated as an approximately-20-or-more-gate course from
+  direct operator inspection. Never hardcode the count: public index is only
+  progress and official nonnegative finish time is the completion authority.
+  All prior six-/5--12-gate evidence is curriculum-only.
+- LC001 passes the native teacher at 20 and 24 gates (`64/64` each, zero crash
+  or timeout, mean completion `370.688721/447.664062 s`) and observes
+  unsaturated progress through `20/6` and `24/6`. Aggregate SHA is
+  `c4fa43cf...`. The launcher's OMP=1 scope yielded only `1.177568x` projected
+  vector speedup, so throughput is explicitly rejected. LC002 corrects only
+  that launch mechanism with fresh seeds and requires measured `>=10x` speedup.
+  Both are offline-only and send zero FlightSim packets.

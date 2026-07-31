@@ -35,7 +35,7 @@ from scripts.eval_vq2_native_oracle import (
 from scripts.eval_vq2_variable_gate_oracle import variable_oracle_passes
 
 
-TAG = "vq2_lc001_long_course_oracle"
+TAG = "vq2_lc002_long_course_oracle_throughput"
 MIN_GATES = 20
 DEFAULT_COUNTS = (20, 24)
 DT_SECONDS = 1.0 / 64.0
@@ -50,7 +50,7 @@ MINIMUM_PROJECTED_SPEEDUP = 10.0
 NATIVE_PROGRESS_INDEX_FROM_END = -2
 DEFAULT_OUTPUT_ROOT = (
     ROOT / "logs" / "drone_race_full_policy_six_gate_bootstrap"
-    / "vq2_lc001_long_course_oracle_001"
+    / "vq2_lc002_long_course_oracle_throughput_001"
 )
 
 
@@ -110,6 +110,9 @@ def runtime_manifest() -> dict[str, Any]:
         "torch_cuda": str(torch.version.cuda),
         "numpy": np.__version__,
         "cpu_count": os.cpu_count(),
+        "cpu_affinity_count": len(os.sched_getaffinity(0)),
+        "omp_num_threads": os.environ.get("OMP_NUM_THREADS"),
+        "omp_dynamic": os.environ.get("OMP_DYNAMIC"),
     }
 
 
@@ -172,6 +175,12 @@ def load_config(
         raise ValueError("episodes must be a positive multiple of agents")
     if threads <= 0:
         raise ValueError("threads must be positive")
+    if os.environ.get("OMP_NUM_THREADS") != str(threads):
+        raise RuntimeError(
+            "LC002 requires OMP_NUM_THREADS to equal the source-locked thread count"
+        )
+    if os.environ.get("OMP_DYNAMIC", "").upper() != "FALSE":
+        raise RuntimeError("LC002 requires OMP_DYNAMIC=FALSE")
     overrides = loader_overrides(agents=agents, seed=seed, threads=threads)
     saved_argv = sys.argv
     try:
@@ -253,7 +262,7 @@ def run_count(
         metrics, episodes=episodes, num_gates=num_gates
     )
     return {
-        "schema": "vq2_lc001_long_course_oracle_count_v1",
+        "schema": "vq2_lc002_long_course_oracle_count_v1",
         "tag": f"{TAG}_{num_gates}g_{agents}a_{episodes}e",
         "num_gates": num_gates,
         "agents": agents,
@@ -302,17 +311,32 @@ def aggregate_reports(
         baseline["wall_time_seconds"] * vector20["episodes"]
         / vector20["wall_time_seconds"]
     )
-    identity_keys = ("source_commit", "source_sha256", "runtime")
+    static_runtime = lambda report: {
+        key: value for key, value in report["runtime"].items()
+        if key not in {"omp_num_threads", "omp_dynamic"}
+    }
     identity_exact = all(
         baseline[key] == report[key]
         for report in (vector20, vector24)
-        for key in identity_keys
+        for key in ("source_commit", "source_sha256")
+    ) and all(
+        static_runtime(baseline) == static_runtime(report)
+        for report in (vector20, vector24)
+    )
+    omp_contract_exact = (
+        baseline["runtime"].get("omp_num_threads") == "1"
+        and baseline["runtime"].get("omp_dynamic") == "FALSE"
+        and all(
+            report["runtime"].get("omp_num_threads") == "32"
+            and report["runtime"].get("omp_dynamic") == "FALSE"
+            for report in (vector20, vector24)
+        )
     )
     reports_admitted = all(
         report["admitted"] for report in (baseline, vector20, vector24)
     )
     return {
-        "schema": "vq2_lc001_long_course_oracle_aggregate_v1",
+        "schema": "vq2_lc002_long_course_oracle_aggregate_v1",
         "tag": TAG,
         "report_sha256": {
             "baseline_20g": sha256_path(baseline_path),
@@ -327,10 +351,11 @@ def aggregate_reports(
         "minimum_projected_speedup": MINIMUM_PROJECTED_SPEEDUP,
         "throughput_gate_passed": speedup >= MINIMUM_PROJECTED_SPEEDUP,
         "identity_exact": identity_exact,
+        "omp_contract_exact": omp_contract_exact,
         "reports_admitted": reports_admitted,
-        "admitted": identity_exact and reports_admitted,
+        "admitted": identity_exact and omp_contract_exact and reports_admitted,
         "puffer_throughput_admitted": (
-            identity_exact and reports_admitted
+            identity_exact and omp_contract_exact and reports_admitted
             and speedup >= MINIMUM_PROJECTED_SPEEDUP
         ),
         "safety": baseline["safety"],

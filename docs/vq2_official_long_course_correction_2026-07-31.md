@@ -42,3 +42,22 @@ Approximately 36 hours remain. The immediate sequence is:
 
 No synthetic count, including 20 or 24, proves the official lap. It only makes
 the controller and infrastructure compatible with the operator-observed course.
+
+## LC001 throughput correction
+
+The first LC001 remote launcher scoped `OMP_NUM_THREADS=1` around the entire
+runner to stabilize a pre-existing bit-exact PyTorch unit test. This also
+forced both nominally 32-thread vector rollouts to one CPU worker. LC001 remains
+valid teacher/long-course evidence if its predicates pass, but is rejected as a
+throughput proof and must not be relabeled. LC002 confines one-thread execution
+to the flaky exact test and baseline, requires `OMP_NUM_THREADS=32` plus
+`OMP_DYNAMIC=FALSE` inside each vector report, and uses fresh seeds and a new
+evidence directory.
+
+LC001 completed with `64/64` collision-free ordered finishes at both 20 and 24
+gates, mean native completion times `370.688721 s` and `447.664062 s`, and
+maximum unsaturated progress sources `20/6` and `24/6`. Its projected vector
+speedup was only `1.177568x`, exactly exposing the inherited one-thread launch
+mistake. Count report hashes are `5f7c1b21...` and `b1a83357...`; aggregate
+SHA-256 is `c4fa43cf4af7a20ed3728d5ba869a67bc6b7d85c2662ef105d58c0ce151f1903`.
+It sends zero FlightSim packets and grants no actor or live authority.
