@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import subprocess
+import sys
 
 import scripts.eval_vq2_vg047_offset8_fraction_bracket as vg047
 
@@ -67,3 +69,15 @@ def test_vg047_runner_is_resumable_source_locked_and_offline() -> None:
     assert "--resume" in text
     for forbidden in ("FlightSim", "14550", "5600", "COMMAND_LONG"):
         assert forbidden not in text
+
+
+def test_vg047_wrapper_executes_directly() -> None:
+    result = subprocess.run(
+        [sys.executable, str(vg047.Path(vg047.__file__)), "--help"],
+        cwd="/tmp",
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "offset-8" in result.stdout

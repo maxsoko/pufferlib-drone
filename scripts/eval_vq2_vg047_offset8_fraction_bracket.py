@@ -5,10 +5,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
 import torch
+
+_ROOT_BOOTSTRAP = Path(__file__).resolve().parents[1]
+if str(_ROOT_BOOTSTRAP) not in sys.path:
+    sys.path.insert(0, str(_ROOT_BOOTSTRAP))
 
 import scripts.eval_vq2_vg044_checkpoint_line_bracket as base
 
@@ -45,6 +50,10 @@ REJECTION = (
 REJECTION_SHA256 = (
     "3049a97ad216a90855a2b3ebeba199782390b09df87307d2f2d09e8bebf06055"
 )
+PREFLIGHT_ABORT = ROOT / "docs/vq2_vg047_preflight_abort_2026-07-31.json"
+PREFLIGHT_ABORT_SHA256 = (
+    "a918fcb49fa1db197ed9c83bf097537aa1d177268ca07fc07cee6f2e18dd19f0"
+)
 PREREGISTRATION = (
     ROOT
     / "docs/vq2_vg047_offset8_fraction_bracket_preregistration_2026-07-31.md"
@@ -66,6 +75,7 @@ def verify_inputs() -> None:
         VG044_REPORT: VG044_REPORT_SHA256,
         VG044_ADMISSION: VG044_ADMISSION_SHA256,
         REJECTION: REJECTION_SHA256,
+        PREFLIGHT_ABORT: PREFLIGHT_ABORT_SHA256,
         base.GOAL_PROMPT: base.GOAL_PROMPT_SHA256,
     }
     for path, digest in expected.items():
@@ -145,6 +155,7 @@ def source_identity() -> dict[str, Any]:
         Path(__file__).resolve(),
         VG044_REPORT,
         VG044_ADMISSION,
+        PREFLIGHT_ABORT,
     )
     sources.update({
         str(path.relative_to(ROOT)): base.sha256_path(path)

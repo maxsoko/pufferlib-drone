@@ -1,0 +1,25 @@
+{
+  "schema": "vq2_vg047_preflight_abort_v1",
+  "tag": "vq2_vg047_vg033_to_vg042_offset8_fraction_bracket_001",
+  "date": "2026-07-31",
+  "source_commit": "5cd35dd4535f0333272ed21e9b1bd64bf35f3ad6",
+  "completed": true,
+  "rollout_started": false,
+  "output_or_state_created": false,
+  "native_regressions_passed": true,
+  "vision_native_regressions_passed": true,
+  "fresh_sm89_float32_build_passed": true,
+  "focused_tests_passed": 36,
+  "failure": "Direct execution of the thin wrapper did not add the repository root to sys.path before importing scripts.eval_vq2_vg044_checkpoint_line_bracket.",
+  "artifact_sha256": {
+    "bootstrap_log": "4d6d9c5dd7d337c57644fc19f26eff90a27f610d7d30cd42f26583123047c7bb"
+  },
+  "safety": {
+    "teacher_plant_actions": 0,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "submission_authorized": false
+  },
+  "next_authority": "Repair only the wrapper import bootstrap, add a direct-execution test, bind this abort, and relaunch the still-unused VG047 rollout contract."
+}

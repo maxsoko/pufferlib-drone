@@ -41,6 +41,12 @@ VG044 report/admission; VG046 rejection; base interpolation evaluator; offset
 wrapper; runner; preregistration; dedicated tests; compiled extension; native
 sources/config; offset; alphas; and zero-authority fields.
 
+The first remote preflight on commit `5cd35dd4...` passed both native suites,
+the SM89 build, and `36/36` tests, then stopped before output/state creation
+because direct wrapper execution lacked the repository root on `sys.path`.
+Abort SHA-256 is `a918fcb4...`. The repair only adds that bootstrap and a
+direct execution test; the rollout contract remains unused.
+
 Source SHA-256 values:
 
 - VG046 rejection:
@@ -48,11 +54,13 @@ Source SHA-256 values:
 - base interpolation evaluator:
   `e1429cd95cf147c56fbc294993394c1a88c399d7e1b40c0b212b646d361503cc`
 - offset wrapper:
-  `4630031e7b4c3a67a2ede25733ff4c34d2bb547db15588dfa5f1e4264332dca1`
+  `0f81b5bb6bf41ee7a2566e589bf8c0332d38a7f817f018b99079cc54272528fd`
 - runner:
   `2449e2c81f60dba3dc51dd78321b0776b0599f5b9adaf533e36fa965b46bc471`
 - dedicated test:
-  `fd2e5bf1d91658bc521e456a85c745b0d844c1099228647560bc63282993b948`
+  `425528c5955e5f66aa346e613661868f8ac006c4c5c85a8bfd73050f1ebada3b`
+- preflight abort:
+  `a918fcb49fa1db197ed9c83bf097537aa1d177268ca07fc07cee6f2e18dd19f0`
 
 Require the retained Vast environment, CUDA, at least 32 visible CPUs, about
 64 GiB RAM, 15 GiB free disk, Clang/OpenMP, ccache, both native regression

@@ -10915,6 +10915,8 @@ For each training/eval block, record:
 - VG047 screens smaller fractions
   `0/0.025/0.04/0.05/0.06/0.075/0.085/0.10` on offset 8, requiring
   Gate-1/2/crash preservation and strict downstream gain. Wrapper/runner/
-  test/preregistration hashes are `4630031e...`/`2449e2c8...`/
-  `fd2e5bf1...`/`78c24a71...`. Any selection requires a different-offset
+  first preflight stopped before state after `36/36` tests on a missing
+  direct import bootstrap; abort SHA is `a918fcb4...`. Repaired wrapper/
+  runner/test/preregistration hashes are `0f81b5bb...`/`2449e2c8...`/
+  `425528c5...`/`5d718ea0...`. Any selection requires a different-offset
   confirmation and grants no live authority.
