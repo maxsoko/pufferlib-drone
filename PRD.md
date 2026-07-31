@@ -10734,3 +10734,21 @@ For each training/eval block, record:
   `OMP_NUM_THREADS=4`/`MKL_NUM_THREADS=1` before all evaluator processes.
 - Wrapper/runner/test/preregistration hashes are `5c6f9278...`/
   `f86f65a4...`/`d75ecf54...`/`1eef10b5...`. No live authority is granted.
+
+### VQ2 VG037 rejection and VG038 collection — 2026-07-31
+
+- VG037 is terminally rejected without unchanged resume or retry. Its two
+  completed fresh count-5/count-8 rungs yield `14/128` finishes, `45`
+  crashes, `47` misses, and `22` timeouts. Gate-1 through Gate-8 reach is
+  `128/126/85/71/31/16/6/3`, the strongest broad later-course frontier.
+- The maximum possible finish count is only `142/256`, below 231, and the
+  zero-crash gate is already impossible. All action, phase, ordering,
+  envelope, and transport predicates pass. Count/state/log/evidence hashes
+  are `affe2363...`,`ac92ef6b...`/`3d454acf...`/`85de99e7...`/`bb14e1e1...`.
+- VG038 is one VG033-visited collection: seed `429151`, 512 uniform
+  count-5--12 one-shot episodes, 4,096 steps, at least one million labels,
+  reach floors `95%/90%/40%/20%` through Gate 4, and nonzero phase-2--5
+  records. VG033 alone drives the plant; SF016 labels only.
+- Manifest/collector/runner/test/preregistration hashes are `63012cd2...`/
+  `c8b3b9ee...`/`ab184a7d...`/`8015f08e...`/`8cb8d18b...`. No live authority
+  is granted.
