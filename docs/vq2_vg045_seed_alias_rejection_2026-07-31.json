@@ -1,0 +1,91 @@
+{
+  "schema": "vq2_vg045_seed_alias_rejection_v1",
+  "tag": "vq2_vg045_vg044_paired_count5_confirmation_001",
+  "date": "2026-07-31",
+  "source_commit": "e9457d20e376d162cdea398747dad5f6b433ebb4",
+  "completed": true,
+  "qualified_for_count11_diagnostic": false,
+  "formal_comparator_output": true,
+  "formal_comparator_qualified": true,
+  "authority_override_reason": "The declared fresh seed does not enter the native drone-race RNG. Both actors reproduced the VG044 discovery trajectories exactly, so VG045 is not independent confirmation evidence.",
+  "root_cause": {
+    "fixed_overrides_passes_train_seed": true,
+    "static_vec_initializes_each_environment_rng_from_environment_index_only": true,
+    "native_source_location": "src/vecenv.h:352",
+    "variable_gate_fixed_count_seed_affects_plant_rng": false,
+    "declared_seed_vg044": 429158,
+    "declared_seed_vg045": 429159
+  },
+  "behavior_projection": {
+    "fields": [
+      "metrics",
+      "action_mean",
+      "action_std",
+      "action_min",
+      "action_max",
+      "action_samples",
+      "maximum_held_public_index_distribution",
+      "maximum_raw_public_index_distribution",
+      "native_public_phase_mirror_index",
+      "phase_samples",
+      "status_hold_steps",
+      "vector_steps",
+      "raw_phase_encoding_max_error",
+      "executed_action_max_error",
+      "action_envelope_violations",
+      "phase_changes_off_tick",
+      "phase_decreases",
+      "phase_skips",
+      "nonfinite_action"
+    ],
+    "vg044_parent_sha256": "d0db42b0c5eb4ddfe4d4b0d3e3165c55d00fbc1d88688d18d9a2fd494fa2f764",
+    "vg045_parent_sha256": "d0db42b0c5eb4ddfe4d4b0d3e3165c55d00fbc1d88688d18d9a2fd494fa2f764",
+    "vg044_candidate_sha256": "fc25942e5f8821c2a55d8ec8c2f3bd8a851c55a2c3e634791761f8ad2daaaf43",
+    "vg045_candidate_sha256": "fc25942e5f8821c2a55d8ec8c2f3bd8a851c55a2c3e634791761f8ad2daaaf43",
+    "parent_exact_duplicate": true,
+    "candidate_exact_duplicate": true
+  },
+  "reported_metrics": {
+    "parent_gate_reach": {
+      "1": 64,
+      "2": 62,
+      "3": 11,
+      "4": 0,
+      "5": 0
+    },
+    "candidate_gate_reach": {
+      "1": 64,
+      "2": 63,
+      "3": 13,
+      "4": 0,
+      "5": 0
+    },
+    "parent_crashes": 5,
+    "candidate_crashes": 4
+  },
+  "artifact_sha256": {
+    "aggregate": "f386b02d15456c37870658d0cddc6792aa13446e829d3790df2c431454c9d614",
+    "parent_count": "1f52d7cbe2146eb52438299ccd7c0fbda0f7372af1f248cebc3915aab9090dc3",
+    "candidate_count": "8ad8bc22845d9047a8b281e963c21d8c9bcd8f0e1fa816162b3fbdcc88b03942",
+    "parent_state": "eddba21f49efa85376fd75e52649549d2c09adca3fccdc69c13b9f4f3e1299e0",
+    "candidate_state": "17bfedfcfe7d324c3f2c01c9f558b7c5b6b939256c149582d9775a83d97dc6c0",
+    "runner_log": "2869b70213fe9b54192de7294ef1fa9566198397d936b3d247fc99127938145a",
+    "completed_resume_log": "f386b02d15456c37870658d0cddc6792aa13446e829d3790df2c431454c9d614"
+  },
+  "verification": {
+    "remote_completed_resume_reports_unchanged": true,
+    "remote_completed_resume_states_unchanged": true,
+    "remote_to_local_artifact_hashes_exact": true,
+    "behavior_projection_canonical_json_sorted": true
+  },
+  "safety": {
+    "actor_input_privileged_values": 0,
+    "teacher_blend": 0.0,
+    "teacher_plant_actions": 0,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "submission_authorized": false
+  },
+  "next_authority": "Do not count VG045 as confirmation and never retry it unchanged. Add a default-preserving explicit evaluation episode offset, then preregister a new paired confirmation on nonzero offset."
+}

@@ -10956,3 +10956,16 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   improvement. Comparator/runner/test/preregistration hashes are
   `12657474...`/`862e2418...`/`a595f295...`/`5a28bc64...`. No live
   authority exists.
+- VG045's formal metrics repeat VG044 exactly, including every aggregate
+  metric and action statistic for both actors. Canonical behavior projection
+  hashes are identical despite declared seed `429158 -> 429159`: parent
+  `d0db42b0...`, candidate `fc25942e...`. `src/vecenv.h` initializes the
+  drone-race RNG from environment index, so the training seed is inert here.
+  Reject VG045 as non-independent; aggregate/rejection hashes are
+  `f386b02d...`/`214c81c1...`.
+- The default-preserving repair is VG046: apply native
+  `evaluation_episode_offset=8` to both actors, which advances eight resets
+  before the measured episode. Require both behavior projections to differ
+  from offset zero plus every VG045 rollout criterion. Component/comparator/
+  runner/test/preregistration hashes are `85f7e2a5...`/`b5bd643d...`/
+  `d9d092b7...`/`ca0649fb...`/`e5a14922...`. No live authority exists.

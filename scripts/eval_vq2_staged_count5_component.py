@@ -47,6 +47,9 @@ def load_manifest(path: Path) -> dict[str, Any]:
         raise RuntimeError("staged component max_steps must be in [2048,4096]")
     if int(manifest.get("seed", 0)) <= 429120:
         raise RuntimeError("staged component seed is not fresh")
+    episode_offset = int(manifest.get("episode_offset", 0))
+    if episode_offset < 0 or episode_offset > 1024:
+        raise RuntimeError("staged component episode offset must be in [0,1024]")
     required_paths = (
         "checkpoint",
         "train_report",
@@ -138,6 +141,7 @@ def configure_evaluator(
     threads = int(manifest["num_threads"])
     max_steps = int(manifest["max_steps"])
     count = int(manifest["num_gates"])
+    episode_offset = int(manifest.get("episode_offset", 0))
 
     def diagnostic_config(
         pufferl_module: Any,
@@ -147,12 +151,15 @@ def configure_evaluator(
         config, overrides = generic_config(pufferl_module, num_gates=num_gates)
         config["vec"]["num_threads"] = threads
         config["env"]["max_steps"] = max_steps
+        config["env"]["evaluation_episode_offset"] = episode_offset
         return config, [
             *overrides,
             "--vec.num-threads",
             str(threads),
             "--env.max-steps",
             str(max_steps),
+            "--env.evaluation-episode-offset",
+            str(episode_offset),
         ]
 
     evaluator.TAG = manifest["tag"]

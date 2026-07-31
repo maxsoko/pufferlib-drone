@@ -10899,3 +10899,13 @@ For each training/eval block, record:
   improvement. Comparator/runner/test/preregistration hashes are
   `12657474...`/`862e2418...`/`a595f295...`/`5a28bc64...`. Passing grants
   only a count-11 offline diagnostic.
+- VG045 is not independent: both actors reproduce VG044's full metric/action
+  projections exactly when only the declared seed changes. Static drone-race
+  vector RNG is environment-index based; parent/candidate projections are
+  `d0db42b0...`/`fc25942e...`. Reject the formal pass. Aggregate/rejection
+  hashes are `f386b02d...`/`214c81c1...`.
+- VG046 uses default-preserving `evaluation_episode_offset=8` for both actors
+  and requires both projections to differ from offset zero before applying
+  the same Gate-1/2/crash/downstream criteria. Component/comparator/runner/
+  test/preregistration hashes are `85f7e2a5...`/`b5bd643d...`/
+  `d9d092b7...`/`ca0649fb...`/`e5a14922...`. No live authority is granted.
