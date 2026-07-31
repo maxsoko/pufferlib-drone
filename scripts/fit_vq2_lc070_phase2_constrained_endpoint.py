@@ -54,6 +54,10 @@ def interpolate_endpoint(
     endpoint_bias: torch.Tensor,
     alpha: float,
 ) -> tuple[torch.Tensor, torch.Tensor]:
+    if float(alpha) == 0.0:
+        return parent_weight, parent_bias
+    if float(alpha) == 1.0:
+        return endpoint_weight, endpoint_bias
     return (
         parent_weight + float(alpha) * (endpoint_weight - parent_weight),
         parent_bias + float(alpha) * (endpoint_bias - parent_bias),
