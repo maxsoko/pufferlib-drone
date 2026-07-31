@@ -11126,3 +11126,17 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
 - Repaired VG057 trainer/runner/test/preregistration hashes are `4da484f7...`/
   `f5d7014b...`/`040b7703...`/`a5365f3e...`. Numerical admission authorizes only a
   teacher-free residual-scale bracket; no live authority exists.
+- Repaired VG057 completes in `59.061321 s` and deterministically selects
+  epoch 4 after all `5,330` updates. Base parameters are exact and phase-2/3/4
+  validation MSE improves `0.147129/0.048814/0.124329 ->
+  0.090564/0.044920/0.080821`; residual L2 is `2.807989`. Checkpoint/report/
+  state/log hashes are `cf3825ed...`/`843f44a9...`/`88c00cdd...`/
+  `68119d5c...`; completed resume is report-exact and admission SHA is
+  `24edfd5c...`. This is supervised evidence only.
+- VG058 brackets residual scales
+  `0/0.01/0.025/0.05/0.10/0.20/0.35/0.50/0.75/1.0` over fresh offsets
+  `96/104/112/120`, 32 episodes each. A scale must preserve Gate-1/2 and
+  crashes, pass every hard transport predicate, improve downstream reach, and
+  reach Gate 5 beyond the zero-residual parent. Generic/wrapper/runner/test/
+  preregistration hashes are `4b27e3cc...`/`4772eff8...`/`8acbc4a8...`/
+  `eb56a779...`/`f7d853d9...`. No live authority exists.

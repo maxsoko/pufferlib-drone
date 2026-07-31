@@ -11036,3 +11036,13 @@ For each training/eval block, record:
   `4ef9ff5b...`/`627bca44...`. Repaired trainer/runner/test/preregistration
   hashes are `4da484f7...`/`f5d7014b...`/`040b7703...`/`a5365f3e...`. A numerical
   pass grants only a residual-scale rollout bracket and no live authority.
+- Repaired VG057 selects epoch 4 after `5,330` deterministic updates. Base
+  parameters are exact; phase-2/3/4 validation improves
+  `0.147129/0.048814/0.124329 -> 0.090564/0.044920/0.080821`. Checkpoint/
+  report/state/log/admission hashes are `cf3825ed...`/`843f44a9...`/
+  `88c00cdd...`/`68119d5c...`/`24edfd5c...`.
+- VG058 brackets ten residual scales on 128 fresh six-gate episodes each at
+  offsets `96/104/112/120`. Admission requires hard transport, Gate-1/2/crash
+  preservation, strict downstream improvement, and new Gate-5 reach. Generic/
+  wrapper/runner/test/preregistration hashes are `4b27e3cc...`/`4772eff8...`/
+  `8acbc4a8...`/`eb56a779...`/`f7d853d9...`. No live authority exists.

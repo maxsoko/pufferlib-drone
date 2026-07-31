@@ -67,6 +67,7 @@ GOAL_SHA256 = "03f085d32a217889f56600ac2600bead24e087ee47322eb5aa2e208f231f2aa1"
 PREREGISTRATION = ROOT / "docs/vq2_vg055_count6_fraction_bracket_preregistration_2026-07-31.md"
 RUNNER = ROOT / "scripts/run_vq2_vg055_vast.sh"
 DEFAULT_OUTPUT = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
+ACTOR_CLASS = VQ2PhaseRecurrentActor
 
 
 def runtime_manifest() -> dict[str, str]:
@@ -294,7 +295,10 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda", resume: boo
                 evaluator.teacher_free_config = offset_config(original, offset=offset)
                 def load_actor(target: torch.device, *, model_state: dict[str, torch.Tensor] = states[alpha], selected_alpha: float = alpha) -> tuple[VQ2PhaseRecurrentActor, dict[str, Any]]:
                     contract = parent_payload["model"]
-                    actor = VQ2PhaseRecurrentActor(hidden_size=int(contract["hidden_size"]), initial_std=float(contract["initial_std"])).to(target)
+                    actor = ACTOR_CLASS(
+                        hidden_size=int(contract["hidden_size"]),
+                        initial_std=float(contract["initial_std"]),
+                    ).to(target)
                     actor.load_state_dict(model_state)
                     actor.eval()
                     return actor, {**parent_payload, "tag": TAG, "best_epoch": 0, "interpolation_alpha": selected_alpha}

@@ -1,0 +1,39 @@
+{
+  "schema": "vq2_vg057_warmed_phase_residual_admission_v1",
+  "tag": "vq2_vg057_warmed_phase_residual_001",
+  "completed": true,
+  "numerically_admitted": true,
+  "source_commit": "11ed0530a83b88223c32bb6acf1bd5a47a2b3176",
+  "best_epoch": 4,
+  "optimizer_updates": 5330,
+  "trainable_parameter_names": ["phase_action_residual.weight"],
+  "trainable_parameters": 1024,
+  "base_parameters_exact": true,
+  "residual_l2": 2.8079893589019775,
+  "baseline_phase_weighted_mse": {
+    "2": 0.14712922834314476,
+    "3": 0.04881394247032824,
+    "4": 0.12432894509758437
+  },
+  "selected_phase_weighted_mse": {
+    "2": 0.09056358399030166,
+    "3": 0.04491962893035174,
+    "4": 0.08082148819922365
+  },
+  "artifact_sha256": {
+    "checkpoint": "cf3825ed940945100f139c8b0f0a2012c8f2f9e33ff393fdf9f7a3053394d45b",
+    "report": "843f44a91f1f40ded919f56504c5d82304351ae4203c4a30c541ad7c194c87b5",
+    "state": "88c00cddc5d9a305cdb9f47069fa6b774b00e726ab581a0b494b22d87e7c1bf0",
+    "runner_log": "68119d5c479c5881b3a83e7bfb2e7fab073e2ddc9d7c7a3d7ba5fbf0d943da6e",
+    "completed_resume": "843f44a91f1f40ded919f56504c5d82304351ae4203c4a30c541ad7c194c87b5"
+  },
+  "next_authority": "one_source_locked_teacher_free_six_gate_residual_scale_bracket",
+  "live_authority": false,
+  "safety": {
+    "actor_input_privileged_values": 0,
+    "teacher_blend": 0.0,
+    "teacher_plant_actions": 0,
+    "flight_sim_packets_sent": 0,
+    "submission_authorized": false
+  }
+}
