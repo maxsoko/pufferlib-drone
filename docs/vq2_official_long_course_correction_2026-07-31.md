@@ -91,3 +91,13 @@ and `84.270638 s` rollout time; report SHA-256 is
 LC006 therefore runs six independent, faster LC003-sized workers concurrently,
 using process-level parallelism to bypass the single-engine synchronization
 ceiling. All outputs remain privileged throughput-only evidence.
+
+LC006 rejects that multi-worker hypothesis. Its six workers overlap for
+`97.997509 s` but produce only `57,088.323` aggregate steps/s over the
+`110.205655 s` measurement union (`1.717631x` LC001), with `21%` peak GPU use.
+Every worker falls to roughly `9.7--10.7k` steps/s under contention. Cycle-time
+work is now locked to the measured winners: LC002's native vector path for
+teacher generation (`~220k` steps/s on 20 gates) and one LC003 trainer for
+policy optimization (`87,337.28` end-to-end steps/s). No more
+infrastructure-only scale brackets are authorized before a deployable
+long-course candidate exists.
