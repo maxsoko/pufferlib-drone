@@ -10920,3 +10920,11 @@ For each training/eval block, record:
   runner/test/preregistration hashes are `0f81b5bb...`/`2449e2c8...`/
   `425528c5...`/`5d718ea0...`. Any selection requires a different-offset
   confirmation and grants no live authority.
+- Repaired VG047 selects alpha `0.025`: Gate-1/2/3 reach improves
+  `64/58/7 -> 64/58/10` and crashes `6 -> 5` on offset 8. Checkpoint/report/
+  state hashes are `d0bc631e...`/`a27c8384...`/`55d330af...`; admission is
+  `3204cee2...`.
+- VG048 confirms on offset 16 with 64 paired episodes and requires distinct
+  behavior plus Gate-1/2/crash preservation and strict downstream gain.
+  Wrapper/runner/test/preregistration hashes are `8c7ce186...`/
+  `347d7a75...`/`9481bf5c...`/`84f08384...`. No live authority is granted.

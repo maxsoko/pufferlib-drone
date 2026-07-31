@@ -10981,3 +10981,12 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   preregistration hashes are `0f81b5bb...`/`2449e2c8...`/`425528c5...`/
   `5d718ea0...`. A selection remains
   offline-only pending a different-offset confirmation.
+- Repaired VG047 selects alpha `0.025`. On offset 8, Gate-1/2/3 reach is
+  `64/58/7 -> 64/58/10`, crashes improve `6 -> 5`, and all hard predicates
+  pass. Checkpoint/report/state hashes are `d0bc631e...`/`a27c8384...`/
+  `55d330af...`; admission SHA is `3204cee2...`.
+- VG048 is the different-fixture confirmation at episode offset `16`, 64
+  paired episodes, seed label `429162`, requiring behavior distinctness plus
+  Gate-1/2/crash preservation and strict downstream gain. Wrapper/runner/
+  test/preregistration hashes are `8c7ce186...`/`347d7a75...`/
+  `9481bf5c...`/`84f08384...`. No live authority exists.

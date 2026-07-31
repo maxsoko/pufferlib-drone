@@ -28,6 +28,15 @@ VG044_PARENT_BEHAVIOR_SHA256 = (
 VG044_CANDIDATE_BEHAVIOR_SHA256 = (
     "fc25942e5f8821c2a55d8ec8c2f3bd8a851c55a2c3e634791761f8ad2daaaf43"
 )
+PARENT_MANIFEST = (
+    ROOT / "docs/vq2_vg046_parent_count5_manifest_2026-07-31.json"
+)
+CANDIDATE_MANIFEST = (
+    ROOT / "docs/vq2_vg046_candidate_count5_manifest_2026-07-31.json"
+)
+PRIOR_EVIDENCE = (
+    ROOT / "docs/vq2_vg045_seed_alias_rejection_2026-07-31.json"
+)
 BEHAVIOR_FIELDS = (
     "metrics",
     "action_mean",
@@ -155,12 +164,12 @@ def build_report(
         "candidate": candidate,
         "behavior_projection": {
             "fields": list(BEHAVIOR_FIELDS),
-            "vg044_parent_sha256": VG044_PARENT_BEHAVIOR_SHA256,
+            "prior_parent_sha256": VG044_PARENT_BEHAVIOR_SHA256,
             "current_parent_sha256": parent_behavior,
-            "vg044_candidate_sha256": VG044_CANDIDATE_BEHAVIOR_SHA256,
+            "prior_candidate_sha256": VG044_CANDIDATE_BEHAVIOR_SHA256,
             "current_candidate_sha256": candidate_behavior,
-            "parent_distinct_from_vg044": parent_distinct,
-            "candidate_distinct_from_vg044": candidate_distinct,
+            "parent_distinct_from_prior": parent_distinct,
+            "candidate_distinct_from_prior": candidate_distinct,
         },
         "delta": {
             "successes": candidate["successes"] - parent["successes"],
@@ -186,7 +195,7 @@ def build_report(
                 and parent["seed"] == candidate["seed"]
             ),
             "both_offset8": parent_offset_pass and candidate_offset_pass,
-            "both_distinct_from_vg044": (
+            "both_distinct_from_prior": (
                 parent_distinct and candidate_distinct
             ),
             "both_hard_transport_pass": (
@@ -212,12 +221,10 @@ def build_report(
             "candidate_count_report": sha256_path(candidate_path),
             "preregistration": sha256_path(preregistration),
             "parent_manifest": sha256_path(
-                ROOT
-                / "docs/vq2_vg046_parent_count5_manifest_2026-07-31.json"
+                PARENT_MANIFEST
             ),
             "candidate_manifest": sha256_path(
-                ROOT
-                / "docs/vq2_vg046_candidate_count5_manifest_2026-07-31.json"
+                CANDIDATE_MANIFEST
             ),
             "component": sha256_path(
                 ROOT / "scripts/eval_vq2_staged_count5_component.py"
@@ -226,9 +233,7 @@ def build_report(
                 ROOT / "scripts/compare_vq2_staged_count5_diagnostic.py"
             ),
             "comparator": sha256_path(Path(__file__).resolve()),
-            "vg045_rejection": sha256_path(
-                ROOT / "docs/vq2_vg045_seed_alias_rejection_2026-07-31.json"
-            ),
+            "prior_evidence": sha256_path(PRIOR_EVIDENCE),
         },
         "safety": {
             "teacher_plant_actions": 0,

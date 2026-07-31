@@ -1,0 +1,69 @@
+{
+  "schema": "vq2_vg047_offset8_fraction_bracket_admission_v1",
+  "tag": "vq2_vg047_vg033_to_vg042_offset8_fraction_bracket_001",
+  "date": "2026-07-31",
+  "source_commit": "88aea943cbec28a4ea73cb567e76b5e863120bcf",
+  "completed": true,
+  "numerically_admitted": true,
+  "exit_code": 0,
+  "selected_alpha": 0.025,
+  "optimizer_updates": 0,
+  "minimum_transition_window_exposure": 4.0,
+  "equal_source_weight_audit": true,
+  "episode_offset": 8,
+  "parent_summary": {
+    "gate_reach": {
+      "1": 64,
+      "2": 58,
+      "3": 7,
+      "4": 0,
+      "5": 0
+    },
+    "crashes": 6,
+    "misses": 4,
+    "successes": 0,
+    "mean_gates_passed": 2.015625,
+    "hard_transport_pass": true,
+    "behavior_projection_sha256": "faa021347a723c9353249cc72b145cddb27ffef7d9a443fbe5ae12606d4cc69c"
+  },
+  "selected_summary": {
+    "gate_reach": {
+      "1": 64,
+      "2": 58,
+      "3": 10,
+      "4": 0,
+      "5": 0
+    },
+    "crashes": 5,
+    "misses": 5,
+    "successes": 0,
+    "mean_gates_passed": 2.0625,
+    "hard_transport_pass": true,
+    "behavior_projection_sha256": "b742e6029976d0fdeac091bcc87b2270ee8d00f40eb3b1ac32f3fcf11c3c07f2"
+  },
+  "artifact_sha256": {
+    "checkpoint": "d0bc631e2da7521b85766fc9182051d1da4e292810cb36b4ce25e4e3a0d8d4ad",
+    "report": "a27c8384406e0ff4684bafde539063861a72e95997c24925bb695ef66aae434e",
+    "completed_state": "55d330af15efc22fb769ab6b757a20e84695c958582d93a4a7e8e68a19e605a4",
+    "parent_count": "02c0e1a2110cdb043238e4388888bcc6d394bd4f5def844e91292894fcf7913e",
+    "selected_count": "4a1953016887b7f2df8e0939995f775b1d61cbd4b6a92429b537f47635b3e6ec",
+    "runner_log": "b60cf727cbd22e7dee8b3c66b3852ecbde6b6ceb3b24223b824b1134ca6cdcce",
+    "completed_resume_log": "a27c8384406e0ff4684bafde539063861a72e95997c24925bb695ef66aae434e"
+  },
+  "verification": {
+    "all_eight_fractions_completed": true,
+    "selection_criteria_pass": true,
+    "remote_completed_resume_state_unchanged": true,
+    "remote_completed_resume_output_equals_report": true,
+    "remote_to_local_artifact_hashes_exact": true
+  },
+  "safety": {
+    "actor_input_privileged_values": 0,
+    "teacher_blend": 0.0,
+    "teacher_plant_actions": 0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "submission_authorized": false
+  },
+  "next_authority": "One separately preregistered paired count-5 teacher-free confirmation against VG033 on a different nonzero episode offset; no shadow or live activity is authorized."
+}
