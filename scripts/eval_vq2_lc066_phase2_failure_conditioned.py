@@ -58,6 +58,12 @@ PREREGISTRATION = ROOT / "docs/vq2_lc066_phase2_failure_conditioned_preregistrat
 RUNNER = ROOT / "scripts/run_vq2_lc066_vast.sh"
 TEST = ROOT / "tests/test_eval_vq2_lc066_phase2_failure_conditioned.py"
 DEFAULT_OUTPUT = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
+EXTRA_SOURCE_PATHS: tuple[Path, ...] = ()
+NEXT_AUTHORITY_SELECTED = (
+    "Run one larger different-seed Gate-3 confirmation of the selected "
+    "failure-conditioned whole-Puffer decoder surgery."
+)
+NEXT_AUTHORITY_NONE = "Reject the failure-conditioned actions and retain LC062."
 
 
 @functools.lru_cache(maxsize=1)
@@ -127,12 +133,10 @@ def configure() -> None:
         Path(__file__).resolve(), FIT_CHECKPOINT, FIT_REPORT,
         ROOT / "scripts/train_vq2_lc065_phase2_failure_direction.py",
         ROOT / "scripts/eval_vq2_lc064_phase2_residual_direction.py",
+        *EXTRA_SOURCE_PATHS,
     )
-    base.NEXT_AUTHORITY_SELECTED = (
-        "Run one larger different-seed Gate-3 confirmation of the selected "
-        "failure-conditioned whole-Puffer decoder surgery."
-    )
-    base.NEXT_AUTHORITY_NONE = "Reject the failure-conditioned actions and retain LC062."
+    base.NEXT_AUTHORITY_SELECTED = NEXT_AUTHORITY_SELECTED
+    base.NEXT_AUTHORITY_NONE = NEXT_AUTHORITY_NONE
     base.VECTORIZED_CHECKPOINT_SURGERY = (
         "failure-score outer product merged exactly into phase-2 Puffer output weight and bias"
     )
