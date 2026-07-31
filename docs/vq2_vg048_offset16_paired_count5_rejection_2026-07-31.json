@@ -1,0 +1,52 @@
+{
+  "schema": "vq2_vg048_offset16_paired_count5_rejection_v1",
+  "tag": "vq2_vg048_vg047_offset16_paired_count5_confirmation_001",
+  "date": "2026-07-31",
+  "source_commit": "0a5c17d529197d25101b101c728ec16fb37f1afd",
+  "completed": true,
+  "qualified_for_count11_diagnostic": false,
+  "episode_offset": 16,
+  "parent": {
+    "gate_reach": {"1": 64, "2": 56, "3": 10, "4": 0, "5": 0},
+    "crashes": 8,
+    "misses": 7,
+    "mean_gates_passed": 2.03125,
+    "behavior_projection_sha256": "eff69b3fc3af2458e57f64e2b3570ae565087a5f5cae3cfc771b916b584efff2"
+  },
+  "candidate": {
+    "alpha": 0.025,
+    "gate_reach": {"1": 64, "2": 56, "3": 9, "4": 1, "5": 0},
+    "crashes": 11,
+    "misses": 6,
+    "mean_gates_passed": 2.03125,
+    "behavior_projection_sha256": "043242aab1698b9aa80358d7c0092aeebd9a18b21b39a97c28f238da4bb20516"
+  },
+  "criteria": {
+    "both_offset16": true,
+    "both_distinct_from_offset8": true,
+    "both_hard_transport_pass": true,
+    "gate1_not_regressed": true,
+    "gate2_not_regressed": true,
+    "crash_count_not_regressed": false,
+    "gate3_or_finish_strictly_improves": false,
+    "candidate_first_gate4_reach": true
+  },
+  "artifact_sha256": {
+    "aggregate": "d4b5de1e855438eba99288fcdfb53aa72908d6bfa26e82595b3ab5f9f2ad4f6a",
+    "parent_count": "fc787a950772d55844b530d1215ce8dbcf6994cf945bac41c172fdad5bcbcff5",
+    "candidate_count": "9d4a16c90e814b3d652887c5bbe419288c9fa9d55a2eb447ef482b5f7339cd15",
+    "parent_state": "45a6556a063a06de5455a75e13dc31ccf82659fe93a13483241089dd07a98dc8",
+    "candidate_state": "47604c497e173b7523596f7cf7abbfa98d166230831c31da9efbdbdf60d3ab08",
+    "runner_log": "442055b3dbab313f0404abd54714a96f7d7edc1f76e77cabc4c436431709ef34",
+    "completed_resume_log": "d4b5de1e855438eba99288fcdfb53aa72908d6bfa26e82595b3ab5f9f2ad4f6a",
+    "completed_resume_exit": "53c234e5e8472b6ac51c1ae1cab3fe06fad053beb8ebfd8977b010655bfdd3c3"
+  },
+  "safety": {
+    "teacher_plant_actions": 0,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "submission_authorized": false
+  },
+  "next_authority": "Reject alpha 0.025 without unchanged retry and retain VG033. Because it is the first actor to reach Gate 4, source-lock an offset-16 micro-fraction bracket below 0.025 with crash preservation mandatory."
+}

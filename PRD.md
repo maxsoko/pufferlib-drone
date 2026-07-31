@@ -10928,3 +10928,10 @@ For each training/eval block, record:
   behavior plus Gate-1/2/crash preservation and strict downstream gain.
   Wrapper/runner/test/preregistration hashes are `8c7ce186...`/
   `347d7a75...`/`9481bf5c...`/`84f08384...`. No live authority is granted.
+- VG048 rejects alpha `0.025`: Gate-3 reach is `10 -> 9` and crashes
+  `8 -> 11`, but the candidate is the first to reach Gate 4 (`1/64`).
+  Aggregate/rejection hashes are `d4b5de1e...`/`a8f5b91f...`.
+- VG049 screens micro fractions through `0.025` on offset 16, allowing strict
+  Gate-4 reach as downstream gain while retaining Gate-1/2/crash gates.
+  Wrapper/runner/test/preregistration hashes are `5064814b...`/
+  `8ca229f3...`/`74f45ad1...`/`711f7cfa...`. No live authority is granted.

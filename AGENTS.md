@@ -10990,3 +10990,11 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   Gate-1/2/crash preservation and strict downstream gain. Wrapper/runner/
   test/preregistration hashes are `8c7ce186...`/`347d7a75...`/
   `9481bf5c...`/`84f08384...`. No live authority exists.
+- VG048 rejects alpha `0.025`: Gate-3 reach regresses `10 -> 9` and crashes
+  `8 -> 11`, though it produces the first Gate-4 reach (`1/64`). Aggregate/
+  rejection hashes are `d4b5de1e...`/`a8f5b91f...`.
+- VG049 brackets micro fractions through `0.025` on offset 16. Admission
+  permits strict Gate-4 gain as downstream progress but still requires
+  Gate-1/2 and crash preservation. Wrapper/runner/test/preregistration hashes
+  are `5064814b...`/`8ca229f3...`/`74f45ad1...`/`711f7cfa...`. No live
+  authority exists.
