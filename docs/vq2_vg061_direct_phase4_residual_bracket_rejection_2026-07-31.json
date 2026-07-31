@@ -1,0 +1,34 @@
+{
+  "schema": "vq2_vg061_direct_phase4_residual_bracket_rejection_v1",
+  "tag": "vq2_vg061_vg060_direct_phase4_residual_bracket_001",
+  "completed": true,
+  "numerically_admitted": false,
+  "source_commit": "641503a6ca801f9c4446a4995d5bf6b25e50173c",
+  "parent": {
+    "gate_reach": {"1": 256, "2": 237, "3": 44, "4": 3, "5": 0, "6": 0},
+    "crashes": 18,
+    "misses": 34,
+    "mean_gates_passed": 2.109375
+  },
+  "scale_outcomes": {
+    "0.1_through_1.5": "all aggregate ordered-gate/crash/miss/mean metrics exactly equal the parent",
+    "2.0": {"gate_reach": [256, 237, 44, 3, 0, 0], "crashes": 19, "misses": 35},
+    "3.0": {"gate_reach": [256, 237, 44, 3, 0, 0], "crashes": 20, "misses": 34}
+  },
+  "finding": "Direct phase-4 behavior cloning on VG039 actor-visited failure histories improves held-out teacher-action MSE but does not cause any Gate-5 pass at any tested head scale. Larger scales only add crashes.",
+  "artifact_sha256": {
+    "report": "7a7b7bce4d0fb944dddb92edb484539bc5c65177329e53949d19d5be50a07a77",
+    "state": "41a41bb578f092d023830e2be329bb1907dc7c454bdb0b62e9a36e9f12fec349",
+    "runner_log": "e3f78bcaad3f4c2905692868ac1cfd258813361db0704b0ba14267a3fa53639e",
+    "completed_resume": "7a7b7bce4d0fb944dddb92edb484539bc5c65177329e53949d19d5be50a07a77"
+  },
+  "unchanged_retry_forbidden": true,
+  "next_authority": "one_source_locked_training_only_phase4_teacher_intervention_collection_from_genuinely_warmed_full_course_states",
+  "live_authority": false,
+  "safety": {
+    "teacher_plant_actions": 0,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "submission_authorized": false
+  }
+}
