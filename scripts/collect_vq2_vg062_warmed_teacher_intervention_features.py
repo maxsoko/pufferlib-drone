@@ -99,6 +99,9 @@ PLANT_ACTION_CONTRACT = (
     "VG033 deterministic mean through held public phase 0; "
     "training-only SF016 oracle query at held public phases 1+"
 )
+FEATURE_QUERY_PHASE_MIN: int | None = None
+FEATURE_QUERY_PHASE_MAX_EXCLUSIVE: int | None = None
+TEACHER_PLANT_ENABLED = True
 
 
 FEATURE_DTYPE = np.dtype([
@@ -354,6 +357,7 @@ def collect(
     phase_records = np.zeros(ENGINE_GATE_CAP + 1, dtype=np.int64)
     lengths = np.zeros(AGENTS, dtype=np.int32)
     teacher_steps_by_agent = np.zeros(AGENTS, dtype=np.int32)
+    query_steps_by_agent = np.zeros(AGENTS, dtype=np.int32)
     phase_changes_off_tick = phase_decreases = phase_skips = 0
     raw_phase_encoding_max_error = executed_action_max_error = 0.0
     feature_records = nonfinite_values = teacher_action_envelope_violations = 0
@@ -397,10 +401,20 @@ def collect(
                 )
                 student_np = student.cpu().numpy().astype(np.float32, copy=False)
                 teacher = alignment_oracle_action(current)
-                plant, teacher_mask = select_intervention_plant_actions(
-                    student_np, teacher, active, phase_index
-                )
-                selected = np.flatnonzero(teacher_mask)
+                if TEACHER_PLANT_ENABLED:
+                    plant, teacher_mask = select_intervention_plant_actions(
+                        student_np, teacher, active, phase_index
+                    )
+                else:
+                    plant = student_np.copy()
+                    teacher_mask = np.zeros_like(active)
+                if FEATURE_QUERY_PHASE_MIN is None:
+                    query_mask = teacher_mask
+                else:
+                    query_mask = active & (phase_index >= FEATURE_QUERY_PHASE_MIN)
+                    if FEATURE_QUERY_PHASE_MAX_EXCLUSIVE is not None:
+                        query_mask &= phase_index < FEATURE_QUERY_PHASE_MAX_EXCLUSIVE
+                selected = np.flatnonzero(query_mask)
                 if selected.size:
                     selected_teacher = teacher[selected]
                     teacher_min = np.minimum(teacher_min, selected_teacher.min(axis=0))
@@ -428,6 +442,7 @@ def collect(
                 terminal = (terminals.numpy() > 0.5) & active
                 lengths[active] += 1
                 teacher_steps_by_agent += teacher_mask.astype(np.int32)
+                query_steps_by_agent += query_mask.astype(np.int32)
                 if selected.size:
                     records = np.empty(selected.size, dtype=FEATURE_DTYPE)
                     selected_device = torch.from_numpy(selected).to(device)
@@ -488,11 +503,19 @@ def collect(
         "episode_length_min": int(lengths.min()),
         "episode_length_mean": float(lengths.mean()),
         "episode_length_max": int(lengths.max()),
+        "total_plant_actions_executed": int(lengths.sum()),
         "teacher_steps_by_agent_min": int(teacher_steps_by_agent.min()),
         "teacher_steps_by_agent_mean": float(teacher_steps_by_agent.mean()),
         "teacher_steps_by_agent_max": int(teacher_steps_by_agent.max()),
         "teacher_plant_actions_executed": int(teacher_steps_by_agent.sum()),
         "student_plant_actions_executed": int(lengths.sum() - teacher_steps_by_agent.sum()),
+        "query_steps_by_agent_min": int(query_steps_by_agent.min()),
+        "query_steps_by_agent_mean": float(query_steps_by_agent.mean()),
+        "query_steps_by_agent_max": int(query_steps_by_agent.max()),
+        "teacher_query_actions_recorded": int(query_steps_by_agent.sum()),
+        "feature_query_phase_min": FEATURE_QUERY_PHASE_MIN,
+        "feature_query_phase_max_exclusive": FEATURE_QUERY_PHASE_MAX_EXCLUSIVE,
+        "teacher_plant_enabled": TEACHER_PLANT_ENABLED,
         "intervention_phase_min": INTERVENTION_PHASE_MIN,
         "minimum_teacher_phase_index": minimum_teacher_phase_index,
         "maximum_teacher_phase_index": maximum_teacher_phase_index,
