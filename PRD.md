@@ -10804,3 +10804,38 @@ For each training/eval block, record:
 - Parent/candidate manifest, runner, dedicated test, and preregistration
   hashes are `51364059...`/`b2169bc6...`/`190ae655...`/`832ad024...`/
   `4ce5e294...`. This remains offline-only.
+
+### VQ2 VG041 rejection and phase-balanced repair — 2026-07-31
+
+- VG041's first preflight stopped before rollout because Git had not retained
+  the runner executable bit. Commit `3913f47e...` repaired only that metadata;
+  runner content stayed `190ae655...`, and the full 37-test remote gate then
+  passed before the one paired comparison.
+- VG040 is rejected. On fresh seed `429154`, VG040 versus VG033 Gate-1/2/3
+  reach is `32/31/6` versus `32/31/8`; crashes are `3` versus `1`, misses
+  are `2` versus `0`, and mean gates are `2.15625` versus `2.21875`.
+  Hard policy/phase/action/transport checks pass for both.
+- Aggregate/parent/candidate/state hashes are `38526e26...`/`cc66c27a...`/
+  `6808a164...`/`4c895c6a...`,`efbfe244...`; completed resume reproduces
+  the aggregate exactly. Never retry VG041 unchanged and retain VG033.
+- VG039 contains `158,365/26,044/240` phase-3/4/5 records but
+  `1,022,122` phase-2 records. The next causally distinct offline repair must
+  balance later public phases within VG039 rather than collect or refit the
+  same broad distribution. No live authority is granted.
+
+### VQ2 VG042 phase-balanced refit — 2026-07-31
+
+- VG042 preregisters one four-epoch refit from VG033, seed `429156`, AdamW
+  `2e-6`, 256-step causal BPTT, and four transition exposures. Original
+  VG039 sequences remain intact; public phase applies only an inside-source
+  loss multiplier `0.25/0.5/1/6/32/32` for phases `0/1/2/3/4/5+`.
+- Effective VG039 training mass becomes approximately
+  `1.01%/9.27%/32.71%/31.90%/24.83%/0.28%`. Fixed outer clean/VG009/
+  recovered-VG012/VG016/VG019/VG024/VG027/VG032/VG039 weights are
+  `0.25/0.03/0.03/0.06/0.08/0.08/0.12/0.15/0.20`.
+- Admission requires strict phase-balanced objective/VG039 improvement,
+  no phase-3 regression, strict phase-4 improvement, ordinary VG039 MSE at
+  most `0.12`, all anchor caps, exact weights, and finite source identity.
+- Core/nine-source/trainer/runner/test/preregistration hashes are
+  `6b0ff918...`/`c959096b...`/`a1891cd5...`/`211bbf89...`/`efa3ee92...`/
+  `832953d0...`. No live authority is granted.

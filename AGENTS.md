@@ -10848,3 +10848,44 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   hashes are `51364059...`/`b2169bc6...`/`190ae655...`/`832ad024...`/
   `4ce5e294...`. VG041 is offline-only; no shadow, Training, or Submission
   authority exists.
+
+### VQ2 VG041 rejection / phase-balanced repair — 2026-07-31
+
+- VG041 completed once on fresh seed `429154` after its preflight correctly
+  stopped before rollout because the runner executable bit was absent. Commit
+  `3913f47e...` repaired only that metadata; runner content SHA remained
+  `190ae655...`, and all 37 remote tests then passed.
+- VG040 is rejected for rollout and VG033 remains the parent. VG040 versus
+  VG033 Gate-1/2/3 reach is `32/31/6` versus `32/31/8`; crashes regress
+  `1 -> 3`, misses regress `0 -> 2`, and mean gates regress
+  `2.21875 -> 2.15625`. Both actors retain exact action/history/phase/
+  ordering/envelope/transport behavior.
+- Aggregate/parent/candidate/state hashes are `38526e26...`/`cc66c27a...`/
+  `6808a164...`/`4c895c6a...`,`efbfe244...`; completed resume exits with
+  the expected rejection code and is byte-identical to the aggregate.
+  Rejection evidence is source-locked; never retry VG041 unchanged.
+- Do not collect another broad corpus yet. VG039 already contains
+  `158,365/26,044/240` legal phase-3/4/5 records, but whole-corpus sampling
+  dilutes them behind `1,022,122` phase-2 records. The next offline branch
+  must retain VG033 and explicitly balance later public phases inside VG039.
+  No live authority exists.
+
+### VQ2 VG042 phase-balanced refit — 2026-07-31
+
+- Preregister one four-epoch refit from VG033 on fresh seed `429156`,
+  AdamW `2e-6`, 256-step causal BPTT, and `4.0x` transition exposure. Keep
+  every original VG039 recurrent sequence and apply only public-phase row
+  weights `0.25/0.5/1/6/32/32` for phases `0/1/2/3/4/5+`.
+- The phase weights change effective VG039 training mass to approximately
+  `1.01%/9.27%/32.71%/31.90%/24.83%/0.28%` across phases 0--5. They never
+  enter the actor observation or runtime. Outer clean/VG009/recovered-VG012/
+  VG016/VG019/VG024/VG027/VG032/VG039 weights are fixed at
+  `0.25/0.03/0.03/0.06/0.08/0.08/0.12/0.15/0.20`.
+- Admit only with strict balanced/VG039 improvement, no phase-3 regression,
+  strict phase-4 improvement, ordinary VG039 MSE at most `0.12`, all nine
+  preservation caps, exact source weights, and finite source-bound evidence.
+  Numerical admission may authorize only a fresh paired diagnostic.
+- Core/nine-source/trainer/runner/test/preregistration hashes are
+  `6b0ff918...`/`c959096b...`/`a1891cd5...`/`211bbf89...`/`efa3ee92...`/
+  `832953d0...`. VG042 is offline-only; FlightSim, shadow, Training, and
+  Submission remain unauthorized.

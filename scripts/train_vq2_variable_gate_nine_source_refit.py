@@ -286,6 +286,9 @@ def configure_core() -> None:
         "dagger7": "dagger7_objective_weight",
         "dagger8": "dagger8_objective_weight",
     }
+    core.ROW_OBJECTIVE_WEIGHTERS = {}
+    core.DATASET_EVALUATORS = {}
+    core.EXTRA_TRAINING_IDENTITY = {}
     core.NUMERICAL_ADMISSION_PREDICATE = numerical_admission_predicate
     core.verify_inputs = verify_inputs
     core._load_parent = _load_parent

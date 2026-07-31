@@ -1,0 +1,110 @@
+{
+  "schema": "vq2_vg041_paired_count5_diagnostic_rejection_v1",
+  "tag": "vq2_vg041_vg040_paired_count5_diagnostic_001",
+  "date": "2026-07-31",
+  "source_commit": "3913f47e3da6e6dccf89e670c8f1854a27773498",
+  "completed": true,
+  "qualified_for_count11_diagnostic": false,
+  "seed": 429154,
+  "num_gates": 5,
+  "episodes_per_actor": 32,
+  "num_threads_per_actor": 4,
+  "max_steps": 2560,
+  "preflight_repair": {
+    "first_preflight_reached_rollout": false,
+    "first_preflight_failure": "The dedicated test found that the runner executable bit was absent from commit c4d854ab; no output directory or episode existed.",
+    "first_preflight_log_sha256": "fdeabed65eb0893835338fda2c60e37873c79b56ad94c5df62abe7b36f81537e",
+    "repair_commit": "3913f47e3da6e6dccf89e670c8f1854a27773498",
+    "runner_content_unchanged": true,
+    "runner_sha256": "190ae65592943363779892b353dc0f6226367cdf3653d7f1f20286251402cce2"
+  },
+  "parent": {
+    "actor": "VG033",
+    "checkpoint_sha256": "56a8e3b84770c1a54afbf11ac2503478221f7829c28723da0f7dfcfa2a7aac26",
+    "successes": 0,
+    "crashes": 1,
+    "misses": 0,
+    "timeouts": 31,
+    "mean_gates_passed": 2.21875,
+    "gate_reach": {
+      "1": 32,
+      "2": 31,
+      "3": 8,
+      "4": 0,
+      "5": 0
+    },
+    "hard_transport_pass": true
+  },
+  "candidate": {
+    "actor": "VG040",
+    "checkpoint_sha256": "c2a015f320f0a2cf13f325dd0a67f3e87725c1f135b8da30763c9c666bbd6e31",
+    "successes": 0,
+    "crashes": 3,
+    "misses": 2,
+    "timeouts": 27,
+    "mean_gates_passed": 2.15625,
+    "gate_reach": {
+      "1": 32,
+      "2": 31,
+      "3": 6,
+      "4": 0,
+      "5": 0
+    },
+    "hard_transport_pass": true
+  },
+  "delta_candidate_minus_parent": {
+    "successes": 0,
+    "crashes": 2,
+    "misses": 2,
+    "mean_gates_passed": -0.0625,
+    "gate1_reach": 0,
+    "gate2_reach": 0,
+    "gate3_reach": -2,
+    "gate4_reach": 0
+  },
+  "criteria": {
+    "same_seed_and_episode_count": true,
+    "both_hard_transport_pass": true,
+    "gate1_not_regressed": true,
+    "crash_count_not_regressed": false,
+    "ordered_gate3_or_finish_signal": true,
+    "downstream_improves_parent": false
+  },
+  "artifact_sha256": {
+    "aggregate": "38526e2638176a40b8123b1a321ae597f55f714a241e8b3a47f03de97c676035",
+    "parent_count_report": "cc66c27a2264894a124213e7ac45a685e06d3cf8aa6c135e72bebd2bfadad9a7",
+    "candidate_count_report": "6808a1642f459287cc276de482cf67859a122bbd534e62b9bfc260b84112ce1d",
+    "parent_state": "4c895c6a8102b97763dc865377cb0ee0590aee49e73f0c04241a03a3b58ae350",
+    "candidate_state": "efbfe2440e8a662d2130327be8d5cac10f6a2e86943bfe4bcbb4b33635c7156a",
+    "repaired_runner_log": "53a007110c0a6c3ee0419773b5fc1276d14880eae6849697a9922dfb0e4f0b28",
+    "completed_resume_log": "38526e2638176a40b8123b1a321ae597f55f714a241e8b3a47f03de97c676035",
+    "completed_resume_exit": "53c234e5e8472b6ac51c1ae1cab3fe06fad053beb8ebfd8977b010655bfdd3c3"
+  },
+  "input_sha256": {
+    "parent_manifest": "51364059c7914f7b1a99231335921ae0a14d2e6fe8097c50892693ce1c873460",
+    "candidate_manifest": "b2169bc6296833dc04de762cb6012ed0c47b2c24ee96e693a87b77f077f60e89",
+    "preregistration": "4ce5e29493d47f762fcf99b6723ec44a6b04cb44b686417c530f5e1597229f7b",
+    "runner": "190ae65592943363779892b353dc0f6226367cdf3653d7f1f20286251402cce2",
+    "component": "925ee589351318ffa8d93449c9fc5a5f2f184f16503fc59c71b38158a7bd3de8",
+    "comparator": "53d30a1e6a93f9432c075a075b54180a00edf22df6473e26d63a6699d706113a",
+    "test": "832ad024640f040c697f16e4b7abf28c8e6e904ef2acbbf79255a72b0e568551"
+  },
+  "verification": {
+    "remote_completed_resume_exit_two": true,
+    "remote_completed_resume_output_equals_aggregate": true,
+    "remote_to_local_artifact_hashes_exact": true,
+    "both_component_reports_complete": true,
+    "both_action_histories_exact": true,
+    "both_public_phase_contracts_exact": true
+  },
+  "safety": {
+    "teacher_plant_actions": 0,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "shadow_authorized": false,
+    "training_authorized": false,
+    "submission_authorized": false
+  },
+  "next_authority": "Reject VG040 for rollout, never retry VG041 unchanged, retain VG033, and preregister a causally distinct phase-balanced offline repair."
+}

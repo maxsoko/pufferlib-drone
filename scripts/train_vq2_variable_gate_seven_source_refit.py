@@ -158,6 +158,9 @@ SOURCE_WEIGHTS = {
 }
 EXTRA_DATASET_SPECS: dict[str, dict[str, Any]] = {}
 EXTRA_OBJECTIVE_WEIGHT_ATTRIBUTES: dict[str, str] = {}
+ROW_OBJECTIVE_WEIGHTERS: dict[str, Any] = {}
+DATASET_EVALUATORS: dict[str, Any] = {}
+EXTRA_TRAINING_IDENTITY: dict[str, Any] = {}
 NUMERICAL_ADMISSION_PREDICATE: Any = None
 
 
@@ -281,15 +284,42 @@ def seven_source_loss(
     previous_predictions: dict[str, torch.Tensor | None],
     previous_valid: dict[str, torch.Tensor | None],
     config: SevenSourceConfig,
+    row_weights: dict[str, torch.Tensor] | None = None,
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
     """Normalize every source independently, then apply fixed weights."""
 
+    if row_weights is not None and not set(row_weights).issubset(predictions):
+        raise ValueError("row-weight sources must be present in predictions")
     components: dict[str, torch.Tensor] = {}
     total: torch.Tensor | None = None
     for name, source_weight in objective_weights(config).items():
-        action, _ = weighted_action_mse(
-            predictions[name], targets[name], valid[name], weights
+        source_row_weights = (
+            None if row_weights is None else row_weights.get(name)
         )
+        if source_row_weights is None:
+            action, _ = weighted_action_mse(
+                predictions[name], targets[name], valid[name], weights
+            )
+        else:
+            if (
+                source_row_weights.shape != valid[name].shape
+                or not torch.isfinite(source_row_weights).all()
+                or (source_row_weights < 0).any()
+            ):
+                raise ValueError(
+                    f"{name} row weights must be finite, nonnegative, and "
+                    "aligned with valid rows"
+                )
+            effective = (
+                source_row_weights.to(predictions[name].dtype)
+                * valid[name].to(predictions[name].dtype)
+            )
+            count = effective.sum().clamp_min(1.0)
+            channel_mse = (
+                (predictions[name] - targets[name]).square()
+                * effective.unsqueeze(-1)
+            ).sum((0, 1)) / count
+            action = (channel_mse * weights).sum() / weights.sum()
         smoothness = temporal_smoothness(
             predictions[name],
             valid[name],
@@ -305,6 +335,18 @@ def seven_source_loss(
     if total is None:
         raise RuntimeError("VG028 has no source objective")
     return total, components
+
+
+def evaluate_source(
+    name: str,
+    model: VQ2PhaseRecurrentActor,
+    dataset: VariableGateBCDataset,
+    agents: np.ndarray,
+    config: SevenSourceConfig,
+    device: torch.device,
+) -> dict[str, Any]:
+    evaluator = DATASET_EVALUATORS.get(name, evaluate)
+    return evaluator(model, dataset, agents, config, device)
 
 
 def source_weight_audit(
@@ -634,6 +676,7 @@ def train(
                 name: len(splits[name][1]) for name in datasets
             },
         },
+        "extra_training_identity": dict(EXTRA_TRAINING_IDENTITY),
         "safety": {
             "actor_input_privileged_values": 0,
             "teacher_blend": 0.0,
@@ -644,7 +687,9 @@ def train(
     }
 
     baseline_by_source = {
-        name: evaluate(model, dataset, splits[name][1], config, device)
+        name: evaluate_source(
+            name, model, dataset, splits[name][1], config, device
+        )
         for name, dataset in datasets.items()
     }
     baseline_score = sum(
@@ -750,6 +795,10 @@ def train(
                     raise RuntimeError(f"VG028 cyclic {name} stream ended")
                 items[name] = item
             transition_present = any(item.transition.any() for item in items.values())
+            row_weights = {
+                name: weighter(items[name].observation, items[name].valid)
+                for name, weighter in ROW_OBJECTIVE_WEIGHTERS.items()
+            }
             repetitions = config.transition_window_exposure if transition_present else 1
             transition_chunks += int(transition_present)
             final_outputs: dict[str, Any] = {}
@@ -779,6 +828,7 @@ def train(
                             name: item.previous_valid for name, item in items.items()
                         },
                         config=config,
+                        row_weights=row_weights,
                     )
                 scaler.scale(loss).backward()
                 scaler.unscale_(optimizer)
@@ -809,7 +859,9 @@ def train(
             paired_chunks += 1
 
         validation = {
-            name: evaluate(model, dataset, splits[name][1], config, device)
+            name: evaluate_source(
+                name, model, dataset, splits[name][1], config, device
+            )
             for name, dataset in datasets.items()
         }
         validation_score = sum(
