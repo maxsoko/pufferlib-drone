@@ -10942,3 +10942,10 @@ For each training/eval block, record:
 - VG050 is a 64-episode paired offset-24 confirmation. Comparator/runner/test/
   preregistration hashes are `d393bd4f...`/`cec1c76c...`/`7db6a0ee...`/
   `b6c1d414...`. No live authority is granted.
+- VG050 rejects the interpolation line: Gate-2 reach is `61 -> 60` and
+  crashes `1 -> 3`. Aggregate/rejection hashes are `86c56e84...`/
+  `0cd7e823...`; VG033 remains the parent.
+- VG051 targets the actual six-gate proxy over offsets `0/8/16/24`, 64
+  episodes each. Evaluator/runner/test/preregistration hashes are
+  `cd5e7a88...`/`ee7b7e83...`/`e2fe240f...`/`cda2963c...`. No live
+  authority is granted.

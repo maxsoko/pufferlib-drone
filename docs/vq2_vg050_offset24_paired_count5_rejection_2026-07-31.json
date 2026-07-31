@@ -1,0 +1,36 @@
+{
+  "schema": "vq2_vg050_offset24_paired_count5_rejection_v1",
+  "tag": "vq2_vg050_vg049_offset24_paired_count5_confirmation_001",
+  "date": "2026-07-31",
+  "completed": true,
+  "qualified_for_count11_diagnostic": false,
+  "episode_offset": 24,
+  "parent": {
+    "gate_reach": {"1": 64, "2": 61, "3": 9, "4": 0, "5": 0},
+    "crashes": 1,
+    "misses": 5,
+    "mean_gates_passed": 2.09375
+  },
+  "candidate": {
+    "alpha": 0.0025,
+    "gate_reach": {"1": 64, "2": 60, "3": 9, "4": 0, "5": 0},
+    "crashes": 3,
+    "misses": 5,
+    "mean_gates_passed": 2.078125
+  },
+  "artifact_sha256": {
+    "aggregate": "86c56e8403d00e834fc0a57d6f4727e70f9b6303eb9a6b9c6042aaae30bbbc8f",
+    "parent_count": "d57206bd273f01fad320621e72c3bcdb60432e380f1a06f66e67753fa703287c",
+    "candidate_count": "c020b4695b32c9db22128ac51012dbbb1c7c96a345003abd4a222583c065c2e4",
+    "runner_log": "7e377cf903d464b80dd8cc97609305be93adca2065d729a52e7e87e6638f5ad4",
+    "completed_resume_log": "86c56e8403d00e834fc0a57d6f4727e70f9b6303eb9a6b9c6042aaae30bbbc8f",
+    "completed_resume_exit": "53c234e5e8472b6ac51c1ae1cab3fe06fad053beb8ebfd8977b010655bfdd3c3"
+  },
+  "safety": {
+    "teacher_plant_actions": 0,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "submission_authorized": false
+  },
+  "next_authority": "Reject the VG042 interpolation direction as non-robust and retain VG033. Target the official six-gate objective with a multi-offset count-6 baseline before further training."
+}

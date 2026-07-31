@@ -11005,3 +11005,10 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
 - VG050 confirms on offset 24 with 64 paired episodes. Comparator/runner/test/
   preregistration hashes are `d393bd4f...`/`cec1c76c...`/`7db6a0ee...`/
   `b6c1d414...`. No live authority exists.
+- VG050 rejects the interpolation line: Gate-2 reach regresses `61 -> 60`
+  and crashes `1 -> 3`. Aggregate/rejection hashes are `86c56e84...`/
+  `0cd7e823...`; retain VG033.
+- VG051 redirects evaluation to the actual six-gate proxy across episode
+  offsets `0/8/16/24`, 64 episodes each. Evaluator/runner/test/
+  preregistration hashes are `cd5e7a88...`/`ee7b7e83...`/`e2fe240f...`/
+  `cda2963c...`. No live authority exists.

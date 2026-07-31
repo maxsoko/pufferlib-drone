@@ -17,7 +17,7 @@ import scripts.eval_vq2_variable_gate_recurrent_policy as evaluator
 
 
 MANIFEST_SCHEMA = "vq2_staged_count5_component_manifest_v1"
-ALLOWED_COUNTS = (5, 11)
+ALLOWED_COUNTS = (5, 6, 11)
 MAX_EXECUTED_ACTION_ERROR = 5e-5
 
 
@@ -36,7 +36,7 @@ def load_manifest(path: Path) -> dict[str, Any]:
     if not isinstance(manifest.get("tag"), str) or not manifest["tag"]:
         raise RuntimeError("staged component tag is missing")
     if manifest.get("num_gates") not in ALLOWED_COUNTS:
-        raise RuntimeError("staged component gate count must be 5 or 11")
+        raise RuntimeError("staged component gate count must be 5, 6, or 11")
     agents = int(manifest.get("agents", 0))
     episodes = int(manifest.get("episodes", 0))
     if agents not in range(8, 65) or episodes != agents:
