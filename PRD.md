@@ -11046,3 +11046,14 @@ For each training/eval block, record:
   preservation, strict downstream improvement, and new Gate-5 reach. Generic/
   wrapper/runner/test/preregistration hashes are `4b27e3cc...`/`4772eff8...`/
   `8acbc4a8...`/`eb56a779...`/`f7d853d9...`. No live authority exists.
+- VG058 rejects every scale. Alpha `0.05` improves Gate-4 reach `2 -> 3` and
+  crashes `5 -> 4`, but Gate-2 reach regresses `118 -> 114` and Gate 5 stays
+  at zero. Report/state/log/rejection hashes are `c7bcfc83...`/`246fe5d9...`/
+  `c4a19f89...`/`3ffd88cf...`. Close the shared-residual branch.
+- VG059 maps the learned correction into an indexed residual table with only
+  phase-4 head nonzero, making phases 0--3 exactly VG033. Ten physical scales
+  run on 256 fresh episodes each at offsets `128/136/144/152`; admission
+  requires exact Gate-1--4 reach and new Gate-5 reach. Actor/wrapper/runner/
+  focused-test/actor-test/preregistration hashes are `f66116b6...`/
+  `6ef13f27...`/`3ca3b058...`/`a2e9c547...`/`190b0919...`/`c11356fe...`. No live
+  authority exists.

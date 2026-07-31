@@ -11140,3 +11140,17 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   reach Gate 5 beyond the zero-residual parent. Generic/wrapper/runner/test/
   preregistration hashes are `4b27e3cc...`/`4772eff8...`/`8acbc4a8...`/
   `eb56a779...`/`f7d853d9...`. No live authority exists.
+- VG058 rejects every shared-residual scale. Alpha `0.05` is the best local
+  signal, changing Gate-1--6 reach `127/118/27/2/0/0 ->
+  127/114/29/3/0/0` and crashes `5 -> 4`, but it regresses Gate 2 and never
+  reaches Gate 5. Full scale collapses Gate-2/3 reach to `97/3`. Report/state/
+  log/rejection hashes are `c7bcfc83...`/`246fe5d9...`/`c4a19f89...`/
+  `3ffd88cf...`; completed resume is report-exact. Never retry unchanged.
+- VG059 introduces an indexed learned residual table inside the recurrent
+  Puffer actor. Only public index 4 receives `(4/16)*VG057_weight`; all other
+  heads are zero, so action and recurrent state through Gate 4 remain exactly
+  VG033. Physical scales `0/0.1/0.25/0.5/0.75/1/1.5/2/3/4` are screened on
+  256 fresh episodes each at offsets `128/136/144/152`. Actor/wrapper/runner/
+  focused-test/actor-test/preregistration hashes are `f66116b6...`/
+  `6ef13f27...`/`3ca3b058...`/`a2e9c547...`/`190b0919...`/`c11356fe...`.
+  Require exactly equal Gate-1--4 reach and new Gate-5 reach; no live authority.

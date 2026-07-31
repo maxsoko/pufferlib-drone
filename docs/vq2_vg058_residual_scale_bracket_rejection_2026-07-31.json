@@ -1,0 +1,43 @@
+{
+  "schema": "vq2_vg058_residual_scale_bracket_rejection_v1",
+  "tag": "vq2_vg058_vg057_residual_scale_bracket_001",
+  "completed": true,
+  "numerically_admitted": false,
+  "source_commit": "ae6245a97aab6220a51cb9628f78f081828db7ad",
+  "parent": {
+    "gate_reach": {"1": 127, "2": 118, "3": 27, "4": 2, "5": 0, "6": 0},
+    "crashes": 5,
+    "misses": 23,
+    "mean_gates_passed": 2.140625
+  },
+  "best_local_signal": {
+    "alpha": 0.05,
+    "gate_reach": {"1": 127, "2": 114, "3": 29, "4": 3, "5": 0, "6": 0},
+    "crashes": 4,
+    "misses": 17,
+    "mean_gates_passed": 2.1328125,
+    "qualified": false,
+    "failure": "Gate-2 reach regressed and Gate-5 reach remained zero"
+  },
+  "full_scale": {
+    "gate_reach": {"1": 127, "2": 97, "3": 3, "4": 0, "5": 0, "6": 0},
+    "crashes": 12,
+    "misses": 21,
+    "mean_gates_passed": 1.7734375
+  },
+  "artifact_sha256": {
+    "report": "c7bcfc83f1fb3dcd45cf90973a65f1eb04c1b1b1bba10bc2eff1544ef05de458",
+    "state": "246fe5d9f38ac2a7b3760d3bd8b0044727d542113ed697d077da8508cc98ba0c",
+    "runner_log": "c4a19f89e92c539cdf5be5b080417b123ea9c7b38b80e5b5d90db31baf78df1c",
+    "completed_resume": "c7bcfc83f1fb3dcd45cf90973a65f1eb04c1b1b1bba10bc2eff1544ef05de458"
+  },
+  "unchanged_retry_forbidden": true,
+  "next_authority": "one_source_locked_phase4_indexed_learned_residual_scale_bracket_with_phases0_through3_exact",
+  "live_authority": false,
+  "safety": {
+    "teacher_plant_actions": 0,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "submission_authorized": false
+  }
+}

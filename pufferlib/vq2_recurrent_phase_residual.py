@@ -9,7 +9,11 @@ from torch import nn
 
 from pufferlib.vq2_informed import LEGAL_OBS_SIZE, VQ2VisualEncoder
 from pufferlib.vq2_recurrent import ACTION_SIZE, RecurrentActorOutput
-from pufferlib.vq2_recurrent_phase import PHASE_LEGAL_OBS_SIZE
+from pufferlib.vq2_recurrent_phase import (
+    OFFICIAL_GATE_COUNT,
+    PHASE_LEGAL_OBS_SIZE,
+    VQ2PhaseRecurrentActor,
+)
 
 
 class VQ2PhaseResidualActor(nn.Module):
@@ -96,3 +100,51 @@ class VQ2PhaseResidualActor(nn.Module):
             output.mean[:, 0], output.pre_tanh_mean[:, 0], output.log_std[:, 0]
         ), next_state
 
+
+class VQ2IndexedPhaseResidualActor(VQ2PhaseRecurrentActor):
+    """Base phase actor plus one learned hidden-state residual per public index."""
+
+    def __init__(self, *, hidden_size: int = 256, initial_std: float = 0.15) -> None:
+        super().__init__(hidden_size=hidden_size, initial_std=initial_std)
+        self.indexed_phase_action_residual = nn.Parameter(
+            torch.zeros(OFFICIAL_GATE_COUNT + 1, ACTION_SIZE, hidden_size)
+        )
+
+    def load_base_state(self, base_state: dict[str, torch.Tensor]) -> None:
+        incompatible = self.load_state_dict(base_state, strict=False)
+        if incompatible.unexpected_keys or incompatible.missing_keys != [
+            "indexed_phase_action_residual"
+        ]:
+            raise RuntimeError("base actor differs outside the indexed residual")
+        nn.init.zeros_(self.indexed_phase_action_residual)
+
+    def forward_sequence(
+        self,
+        observation: torch.Tensor,
+        state: torch.Tensor | None = None,
+    ) -> tuple[RecurrentActorOutput, torch.Tensor]:
+        if observation.ndim != 3 or observation.shape[-1] != PHASE_LEGAL_OBS_SIZE:
+            raise ValueError("indexed-phase actor accepts [batch,time,4119] only")
+        batch = observation.shape[0]
+        if state is None:
+            state = self.initial_state(
+                batch, device=observation.device, dtype=observation.dtype
+            )
+        if tuple(state.shape) != (1, batch, self.hidden_size):
+            raise ValueError("indexed-phase recurrent state shape changed")
+        legal = observation[..., :LEGAL_OBS_SIZE]
+        phase = observation[..., LEGAL_OBS_SIZE:]
+        if not bool(torch.isfinite(phase).all()) or bool(
+            ((phase < -1e-6) | (phase > 1.0 + 1e-6)).any()
+        ):
+            raise ValueError("public gate phase must be finite and in [0,1]")
+        encoded = self.encoder(legal) + self.phase_embedding(phase)
+        recurrent, next_state = self.recurrent(encoded, state)
+        phase_index = torch.round(phase[..., 0] * OFFICIAL_GATE_COUNT)
+        phase_index = phase_index.to(torch.long).clamp_(0, OFFICIAL_GATE_COUNT)
+        selected = self.indexed_phase_action_residual[phase_index]
+        residual = torch.einsum("bth,btoh->bto", recurrent, selected)
+        pre_tanh_mean = self.action_head(recurrent) + residual
+        mean = torch.tanh(pre_tanh_mean)
+        log_std = self.log_std.clamp(-5.0, 1.0).expand_as(mean)
+        return RecurrentActorOutput(mean, pre_tanh_mean, log_std), next_state

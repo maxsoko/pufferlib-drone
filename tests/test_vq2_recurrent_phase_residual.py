@@ -4,8 +4,14 @@ import torch
 
 from pufferlib.vq2_informed import LEGAL_OBS_SIZE
 from pufferlib.vq2_recurrent import VQ2RecurrentActor
-from pufferlib.vq2_recurrent_phase import PHASE_LEGAL_OBS_SIZE
-from pufferlib.vq2_recurrent_phase_residual import VQ2PhaseResidualActor
+from pufferlib.vq2_recurrent_phase import (
+    PHASE_LEGAL_OBS_SIZE,
+    VQ2PhaseRecurrentActor,
+)
+from pufferlib.vq2_recurrent_phase_residual import (
+    VQ2IndexedPhaseResidualActor,
+    VQ2PhaseResidualActor,
+)
 
 
 def test_phase_zero_is_base_exact_after_residual_weights_change() -> None:
@@ -33,3 +39,32 @@ def test_phase_residual_remains_one_actor_and_joint_vector() -> None:
     assert state.shape == (1, 2, 32)
     assert actor.recurrent.num_layers == 1
 
+
+def test_indexed_residual_zero_is_base_exact() -> None:
+    torch.manual_seed(7)
+    base = VQ2PhaseRecurrentActor(hidden_size=32)
+    indexed = VQ2IndexedPhaseResidualActor(hidden_size=32)
+    indexed.load_base_state(base.state_dict())
+    observation = torch.randn(2, 5, PHASE_LEGAL_OBS_SIZE)
+    observation[..., -1] = torch.arange(5).float() / 16.0
+    with torch.no_grad():
+        base_output, base_state = base.forward_sequence(observation)
+        indexed_output, indexed_state = indexed.forward_sequence(observation)
+    assert torch.equal(base_output.mean, indexed_output.mean)
+    assert torch.equal(base_state, indexed_state)
+
+
+def test_indexed_residual_changes_only_selected_phase() -> None:
+    torch.manual_seed(8)
+    base = VQ2PhaseRecurrentActor(hidden_size=32)
+    indexed = VQ2IndexedPhaseResidualActor(hidden_size=32)
+    indexed.load_base_state(base.state_dict())
+    with torch.no_grad():
+        indexed.indexed_phase_action_residual[4].fill_(0.1)
+    observation = torch.randn(1, 2, PHASE_LEGAL_OBS_SIZE)
+    observation[..., -1] = torch.tensor([3, 4]).float() / 16.0
+    with torch.no_grad():
+        base_output, _ = base.forward_sequence(observation)
+        indexed_output, _ = indexed.forward_sequence(observation)
+    assert torch.equal(base_output.mean[:, 0], indexed_output.mean[:, 0])
+    assert not torch.equal(base_output.mean[:, 1], indexed_output.mean[:, 1])
