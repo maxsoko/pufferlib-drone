@@ -14,6 +14,13 @@ CANDIDATE_MANIFEST = (
     component.ROOT / "docs/vq2_vg029_candidate_count5_manifest_2026-07-31.json"
 )
 RUNNER = component.ROOT / "scripts/run_vq2_vg029_vast.sh"
+VG030_PARENT_MANIFEST = (
+    component.ROOT / "docs/vq2_vg030_parent_count11_manifest_2026-07-31.json"
+)
+VG030_CANDIDATE_MANIFEST = (
+    component.ROOT / "docs/vq2_vg030_candidate_count11_manifest_2026-07-31.json"
+)
+VG030_RUNNER = component.ROOT / "scripts/run_vq2_vg030_vast.sh"
 
 
 def _count_report(
@@ -22,12 +29,17 @@ def _count_report(
     crashes: int,
     successes: int = 0,
     episodes: int = 16,
+    num_gates: int = 5,
 ) -> dict[str, object]:
     misses = episodes - crashes - successes
     return {
-        "schema": "vq2_staged_count5_component_v1",
+        "schema": (
+            "vq2_staged_count5_component_v1"
+            if num_gates == 5
+            else "vq2_staged_gate_count_component_v1"
+        ),
         "completed": True,
-        "num_gates": 5,
+        "num_gates": num_gates,
         "agents": episodes,
         "episodes": episodes,
         "seed": 429121,
@@ -141,6 +153,30 @@ def test_paired_diagnostic_keeps_transport_faults_hard() -> None:
     assert not comparator.diagnostic_passes(parent, candidate)
 
 
+def test_count11_summary_retains_all_ordered_gate_reach() -> None:
+    report = _count_report(
+        phase_distribution={1: 3, 2: 4, 3: 2, 4: 1, 11: 6},
+        crashes=2,
+        successes=6,
+        num_gates=11,
+    )
+    summary = comparator.summarize_count(report, num_gates=11)
+    assert summary["gate_reach"] == {
+        "1": 16,
+        "2": 13,
+        "3": 9,
+        "4": 7,
+        "5": 6,
+        "6": 6,
+        "7": 6,
+        "8": 6,
+        "9": 6,
+        "10": 6,
+        "11": 6,
+    }
+    assert summary["hard_transport_pass"]
+
+
 def test_vg029_real_manifests_bind_admitted_parent_and_candidate() -> None:
     parent = component.load_manifest(PARENT_MANIFEST)
     candidate = component.load_manifest(CANDIDATE_MANIFEST)
@@ -157,6 +193,23 @@ def test_vg029_real_manifests_bind_admitted_parent_and_candidate() -> None:
     assert parent["max_steps"] == 2560
 
 
+def test_vg030_real_manifests_bind_same_count11_fixture() -> None:
+    parent = component.load_manifest(VG030_PARENT_MANIFEST)
+    candidate = component.load_manifest(VG030_CANDIDATE_MANIFEST)
+    component.verify_actor_evidence(parent)
+    component.verify_actor_evidence(candidate)
+    for name in ("num_gates", "agents", "episodes", "num_threads", "max_steps", "seed"):
+        assert parent[name] == candidate[name]
+    assert parent["role"] == "parent"
+    assert candidate["role"] == "candidate"
+    assert parent["checkpoint_sha256"] != candidate["checkpoint_sha256"]
+    assert parent["num_gates"] == 11
+    assert parent["seed"] == 429122
+    assert parent["agents"] == parent["episodes"] == 32
+    assert parent["num_threads"] == 4
+    assert parent["max_steps"] == 2560
+
+
 def test_vg029_runner_is_parallel_resumable_source_locked_and_offline() -> None:
     text = RUNNER.read_text()
     assert os.access(RUNNER, os.X_OK)
@@ -164,6 +217,26 @@ def test_vg029_runner_is_parallel_resumable_source_locked_and_offline() -> None:
     assert "git status --porcelain --untracked-files=no" in text
     assert "eval_vq2_staged_count5_component.py" in text
     assert "compare_vq2_staged_count5_diagnostic.py" in text
+    assert "tests/test_vq2_staged_count5_diagnostic.py" in text
+    assert "bash build.sh drone_race_vision --float" in text
+    assert "parent_pid=$!" in text
+    assert "candidate_pid=$!" in text
+    assert "--resume" in text
+    assert text.index('VQ2_PARENT_OUTPUT="') < text.index(
+        "test_drone_race_native_regressions"
+    )
+    for forbidden in ("FlightSim", "14550", "5600", "COMMAND_LONG"):
+        assert forbidden not in text
+
+
+def test_vg030_runner_is_parallel_resumable_source_locked_and_offline() -> None:
+    text = VG030_RUNNER.read_text()
+    assert os.access(VG030_RUNNER, os.X_OK)
+    assert 'VQ2_EXPECTED_COMMIT="${VQ2_EXPECTED_COMMIT:?' in text
+    assert "git status --porcelain --untracked-files=no" in text
+    assert "eval_vq2_staged_count5_component.py" in text
+    assert "compare_vq2_staged_count5_diagnostic.py" in text
+    assert "--num-gates 11" in text
     assert "tests/test_vq2_staged_count5_diagnostic.py" in text
     assert "bash build.sh drone_race_vision --float" in text
     assert "parent_pid=$!" in text

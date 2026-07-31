@@ -10585,3 +10585,25 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   manifest hashes are `2a5d5dc1...`/`473bc93b...`. VG029 can authorize only a
   separately preregistered full offline screen. Shadow, VQ2 Training, and
   Submission remain unauthorized.
+
+### VQ2 VG029 admission / VG030 count-11 diagnostic — 2026-07-31
+
+- VG029 completes once from source commit `02b7c773...` on 32 identical fresh
+  count-5 courses per actor, seed `429121`, four threads, and a 2,560-step
+  horizon. VG028 versus VG025 Gate-1/Gate-2/Gate-3/Gate-4 reach is
+  `32/25/3/1` versus `32/13/0/0`; mean ordered gates improves
+  `1.40625 -> 1.90625`, while crashes improve `5 -> 2`.
+- Both actors have zero teacher, optimizer, FlightSim, action-envelope,
+  phase, ordering, or transport fault. Aggregate/parent/candidate/state/log
+  hashes are `5bbc44b9...`/`c6e06a20...`/`0caecd37...`/
+  `bb25b3f0...`,`5b59b6e5...`/`a40fb507...`; completed resume exits zero and
+  leaves every output unchanged. Admission evidence SHA is `42ac6e99...`.
+- Before spending the full 256-course screen, preregister VG030: a same-seed
+  paired count-11 diagnostic on 32 episodes per actor, seed `429122`, four
+  threads, and 2,560 steps. Retain the VG029 gates: zero hard fault, no
+  Gate-1/crash regression, nonzero Gate-3-or-finish signal, and strict
+  downstream improvement over VG025.
+- Generalized component/comparator/runner/test/preregistration hashes are
+  `925ee589...`/`53d30a1e...`/`8a4b19ed...`/`b337cbea...`/`b0c5559f...`;
+  parent/candidate manifest hashes are `929f1063...`/`d89d641b...`. VG030 is
+  offline-only. Shadow, VQ2 Training, and Submission remain unauthorized.

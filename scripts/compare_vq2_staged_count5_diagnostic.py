@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare same-fixture parent and candidate count-5 component screens."""
+"""Compare same-fixture parent and candidate staged gate-count screens."""
 
 from __future__ import annotations
 
@@ -26,18 +26,27 @@ def _integer_rate(metrics: dict[str, Any], name: str, episodes: int) -> int:
     value = float(metrics.get(name, math.nan))
     count = round(value * episodes)
     if not math.isfinite(value) or abs(value * episodes - count) > 1e-6:
-        raise RuntimeError(f"count-5 metric {name} is not an integer rate")
+        raise RuntimeError(f"staged metric {name} is not an integer rate")
     return int(count)
 
 
-def summarize_count(report: dict[str, Any]) -> dict[str, Any]:
+def summarize_count(
+    report: dict[str, Any],
+    *,
+    num_gates: int = 5,
+) -> dict[str, Any]:
+    expected_schema = (
+        "vq2_staged_count5_component_v1"
+        if num_gates == 5
+        else "vq2_staged_gate_count_component_v1"
+    )
     if (
-        report.get("schema") != "vq2_staged_count5_component_v1"
+        report.get("schema") != expected_schema
         or not report.get("completed")
-        or report.get("num_gates") != 5
+        or report.get("num_gates") != num_gates
         or report.get("agents") != report.get("episodes")
     ):
-        raise RuntimeError("count-5 component report is incomplete")
+        raise RuntimeError("staged component report is incomplete")
     episodes = int(report["episodes"])
     distribution = {
         int(index): int(count)
@@ -46,10 +55,10 @@ def summarize_count(report: dict[str, Any]) -> dict[str, Any]:
         ).items()
     }
     if sum(distribution.values()) != episodes:
-        raise RuntimeError("count-5 phase distribution does not cover every episode")
+        raise RuntimeError("staged phase distribution does not cover every episode")
     reach = {
         gate: sum(count for index, count in distribution.items() if index >= gate)
-        for gate in range(1, 6)
+        for gate in range(1, num_gates + 1)
     }
     metrics = report["metrics"]
     hard_transport_pass = bool(
@@ -120,20 +129,21 @@ def main() -> int:
     parser.add_argument("--candidate-output", type=Path, required=True)
     parser.add_argument("--preregistration", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--num-gates", type=int, choices=(5, 11), default=5)
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
-    parent_path = args.parent_output.resolve() / "count_5.json"
-    candidate_path = args.candidate_output.resolve() / "count_5.json"
+    parent_path = args.parent_output.resolve() / f"count_{args.num_gates}.json"
+    candidate_path = args.candidate_output.resolve() / f"count_{args.num_gates}.json"
     preregistration = args.preregistration.resolve()
     parent_report = json.loads(parent_path.read_text())
     candidate_report = json.loads(candidate_path.read_text())
-    parent = summarize_count(parent_report)
-    candidate = summarize_count(candidate_report)
+    parent = summarize_count(parent_report, num_gates=args.num_gates)
+    candidate = summarize_count(candidate_report, num_gates=args.num_gates)
     if (
         parent_report.get("source_identity", {}).get("source_commit")
         != candidate_report.get("source_identity", {}).get("source_commit")
     ):
-        raise RuntimeError("paired count-5 components do not share a source commit")
+        raise RuntimeError("paired staged components do not share a source commit")
     admitted = diagnostic_passes(parent, candidate)
     source_commit = subprocess.run(
         ["git", "rev-parse", "HEAD"],
@@ -143,9 +153,14 @@ def main() -> int:
         text=True,
     ).stdout.strip()
     report = {
-        "schema": SCHEMA,
+        "schema": (
+            SCHEMA
+            if args.num_gates == 5
+            else "vq2_staged_gate_count_paired_diagnostic_v1"
+        ),
         "completed": True,
         "qualified_for_full_screen": admitted,
+        "num_gates": args.num_gates,
         "source_commit": source_commit,
         "parent": parent,
         "candidate": candidate,
@@ -215,7 +230,7 @@ def main() -> int:
         if not args.resume:
             raise FileExistsError(f"refusing to overwrite {output}")
         if json.loads(output.read_text()) != report:
-            raise RuntimeError("completed count-5 diagnostic identity changed")
+            raise RuntimeError("completed staged diagnostic identity changed")
     else:
         write_json_once(output, report)
     print(json.dumps(report, indent=2, sort_keys=True))

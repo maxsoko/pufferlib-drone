@@ -10582,3 +10582,24 @@ For each training/eval block, record:
 - Component/comparator/runner/test/preregistration hashes are `f6ae14ae...`/
   `42e9a4d7...`/`0bb86a7e...`/`7048db0c...`/`e308a618...`; manifest hashes are
   `2a5d5dc1...`/`473bc93b...`. VG029 remains offline-only.
+
+### VQ2 VG029 admission and VG030 count-11 diagnostic — 2026-07-31
+
+- VG029 completes its sole paired seed-`429121` count-5 diagnostic from
+  source commit `02b7c773...`. VG028 versus VG025 ordered Gate-1/Gate-2/
+  Gate-3/Gate-4 reach is `32/25/3/1` versus `32/13/0/0`; crashes fall
+  `5 -> 2` and mean gates rise `1.40625 -> 1.90625`.
+- Both components pass the full deterministic policy, public-phase, ordering,
+  action-history, envelope, and transport contract. Aggregate/parent/
+  candidate/state/log hashes are `5bbc44b9...`/`c6e06a20...`/`0caecd37...`/
+  `bb25b3f0...`,`5b59b6e5...`/`a40fb507...`; completed resume is immutable.
+  Admission evidence SHA is `42ac6e99...`.
+- VG030 is one fresh paired count-11 diagnostic: 32 episodes per actor, seed
+  `429122`, four threads, and 2,560 maximum steps. It must preserve Gate-1
+  reach and crash count, retain zero hard faults, and strictly improve
+  Gate-3-or-later reach or finishes over VG025 before VG028 earns a full
+  256-course screen.
+- Generalized component/comparator/runner/test/preregistration hashes are
+  `925ee589...`/`53d30a1e...`/`8a4b19ed...`/`b337cbea...`/`b0c5559f...`;
+  manifest hashes are `929f1063...`/`d89d641b...`. No live authority is
+  granted.

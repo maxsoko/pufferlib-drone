@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run one source-locked side of a paired count-5 policy diagnostic."""
+"""Run one source-locked side of a paired staged gate-count diagnostic."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ import scripts.eval_vq2_variable_gate_recurrent_policy as evaluator
 
 
 MANIFEST_SCHEMA = "vq2_staged_count5_component_manifest_v1"
-COUNT = 5
+ALLOWED_COUNTS = (5, 11)
 MAX_EXECUTED_ACTION_ERROR = 5e-5
 
 
@@ -30,23 +30,23 @@ def _root_path(value: str) -> Path:
 def load_manifest(path: Path) -> dict[str, Any]:
     manifest = json.loads(path.read_text())
     if manifest.get("schema") != MANIFEST_SCHEMA:
-        raise RuntimeError("unsupported count-5 component manifest")
+        raise RuntimeError("unsupported staged component manifest")
     if manifest.get("role") not in {"parent", "candidate"}:
-        raise RuntimeError("count-5 component role must be parent or candidate")
+        raise RuntimeError("staged component role must be parent or candidate")
     if not isinstance(manifest.get("tag"), str) or not manifest["tag"]:
-        raise RuntimeError("count-5 component tag is missing")
-    if manifest.get("num_gates") != COUNT:
-        raise RuntimeError("count-5 component must use exactly five gates")
+        raise RuntimeError("staged component tag is missing")
+    if manifest.get("num_gates") not in ALLOWED_COUNTS:
+        raise RuntimeError("staged component gate count must be 5 or 11")
     agents = int(manifest.get("agents", 0))
     episodes = int(manifest.get("episodes", 0))
     if agents not in range(8, 65) or episodes != agents:
-        raise RuntimeError("count-5 component requires one episode per 8--64 agents")
+        raise RuntimeError("staged component requires one episode per 8--64 agents")
     if int(manifest.get("num_threads", 0)) not in {4, 32}:
-        raise RuntimeError("count-5 component threads must retain a parity-proven rung")
+        raise RuntimeError("staged component threads must retain a parity-proven rung")
     if int(manifest.get("max_steps", 0)) not in range(2048, 4097):
-        raise RuntimeError("count-5 component max_steps must be in [2048,4096]")
+        raise RuntimeError("staged component max_steps must be in [2048,4096]")
     if int(manifest.get("seed", 0)) <= 429120:
-        raise RuntimeError("count-5 component seed is not fresh")
+        raise RuntimeError("staged component seed is not fresh")
     required_paths = (
         "checkpoint",
         "train_report",
@@ -57,7 +57,7 @@ def load_manifest(path: Path) -> dict[str, Any]:
     )
     for name in required_paths:
         if not isinstance(manifest.get(name), str):
-            raise RuntimeError(f"count-5 component {name} path is missing")
+            raise RuntimeError(f"staged component {name} path is missing")
         _root_path(manifest[name])
     for name in (
         "checkpoint_sha256",
@@ -67,7 +67,7 @@ def load_manifest(path: Path) -> dict[str, Any]:
     ):
         value = manifest.get(name)
         if not isinstance(value, str) or len(value) != 64:
-            raise RuntimeError(f"count-5 component {name} is not a SHA-256")
+            raise RuntimeError(f"staged component {name} is not a SHA-256")
     return manifest
 
 
@@ -84,7 +84,7 @@ def verify_actor_evidence(manifest: dict[str, Any]) -> None:
     }
     for path, digest in expected.items():
         if evaluator.sha256_path(path) != digest:
-            raise RuntimeError(f"count-5 component evidence hash mismatch: {path}")
+            raise RuntimeError(f"staged component evidence hash mismatch: {path}")
 
     train_report = json.loads(train_report_path.read_text())
     admission = json.loads(admission_path.read_text())
@@ -98,7 +98,7 @@ def verify_actor_evidence(manifest: dict[str, Any]) -> None:
         or train_report.get("minimum_transition_window_exposure", 0.0) < 4.0
         or not train_report.get("equal_source_weight_audit")
     ):
-        raise RuntimeError("count-5 component training report is not admitted")
+        raise RuntimeError("staged component training report is not admitted")
     train_safety = train_report.get("safety", {})
     if (
         train_safety.get("actor_input_privileged_values") != 0
@@ -106,7 +106,7 @@ def verify_actor_evidence(manifest: dict[str, Any]) -> None:
         or train_safety.get("flight_sim_packets_sent") != 0
         or train_safety.get("sealed_test_accesses") != 0
     ):
-        raise RuntimeError("count-5 component training safety contract changed")
+        raise RuntimeError("staged component training safety contract changed")
     if (
         admission.get("schema") != manifest.get("admission_schema")
         or not admission.get("completed")
@@ -116,7 +116,7 @@ def verify_actor_evidence(manifest: dict[str, Any]) -> None:
         or admission.get("artifact_sha256", {}).get("report")
         != manifest["train_report_sha256"]
     ):
-        raise RuntimeError("count-5 component admission does not bind the actor")
+        raise RuntimeError("staged component admission does not bind the actor")
     admission_safety = admission.get("safety", {})
     if (
         admission_safety.get("actor_input_privileged_values") != 0
@@ -125,7 +125,7 @@ def verify_actor_evidence(manifest: dict[str, Any]) -> None:
         or admission_safety.get("sealed_test_accesses") != 0
         or admission_safety.get("submission_authorized")
     ):
-        raise RuntimeError("count-5 component admission safety contract changed")
+        raise RuntimeError("staged component admission safety contract changed")
 
 
 def configure_evaluator(
@@ -137,6 +137,7 @@ def configure_evaluator(
     episodes = int(manifest["episodes"])
     threads = int(manifest["num_threads"])
     max_steps = int(manifest["max_steps"])
+    count = int(manifest["num_gates"])
 
     def diagnostic_config(
         pufferl_module: Any,
@@ -155,12 +156,16 @@ def configure_evaluator(
         ]
 
     evaluator.TAG = manifest["tag"]
-    evaluator.SCHEMA = "vq2_staged_count5_component_v1"
-    evaluator.COUNTS = (COUNT,)
+    evaluator.SCHEMA = (
+        "vq2_staged_count5_component_v1"
+        if count == 5
+        else "vq2_staged_gate_count_component_v1"
+    )
+    evaluator.COUNTS = (count,)
     evaluator.AGENTS = agents
     evaluator.EPISODES_PER_COUNT = episodes
     evaluator.TOTAL_EPISODES = episodes
-    evaluator.SEEDS = {COUNT: int(manifest["seed"])}
+    evaluator.SEEDS = {count: int(manifest["seed"])}
     evaluator.MINIMUM_SUCCESS_RATE = 0.0
     evaluator.MAX_EXECUTED_ACTION_ERROR = MAX_EXECUTED_ACTION_ERROR
     evaluator.REQUIRE_ZERO_CROSSING_MARGIN = False
@@ -196,7 +201,7 @@ def main() -> int:
         resume=args.resume,
     )
     if not report.get("completed") or report.get("total_episodes") != manifest["episodes"]:
-        raise RuntimeError("count-5 component did not complete its fixed episodes")
+        raise RuntimeError("staged component did not complete its fixed episodes")
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0
 
