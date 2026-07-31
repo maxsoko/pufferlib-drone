@@ -1,0 +1,77 @@
+{
+  "schema": "vq2_vg068_indexed_mlp_intervention_rejection_v1",
+  "tag": "vq2_vg068_indexed_mlp_intervention_features_001",
+  "completed": true,
+  "terminally_rejected": true,
+  "unchanged_retry_forbidden": true,
+  "numerically_admitted": false,
+  "source_commit": "81818166b1de4e125ba2e3eb38e780270dee98c4",
+  "artifact_sha256": {
+    "checkpoint": "4f8b3d342d3c11d75d8893d8a9782759c45cc2bf42614df3617b48243513da53",
+    "report": "d2f8e3cadf75537760c4310ddb849baa57ba239705fbfe1a30fce98ccc8bcb46",
+    "state": "9c1fd14136af864f4b46e2ed64c45e73a130015944cf21d812bc1ffa63ae1fa5"
+  },
+  "result": {
+    "best_epoch": 7,
+    "wall_time_seconds": 53.988812354858965,
+    "base_parameters_exact": true,
+    "non_target_outputs_zero": true,
+    "trainable_l2": 22.087173461914062,
+    "baseline_phase_balanced_action_mse": 0.004833536377442265,
+    "selected_phase_balanced_action_mse": 0.003191732409902254,
+    "aggregate_improvement_factor": 1.5143927361975469,
+    "phase_improvement_factors": {
+      "1": 1.9963583872901756,
+      "2": 1.382048581481906,
+      "3": 1.9163299853617621,
+      "4": 1.261888819712057,
+      "5": 1.4851565415825105,
+      "6": 0.8411232610124718,
+      "7": 1.1228050528003801,
+      "8": 0.8534826670215748,
+      "9": 1.0776380142395237,
+      "10": 0.8782591513019958,
+      "11": 0.7019367838290905
+    }
+  },
+  "failed_admission_predicates": {
+    "aggregate_improvement_at_least_2x": false,
+    "phases_1_through_3_each_improve_at_least_2x": false,
+    "no_phase_regresses": false
+  },
+  "diagnosis": {
+    "nonlinear_capacity_has_signal": true,
+    "global_epoch_selection_is_inappropriate_for_independent_heads": true,
+    "best_observed_phase_epochs": {
+      "1": 5,
+      "2": 10,
+      "3": 10,
+      "4": 10,
+      "5": 10,
+      "6": 0,
+      "7": 4,
+      "8": 10,
+      "9": 4,
+      "10": 0,
+      "11": 9
+    },
+    "counterfactual_composed_improvement_factor": 2.1177632935368926,
+    "counterfactual_is_not_executable": true,
+    "reason_not_executable": "VG068 retained whole-model state only for the aggregate-best epoch, so the independently best phase tensors do not exist as a checkpoint."
+  },
+  "authorized_successor": {
+    "tag": "vq2_vg069_phase_independent_early_stop_001",
+    "scope": "Repeat the source-locked offline fit while retaining each independent public-index head only at its lowest held action MSE; retain the exact zero parent head when no epoch improves it.",
+    "rollout_authority": false,
+    "live_authority": false
+  },
+  "safety": {
+    "teacher_plant_actions": 0,
+    "runtime_teacher_actions": 0,
+    "flight_sim_packets_sent": 0,
+    "windows_shadow_packets_sent": 0,
+    "vq2_training_packets_sent": 0,
+    "submission_authorized": false
+  },
+  "live_authority": false
+}
