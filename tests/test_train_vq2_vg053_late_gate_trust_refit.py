@@ -3,9 +3,17 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 import scripts.train_vq2_vg053_late_gate_trust_refit as vg053
+from pufferlib.vq2_informed import MASK_SIZE
+from pufferlib.vq2_recurrent_phase import PHASE_LEGAL_OBS_SIZE
+from scripts.train_vq2_variable_gate_recurrent_bc import (
+    PHASE_TAIL_INDEX,
+    audit_public_phase_layout,
+    phase_increment_rows,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -61,6 +69,33 @@ def test_vg053_numerical_admission_requires_late_gate_improvement() -> None:
         source_balance_audit=True,
         config=config,
     )
+
+
+def test_vg053_allows_only_the_initial_late_phase_jump() -> None:
+    tail = np.zeros(
+        (4, 1, PHASE_LEGAL_OBS_SIZE - MASK_SIZE), dtype=np.float32
+    )
+    phase = np.asarray(
+        [3.0 / 16.0, 3.0 / 16.0, 4.0 / 16.0, 4.0 / 16.0],
+        dtype=np.float32,
+    )
+    tail[:, 0, PHASE_TAIL_INDEX] = phase
+    valid = np.ones((4, 1), dtype=np.uint8)
+    with pytest.raises(RuntimeError, match="skipped public index"):
+        audit_public_phase_layout(tail, valid, np.asarray([4]))
+    audit = audit_public_phase_layout(
+        tail,
+        valid,
+        np.asarray([4]),
+        allow_initial_phase_jump=True,
+    )
+    assert audit["increments"] == 1
+    assert audit["initial_phase_jumps"] == 1
+    assert audit["maximum_initial_phase_index"] == 3
+    transition = phase_increment_rows(
+        phase[:, None], valid, np.asarray([phase[0]], dtype=np.float32)
+    )
+    assert transition[:, 0].tolist() == [False, False, True, False]
 
 
 def test_vg053_source_evidence_verifies_when_mirrored() -> None:

@@ -10983,4 +10983,9 @@ For each training/eval block, record:
   requires strict aggregate and VG052 validation improvement while retaining
   every old cap, then authorizes only a fresh six-gate multi-offset rollout.
   Trainer/runner/test/preregistration hashes are
-  `a91640c5...`/`92fd257c...`/`1d7efeb1...`/`4afa4c7e...`.
+  `b7d7753c...`/`92fd257c...`/`a1360cde...`/`f6540ce0...`.
+- VG053's first preflight passed 29 tests and then stopped before state/output
+  or optimizer update because VG052 begins at phase 3/4. Abort/log hashes are
+  `01d407b2...`/`8966c11e...`. The repaired loader permits that initial jump
+  only for VG052, does not treat it as a gate transition, and preserves strict
+  ordering for every subsequent public progress change.

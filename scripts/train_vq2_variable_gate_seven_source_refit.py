@@ -624,6 +624,10 @@ def train(
         }
         if spec.get("report_path") is not None:
             kwargs["report_path"] = spec["report_path"]
+        if spec.get("allow_initial_phase_jump") is not None:
+            kwargs["allow_initial_phase_jump"] = bool(
+                spec["allow_initial_phase_jump"]
+            )
         datasets[name] = VariableGateBCDataset(spec["dataset"], **kwargs)
     split_counts = {
         "clean": config.clean_validation_agents,

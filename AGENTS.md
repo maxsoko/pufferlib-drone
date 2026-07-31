@@ -11054,5 +11054,12 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   admission requires strict overall/VG052 improvement and every prior cap;
   it authorizes only a fresh multi-offset six-gate screen.
 - VG053 trainer/runner/test/preregistration hashes are
-  `a91640c5...`/`92fd257c...`/`1d7efeb1...`/`4afa4c7e...`.
+  `b7d7753c...`/`92fd257c...`/`a1360cde...`/`f6540ce0...`.
   No live authority exists.
+- VG053's first preflight on commit `7f6c7ce8...` passed 29 tests, then
+  stopped before output/state creation, baseline validation, or optimizer
+  update: the generic dataset audit correctly rejected the intentional VG052
+  reset jump from phase zero to 3/4. Abort/log hashes are `01d407b2...`/
+  `8966c11e...`. The default-preserving repair enables initial jumps only for
+  the explicit VG052 dataset and suppresses that reset jump as a transition;
+  all later phase changes remain ordered. Never retry the old source unchanged.

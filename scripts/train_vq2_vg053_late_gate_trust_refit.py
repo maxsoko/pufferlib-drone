@@ -43,6 +43,10 @@ VG052_ADMISSION = (
 VG052_ADMISSION_SHA256 = (
     "95c3f6e6b9b838bf7fec40503136136098780eb5719b2971d579c72ecf63016e"
 )
+PREFLIGHT_ABORT = ROOT / "docs/vq2_vg053_preflight_abort_2026-07-31.json"
+PREFLIGHT_ABORT_SHA256 = (
+    "01d407b2ff3ede30c902441ee6512c8b38473d972e814c742233b8d47286f041"
+)
 PREREGISTRATION = (
     ROOT / "docs/vq2_vg053_late_gate_trust_refit_preregistration_2026-07-31.md"
 )
@@ -92,6 +96,7 @@ def source_paths() -> list[Path]:
         VG052_DATASET / "report.json",
         VG052_DATASET / "metadata.json",
         VG052_ADMISSION,
+        PREFLIGHT_ABORT,
     ]
 
 
@@ -113,6 +118,7 @@ def verify_inputs() -> None:
         VG052_DATASET / "report.json": VG052_REPORT_SHA256,
         VG052_DATASET / "metadata.json": VG052_METADATA_SHA256,
         VG052_ADMISSION: VG052_ADMISSION_SHA256,
+        PREFLIGHT_ABORT: PREFLIGHT_ABORT_SHA256,
     }
     for path, digest in expected.items():
         if sha256_path(path) != digest:
@@ -121,6 +127,7 @@ def verify_inputs() -> None:
         raise RuntimeError("VG053 preregistration is missing")
     report = json.loads((VG052_DATASET / "report.json").read_text())
     admission = json.loads(VG052_ADMISSION.read_text())
+    preflight_abort = json.loads(PREFLIGHT_ABORT.read_text())
     if (
         report.get("schema") != "vq2_vg052_late_gate_local_dagger_report_v1"
         or report.get("tag")
@@ -146,6 +153,14 @@ def verify_inputs() -> None:
         or admission.get("live_authority")
     ):
         raise RuntimeError("VG052 admission does not authorize VG053")
+    if (
+        preflight_abort.get("schema") != "vq2_vg053_preflight_abort_v1"
+        or preflight_abort.get("output_directory_created")
+        or preflight_abort.get("training_state_written")
+        or preflight_abort.get("optimizer_updates") != 0
+        or not preflight_abort.get("unchanged_retry_forbidden")
+    ):
+        raise RuntimeError("VG053 preflight repair evidence changed")
 
 
 def numerical_admission_predicate(
@@ -201,6 +216,7 @@ def configure_core() -> None:
             "report_sha256": VG052_REPORT_SHA256,
             "metadata_sha256": VG052_METADATA_SHA256,
             "validation_agents_attribute": "dagger9_validation_agents",
+            "allow_initial_phase_jump": True,
         },
     }
     core.EXTRA_OBJECTIVE_WEIGHT_ATTRIBUTES = {
@@ -218,6 +234,8 @@ def configure_core() -> None:
         "vg052_late_gate_mass": 0.10,
         "causal_sequences_preserved": True,
         "runtime_abi_changed": False,
+        "vg052_initial_phase_jump_allowed": True,
+        "initial_jump_counts_as_gate_transition": False,
     }
     core.NUMERICAL_ADMISSION_PREDICATE = numerical_admission_predicate
     core.verify_inputs = verify_inputs

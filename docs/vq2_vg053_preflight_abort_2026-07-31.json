@@ -1,0 +1,22 @@
+{
+  "schema": "vq2_vg053_preflight_abort_v1",
+  "tag": "vq2_vg053_late_gate_trust_refit_001",
+  "source_commit": "7f6c7ce89e1d6ca87c8d710b8c0e5471411b84e7",
+  "remote_preflight_tests_passed": 29,
+  "failure_stage": "source_dataset_construction_before_output_or_training_state",
+  "failure": "generic phase audit rejected the intentional VG052 initial public phase jump from zero to gate index 3 or 4",
+  "runner_log_sha256": "8966c11ea879f82c959f46945b97c6931a03148ff940f11839bfed1e843e0b43",
+  "output_directory_created": false,
+  "training_state_written": false,
+  "baseline_validation_started": false,
+  "optimizer_updates": 0,
+  "checkpoint_written": false,
+  "repair": "source-specific allow_initial_phase_jump audit; suppress that reset jump as a transition while retaining ordered checks for every later phase change",
+  "unchanged_retry_forbidden": true,
+  "safety": {
+    "actor_input_privileged_values": 0,
+    "teacher_blend": 0.0,
+    "flight_sim_packets_sent": 0,
+    "submission_authorized": false
+  }
+}

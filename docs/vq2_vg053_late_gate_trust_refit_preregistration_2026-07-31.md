@@ -28,6 +28,13 @@ Submission remains forbidden without explicit user authorization.
 Source lock before the run:
 
 - VG052 admission/report/metadata: `95c3f6e6...`/`687141ac...`/`03b71103...`
-- trainer: `a91640c5...`
+- trainer: `b7d7753c...`
 - runner: `92fd257c...`
-- focused test: `1d7efeb1...`
+- focused test: `a1360cde...`
+
+The first preflight on commit `7f6c7ce8...` passed 29 tests, then stopped
+before output/state creation or any optimizer update because the generic phase
+auditor rejected VG052's intentional reset jump to phase 3/4. Abort log SHA is
+`8966c11e...`. The repaired loader permits that initial jump only for the
+explicit VG052 source and does not count it as a gate transition; every later
+phase change must remain ordered one index at a time.

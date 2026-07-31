@@ -177,6 +177,8 @@ def audit_public_phase_layout(
     tail: np.ndarray,
     valid: np.ndarray,
     lengths: np.ndarray,
+    *,
+    allow_initial_phase_jump: bool = False,
 ) -> dict[str, int | float]:
     """Audit every valid phase prefix while explicitly excluding padding."""
 
@@ -185,6 +187,8 @@ def audit_public_phase_layout(
     if valid.shape != tail.shape[:2] or lengths.shape != (tail.shape[1],):
         raise ValueError("phase audit layout does not align")
     increments = 0
+    initial_phase_jumps = 0
+    maximum_initial_phase_index = 0
     encoding_error = 0.0
     invalid_padding_rows = 0
     for agent, raw_length in enumerate(lengths):
@@ -206,7 +210,13 @@ def audit_public_phase_layout(
             encoding_error,
             float(np.max(np.abs(scaled - np.rint(scaled)), initial=0.0)),
         )
-        delta = np.diff(np.concatenate((np.zeros(1, dtype=np.float32), phase)))
+        initial_phase_index = int(np.rint(float(phase[0]) * 16.0))
+        maximum_initial_phase_index = max(
+            maximum_initial_phase_index, initial_phase_index
+        )
+        initial_phase_jumps += int(initial_phase_index > 0)
+        initial = phase[0] if allow_initial_phase_jump else np.float32(0.0)
+        delta = np.diff(np.concatenate((np.asarray([initial]), phase)))
         if np.any(delta < -1e-7):
             raise RuntimeError("phase audit found a valid-row decrease")
         if np.any(delta > 1.0 / 16.0 + 1e-7):
@@ -215,11 +225,18 @@ def audit_public_phase_layout(
         invalid_padding_rows += int(tail.shape[0] - length)
     if encoding_error > 1e-6:
         raise RuntimeError("phase audit found a non-/16 encoding")
-    return {
+    result: dict[str, int | float] = {
         "increments": increments,
         "encoding_max_error": encoding_error,
         "invalid_padding_rows_excluded": invalid_padding_rows,
     }
+    if allow_initial_phase_jump:
+        result.update({
+            "initial_phase_jumps": initial_phase_jumps,
+            "maximum_initial_phase_index": maximum_initial_phase_index,
+            "initial_phase_jump_allowed": True,
+        })
+    return result
 
 
 def _agent_batches(order: np.ndarray, size: int) -> Iterable[np.ndarray]:
@@ -238,8 +255,10 @@ class VariableGateBCDataset:
         verify_hashes: bool = True,
         expected_report_sha256: str = DATASET_REPORT_SHA256,
         expected_metadata_sha256: str = DATASET_METADATA_SHA256,
+        allow_initial_phase_jump: bool = False,
     ) -> None:
         self.root = Path(root)
+        self.allow_initial_phase_jump = bool(allow_initial_phase_jump)
         self.report_path = (
             self.root / "report.json"
             if report_path is None
@@ -295,7 +314,10 @@ class VariableGateBCDataset:
         if self.lengths.shape != (self.agents,):
             raise RuntimeError("VG003 episode lengths do not align with agents")
         self.phase_audit = audit_public_phase_layout(
-            self.tail, self.valid, self.lengths
+            self.tail,
+            self.valid,
+            self.lengths,
+            allow_initial_phase_jump=self.allow_initial_phase_jump,
         )
         expected_increments = self.report.get("dataset", {}).get(
             "phase_increments"
@@ -320,11 +342,16 @@ class VariableGateBCDataset:
         mask = np.take(self.mask[start:end], indices, axis=1)
         tail = np.take(self.tail[start:end], indices, axis=1)
         valid_np = np.take(self.valid[start:end], indices, axis=1)
-        previous_phase = (
-            np.zeros(len(indices), dtype=np.float32)
-            if start == 0
-            else np.take(self.tail[start - 1, :, PHASE_TAIL_INDEX], indices)
-        )
+        if start == 0:
+            previous_phase = (
+                np.take(self.tail[0, :, PHASE_TAIL_INDEX], indices)
+                if self.allow_initial_phase_jump
+                else np.zeros(len(indices), dtype=np.float32)
+            )
+        else:
+            previous_phase = np.take(
+                self.tail[start - 1, :, PHASE_TAIL_INDEX], indices
+            )
         transition_np = phase_increment_rows(
             tail[:, :, PHASE_TAIL_INDEX], valid_np, previous_phase
         )
