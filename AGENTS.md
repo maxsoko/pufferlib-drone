@@ -11206,3 +11206,8 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   omitted the repository root from `sys.path`; no report exists. LC005 repairs
   only that import bootstrap, uses fresh tag/seed 431050, and preserves the
   `4096/64/256/65536` scale and every throughput/no-checkpoint predicate.
+- LC005 rejects at `46,763` SPS (`1.406982x`) and 24% peak GPU; single-engine
+  rollout grows to `84.270638 s`. Report SHA is `141cd7f4...`. LC006 launches
+  six independent LC003-sized workers concurrently (seeds 431060--431065) to
+  bypass buffer synchronization, target about 14 GB VRAM/168 active cores, and
+  retain the aggregate `10x`/50%-GPU/no-checkpoint gates.

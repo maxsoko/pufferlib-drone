@@ -211,11 +211,13 @@ def run_benchmark(*, baseline_path: Path) -> dict[str, Any]:
             target=_poll_gpu, args=(stop, gpu_samples), daemon=True
         )
         sampler.start()
+        measured_started_unix = time.time()
         measured_started = time.perf_counter()
         for _ in range(MEASURED_CYCLES):
             _C.rollouts(engine)
             _C.train(engine)
         measured_seconds = time.perf_counter() - measured_started
+        measured_finished_unix = time.time()
         stop.set()
         sampler.join(timeout=5.0)
         puffer_log = dict(_C.log(engine))
@@ -246,6 +248,8 @@ def run_benchmark(*, baseline_path: Path) -> dict[str, Any]:
         "num_params": num_params,
         "initialization_seconds": initialization_seconds,
         "measured_seconds": measured_seconds,
+        "measured_started_unix": measured_started_unix,
+        "measured_finished_unix": measured_finished_unix,
         "measured_agent_steps": measured_agent_steps,
         "end_to_end_agent_steps_per_second": end_to_end_sps,
         "baseline_path": str(baseline_path),

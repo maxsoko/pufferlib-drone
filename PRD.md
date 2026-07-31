@@ -11099,3 +11099,7 @@ For each training/eval block, record:
 - LC004 failed at wrapper import before environment or optimizer creation; no
   report exists. LC005 adds the missing repository-root bootstrap only, uses a
   fresh tag/seed, and reruns the unchanged full-host scale and admission gate.
+- LC005 rejects at `46,763` SPS (`1.406982x`) and 24% peak GPU; report SHA is
+  `141cd7f4...`. LC006 uses six concurrent LC003-sized processes to bypass the
+  single-engine buffer ceiling, with fresh per-worker seeds and aggregate
+  `10x` speed/50%-GPU/no-checkpoint requirements.

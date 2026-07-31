@@ -84,3 +84,10 @@ LC004 stopped at wrapper import because the repository root was absent from
 `sys.path`; no environment, CUDA context, rollout, optimizer update, or report
 was created. LC005 repairs only that executable bootstrap, uses a fresh tag and
 seed 431050, and preserves the full LC004 scale and admission contract.
+
+LC005 runs but rejects at `46,763` end-to-end SPS (`1.406982x`), 24% peak GPU,
+and `84.270638 s` rollout time; report SHA-256 is
+`141cd7f4a27e8a030d3b7c8e2d0d7c4dee1e9c17c29ee9c587445255f806dbe2`.
+LC006 therefore runs six independent, faster LC003-sized workers concurrently,
+using process-level parallelism to bypass the single-engine synchronization
+ceiling. All outputs remain privileged throughput-only evidence.
