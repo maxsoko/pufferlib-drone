@@ -318,16 +318,232 @@ def build_evidence(
     }
 
 
+def build_terminal_prefix_evidence(
+    *,
+    screen: Path,
+    candidate_admission: Path,
+    planned_episodes: int = 256,
+    runner_log: Path | None = None,
+    runner_exit: Path | None = None,
+) -> dict[str, Any]:
+    """Freeze a completed count prefix only when admission is impossible."""
+
+    state_path = screen / "state.json"
+    state = json.loads(state_path.read_text())
+    admission = json.loads(candidate_admission.read_text())
+    completed_counts = state.get("completed_counts")
+    planned_counts = state.get("counts")
+    episodes_per_count = int(state.get("episodes_per_count", 0))
+    checkpoint_sha256 = state.get("checkpoint_sha256")
+    if (
+        state.get("schema") != "vq2_variable_gate_recurrent_screen_state_v1"
+        or state.get("status") != "screening"
+        or planned_counts != list(COUNTS)
+        or not isinstance(completed_counts, list)
+        or not completed_counts
+        or completed_counts != list(COUNTS[: len(completed_counts)])
+        or episodes_per_count <= 0
+        or planned_episodes != episodes_per_count * len(COUNTS)
+    ):
+        raise RuntimeError("screen state is not a completed ordered count prefix")
+    if (
+        admission.get("artifact_sha256", {}).get("checkpoint")
+        != checkpoint_sha256
+        or admission.get("safety", {}).get("flight_sim_packets_sent") != 0
+        or admission.get("safety", {}).get("submission_authorized")
+    ):
+        raise RuntimeError("candidate admission does not bind the prefix actor")
+
+    source_identity = {
+        name: state[name]
+        for name in (
+            "source_commit",
+            "source_sha256",
+            "runtime",
+            "compiled_extension_path",
+        )
+    }
+    count_reports: list[dict[str, Any]] = []
+    count_sha256: dict[str, str] = {}
+    for count in completed_counts:
+        path = screen / f"count_{count}.json"
+        report = json.loads(path.read_text())
+        if (
+            report.get("source_identity") != source_identity
+            or report.get("checkpoint_sha256") != checkpoint_sha256
+            or report.get("num_gates") != count
+        ):
+            raise RuntimeError(f"count {count} does not bind the prefix state")
+        count_reports.append(summarize_count(report))
+        count_sha256[str(count)] = sha256_path(path)
+
+    episodes = sum(report["episodes"] for report in count_reports)
+    totals = {
+        name: sum(int(report[name]) for report in count_reports)
+        for name in (
+            "successes",
+            "crashes",
+            "crashes_low",
+            "crashes_xy",
+            "crashes_high",
+            "misses",
+            "timeouts",
+            "crossing_margin_violations",
+        )
+    }
+    minimum_rate = float(
+        state.get("admission_contract", {}).get("minimum_success_rate", math.nan)
+    )
+    minimum_successes = math.ceil(minimum_rate * planned_episodes - 1e-12)
+    maximum_possible_successes = (
+        totals["successes"] + planned_episodes - episodes
+    )
+    terminal_reasons = []
+    if totals["crashes"] > 0:
+        terminal_reasons.append("zero_crash_admission_is_impossible")
+    if maximum_possible_successes < minimum_successes:
+        terminal_reasons.append("minimum_finish_count_is_impossible")
+    if not terminal_reasons:
+        raise RuntimeError("screen prefix is not a terminal admission rejection")
+
+    gate_reach = {
+        str(gate): sum(
+            int(report["gate_reach"][str(gate)]) for report in count_reports
+        )
+        for gate in range(1, ENGINE_GATE_CAP + 1)
+    }
+    transport = {
+        "executed_action_max_error": max(
+            report["transport"]["executed_action_max_error"]
+            for report in count_reports
+        ),
+        "phase_changes_off_tick": sum(
+            report["transport"]["phase_changes_off_tick"]
+            for report in count_reports
+        ),
+        "phase_decreases": sum(
+            report["transport"]["phase_decreases"] for report in count_reports
+        ),
+        "phase_skips": sum(
+            report["transport"]["phase_skips"] for report in count_reports
+        ),
+        "raw_phase_encoding_max_error": max(
+            report["transport"]["raw_phase_encoding_max_error"]
+            for report in count_reports
+        ),
+        "nonfinite_action": any(
+            report["transport"]["nonfinite_action"] for report in count_reports
+        ),
+        "action_envelope_violations": sum(
+            report["transport"]["action_envelope_violations"]
+            for report in count_reports
+        ),
+        "wire_rate_envelope_violations": sum(
+            report["transport"]["wire_rate_envelope_violations"]
+            for report in count_reports
+        ),
+        "thrust_envelope_violations": sum(
+            report["transport"]["thrust_envelope_violations"]
+            for report in count_reports
+        ),
+        "out_of_order": sum(
+            report["transport"]["out_of_order"] for report in count_reports
+        ),
+    }
+    hard_transport_pass = all(
+        report["hard_transport_pass"] for report in count_reports
+    )
+    if not hard_transport_pass:
+        terminal_reasons.append("hard_transport_fault")
+    analyzer_commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    artifact_sha256: dict[str, Any] = {
+        "terminal_prefix_state": sha256_path(state_path),
+        "candidate_admission": sha256_path(candidate_admission),
+        "analyzer": sha256_path(Path(__file__).resolve()),
+        "count_reports": count_sha256,
+    }
+    if runner_log is not None:
+        artifact_sha256["runner_log"] = sha256_path(runner_log)
+    if runner_exit is not None:
+        artifact_sha256["runner_exit"] = sha256_path(runner_exit)
+    return {
+        "schema": SCHEMA,
+        "screen_tag": state["tag"],
+        "completed": True,
+        "screen_completed": False,
+        "admitted": False,
+        "unchanged_retry_forbidden": True,
+        "terminal_admission_impossible": True,
+        "terminal_reasons": terminal_reasons,
+        "screen_source_commit": state["source_commit"],
+        "analyzer_source_commit": analyzer_commit,
+        "checkpoint_sha256": checkpoint_sha256,
+        "episodes": episodes,
+        "planned_episodes": planned_episodes,
+        "minimum_success_rate": minimum_rate,
+        "minimum_successes": minimum_successes,
+        "maximum_possible_successes": maximum_possible_successes,
+        **totals,
+        "success_rate": totals["successes"] / episodes,
+        "mean_gates_passed": sum(
+            report["mean_gates_passed"] * report["episodes"]
+            for report in count_reports
+        )
+        / episodes,
+        "gate_reach": gate_reach,
+        "hard_transport_pass": hard_transport_pass,
+        "transport": transport,
+        "counts": {
+            str(report["num_gates"]): report for report in count_reports
+        },
+        "artifact_sha256": artifact_sha256,
+        "safety": {
+            "teacher_labels_written": 0,
+            "student_updates": 0,
+            "flight_sim_packets_sent": 0,
+            "sealed_test_accesses": 0,
+            "shadow_authorized": False,
+            "training_authorized": False,
+            "submission_authorized": False,
+        },
+        "next_authority": (
+            "Preregister a causally distinct offline visited-state collection; "
+            "never resume or retry this rejected screen unchanged."
+        ),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--screen", type=Path, required=True)
     parser.add_argument("--candidate-admission", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--terminal-prefix", action="store_true")
+    parser.add_argument("--runner-log", type=Path)
+    parser.add_argument("--runner-exit", type=Path)
     args = parser.parse_args()
-    evidence = build_evidence(
-        screen=args.screen.resolve(),
-        candidate_admission=args.candidate_admission.resolve(),
-    )
+    if args.terminal_prefix:
+        evidence = build_terminal_prefix_evidence(
+            screen=args.screen.resolve(),
+            candidate_admission=args.candidate_admission.resolve(),
+            runner_log=(
+                args.runner_log.resolve() if args.runner_log is not None else None
+            ),
+            runner_exit=(
+                args.runner_exit.resolve() if args.runner_exit is not None else None
+            ),
+        )
+    else:
+        evidence = build_evidence(
+            screen=args.screen.resolve(),
+            candidate_admission=args.candidate_admission.resolve(),
+        )
     write_json_once(args.output.resolve(), evidence)
     print(json.dumps(evidence, indent=2, sort_keys=True))
     return 0 if evidence["admitted"] else 2

@@ -65,3 +65,47 @@ def test_screen_summary_rejects_unbound_candidate_admission(tmp_path) -> None:
     path.write_text(json.dumps(admission))
     with pytest.raises(RuntimeError, match="does not bind"):
         summary.build_evidence(screen=VG026_SCREEN, candidate_admission=path)
+
+
+def test_terminal_prefix_freezes_only_mathematically_impossible_screen(
+    tmp_path,
+) -> None:
+    screen = tmp_path / "screen"
+    screen.mkdir()
+    count = json.loads((VG026_SCREEN / "count_5.json").read_text())
+    (screen / "count_5.json").write_text(json.dumps(count))
+    state = json.loads((VG026_SCREEN / "state.json").read_text())
+    state.update({"status": "screening", "completed_counts": [5]})
+    state.pop("report_sha256", None)
+    state.pop("success_rate", None)
+    (screen / "state.json").write_text(json.dumps(state))
+    evidence = summary.build_terminal_prefix_evidence(
+        screen=screen,
+        candidate_admission=VG025_ADMISSION,
+    )
+    assert evidence["completed"]
+    assert not evidence["screen_completed"]
+    assert not evidence["admitted"]
+    assert evidence["terminal_admission_impossible"]
+    assert evidence["episodes"] == 64
+    assert evidence["planned_episodes"] == 256
+    assert evidence["minimum_successes"] == 231
+    assert evidence["maximum_possible_successes"] == 192
+    assert set(evidence["terminal_reasons"]) == {
+        "zero_crash_admission_is_impossible",
+        "minimum_finish_count_is_impossible",
+    }
+    assert evidence["gate_reach"]["3"] == 2
+    assert evidence["hard_transport_pass"]
+
+    passing = copy.deepcopy(count)
+    for name in ("env/crash", "env/crash_low", "env/crash_xy", "env/crash_high"):
+        passing["metrics"][name] = 0.0
+    passing["metrics"]["env/success_rate"] = 1.0
+    passing["metrics"]["env/missed_gate"] = 0.0
+    (screen / "count_5.json").write_text(json.dumps(passing))
+    with pytest.raises(RuntimeError, match="not a terminal"):
+        summary.build_terminal_prefix_evidence(
+            screen=screen,
+            candidate_admission=VG025_ADMISSION,
+        )
