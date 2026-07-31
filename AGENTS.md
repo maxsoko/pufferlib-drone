@@ -10627,3 +10627,27 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
 - Wrapper/runner/test/preregistration hashes are `2930c82f...`/
   `ff27bca2...`/`e59fd9d3...`/`62f15082...`. VG031 is offline-only and grants
   no shadow, VQ2 Training, or Submission authority.
+
+### VQ2 VG031 early rejection / VG032 higher-phase DAgger — 2026-07-31
+
+- VG031 is terminally rejected and must never resume or retry unchanged. Its
+  completed count-5 prefix records `5/64` full finishes, `27` crashes
+  (`24` low, `3` lateral), `30` misses, and `2` timeouts. Gate-1 through
+  Gate-5 reach is `64/54/18/16/5`; mean gates passed is `2.453125`.
+- Early stop is mathematically terminal: even 192 perfect remaining episodes
+  could produce at most `197/256` finishes, below the preregistered
+  `231/256` floor, and zero-crash admission was already impossible. The
+  screen consumed `4,804.816625 s`; stopping preserved several GPU-hours.
+- Action history, public phase, ordering, policy envelopes, and transport are
+  exact. Count report/state/runner-log/exit hashes are `b15de9cd...`/
+  `371a1803...`/`8bdf0801...`/`9d9b1872...`. Source-bound early-rejection
+  evidence SHA-256 is `aed9cc06...`.
+- Preregister exactly one VG032 VG028-visited collection, seed `429131`: 512
+  uniform count-5--12 one-shot episodes, 4,096-step bound, at least one
+  million labels, `>=95%` Gate-1, `>=50%` Gate-2, and `>=10%` Gate-3 reach,
+  plus nonzero phase-2 and phase-3 records. VG028 emits every deterministic
+  recurrent plant action; SF016 supplies stored labels only.
+- Manifest/collector/runner/test/preregistration hashes are `d6da45a8...`/
+  `0428813e...`/`e0278410...`/`b644e910...`/`84150960...`. VG032 may
+  authorize only a separately preregistered all-anchor recurrent refit.
+  FlightSim, shadow, Training, and Submission remain unauthorized.

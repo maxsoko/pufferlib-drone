@@ -12,6 +12,9 @@ import scripts.eval_vq2_variable_gate_recurrent_policy as evaluator
 from pufferlib.vq2_public_phase import ENGINE_GATE_CAP
 
 
+ROOT = Path(__file__).resolve().parents[1]
+
+
 @pytest.fixture(autouse=True)
 def restore_configured_modules():
     collector_names = (
@@ -166,6 +169,8 @@ def test_bound_inputs_require_admitted_actor_rejected_screen_and_oracle(
             "unchanged_retry_forbidden": True,
             "checkpoint_sha256": checkpoint_sha,
             "episodes": 256,
+            "planned_episodes": 256,
+            "screen_completed": True,
             "hard_transport_pass": True,
             "gate_reach": {"3": 4},
             "safety": {
@@ -191,6 +196,87 @@ def test_bound_inputs_require_admitted_actor_rejected_screen_and_oracle(
 
     rejected = json.loads(screen.read_text())
     rejected["hard_transport_pass"] = False
+    screen.write_text(json.dumps(rejected))
+    manifest["screen_evidence_sha256"] = collector.sha256_path(screen)
+    with pytest.raises(RuntimeError, match="eligible frontier"):
+        staged.verify_bound_inputs(manifest)
+
+
+def test_bound_inputs_accept_terminally_rejected_screen_prefix(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(staged, "ROOT", tmp_path)
+    oracle_source = tmp_path / "pufferlib/vq2_oracle.py"
+    oracle_source.parent.mkdir(parents=True)
+    oracle_source.write_text("oracle source\n")
+    monkeypatch.setattr(
+        collector, "ORACLE_QUERY_SHA256", collector.sha256_path(oracle_source)
+    )
+
+    checkpoint = tmp_path / "checkpoint.pt"
+    checkpoint.write_bytes(b"checkpoint")
+    checkpoint_sha = collector.sha256_path(checkpoint)
+    train = tmp_path / "train.json"
+    train.write_text(json.dumps({
+        "schema": "train_v1",
+        "tag": "train",
+        "completed": True,
+        "numerically_admitted": True,
+        "checkpoint_sha256": checkpoint_sha,
+        "minimum_transition_window_exposure": 4.0,
+        "equal_source_weight_audit": True,
+    }))
+    admission = tmp_path / "admission.json"
+    admission.write_text(json.dumps({
+        "schema": "admission_v1",
+        "completed": True,
+        "numerically_admitted": True,
+        "artifact_sha256": {
+            "checkpoint": checkpoint_sha,
+            "report": collector.sha256_path(train),
+        },
+        "safety": {
+            "flight_sim_packets_sent": 0,
+            "submission_authorized": False,
+        },
+    }))
+    screen = tmp_path / "screen.json"
+    screen.write_text(json.dumps({
+        "schema": "screen_v1",
+        "screen_tag": "screen",
+        "completed": True,
+        "screen_completed": False,
+        "terminal_admission_impossible": True,
+        "admitted": False,
+        "unchanged_retry_forbidden": True,
+        "checkpoint_sha256": checkpoint_sha,
+        "episodes": 64,
+        "planned_episodes": 256,
+        "hard_transport_pass": True,
+        "gate_reach": {"3": 18},
+        "safety": {
+            "flight_sim_packets_sent": 0,
+            "submission_authorized": False,
+        },
+    }))
+    oracle = tmp_path / "oracle.json"
+    oracle.write_text(json.dumps({"parity_passed": True}))
+    goal = tmp_path / "goal.md"
+    goal.write_text("goal\n")
+    manifest = _manifest()
+    manifest.update({
+        "checkpoint_sha256": checkpoint_sha,
+        "train_report_sha256": collector.sha256_path(train),
+        "candidate_admission_sha256": collector.sha256_path(admission),
+        "screen_evidence_sha256": collector.sha256_path(screen),
+        "oracle_report_sha256": collector.sha256_path(oracle),
+        "goal_prompt_sha256": collector.sha256_path(goal),
+    })
+    staged.verify_bound_inputs(manifest)
+
+    rejected = json.loads(screen.read_text())
+    rejected["terminal_admission_impossible"] = False
     screen.write_text(json.dumps(rejected))
     manifest["screen_evidence_sha256"] = collector.sha256_path(screen)
     with pytest.raises(RuntimeError, match="eligible frontier"):
@@ -285,3 +371,25 @@ def test_source_surface_binds_manifest_and_runtime_evidence(
     finally:
         collector.EXTRA_SOURCE_PATHS = original_extra
         collector.EVIDENCE_PATHS = original_evidence
+
+
+def test_vg032_manifest_and_runner_freeze_higher_phase_collection() -> None:
+    manifest_path = (
+        ROOT
+        / "docs/vq2_vg032_variable_gate_dagger_manifest_2026-07-31.json"
+    )
+    manifest = staged.load_manifest(manifest_path)
+    assert (
+        manifest["tag"]
+        == "vq2_vg032_variable_gate_dagger_round7_vg028_visited_512"
+    )
+    assert manifest["seed"] == 429131
+    assert manifest["minimum_gate2_rate"] == 0.5
+    assert manifest["minimum_gate3_rate"] == 0.1
+    assert manifest["screen_evidence_sha256"] == (
+        "aed9cc0651a204fe4d29ddbd6ea34d7d376865f38ae0d0aca1160efbaea1f244"
+    )
+    runner = (ROOT / str(manifest["runner"])).read_text()
+    assert "d6da45a8cf38d8da2f47c8c025e81d23" in runner
+    assert "collect_vq2_staged_variable_gate_dagger.py" in runner
+    assert "run_vg032_collection --resume" in runner

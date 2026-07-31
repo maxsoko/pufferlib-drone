@@ -123,6 +123,19 @@ def verify_bound_inputs(manifest: dict[str, Any]) -> None:
     )
     screen = json.loads(_root_path(manifest["screen_evidence"]).read_text())
     oracle = json.loads(_root_path(manifest["oracle_report"]).read_text())
+    screen_episodes = int(screen.get("episodes", 0))
+    planned_episodes = int(
+        screen.get("planned_episodes", screen_episodes)
+    )
+    eligible_complete_screen = bool(
+        screen_episodes == 256
+        and screen.get("screen_completed", True)
+    )
+    eligible_terminal_prefix = bool(
+        64 <= screen_episodes < 256
+        and screen.get("screen_completed") is False
+        and screen.get("terminal_admission_impossible") is True
+    )
     if (
         train.get("schema") != manifest["train_report_schema"]
         or train.get("tag") != manifest["train_report_tag"]
@@ -152,7 +165,8 @@ def verify_bound_inputs(manifest: dict[str, Any]) -> None:
         or screen.get("admitted")
         or not screen.get("unchanged_retry_forbidden")
         or screen.get("checkpoint_sha256") != manifest["checkpoint_sha256"]
-        or screen.get("episodes") != 256
+        or planned_episodes != 256
+        or not (eligible_complete_screen or eligible_terminal_prefix)
         or not screen.get("hard_transport_pass")
         or screen.get("gate_reach", {}).get("3", 0) <= 0
         or screen.get("safety", {}).get("flight_sim_packets_sent") != 0

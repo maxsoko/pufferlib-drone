@@ -10621,3 +10621,25 @@ For each training/eval block, record:
 - Wrapper/runner/test/preregistration hashes are `2930c82f...`/
   `ff27bca2...`/`e59fd9d3...`/`62f15082...`. This is offline-only and grants
   no live authority.
+
+### VQ2 VG031 early rejection and VG032 higher-phase DAgger — 2026-07-31
+
+- VG031 is terminally rejected without unchanged resume or retry. Its first
+  complete count-5 prefix yields `5/64` full finishes, `27` crashes, `30`
+  misses, and `2` timeouts. Ordered Gate-1 through Gate-5 reach is
+  `64/54/18/16/5`, demonstrating the first broad later-course signal.
+- The early stop is conclusive: 192 perfect remaining episodes could raise the
+  finish count only to `197/256`, below the fixed `231/256` admission floor,
+  while zero-crash admission was already impossible. All policy, action
+  history, public-phase, ordering, envelope, and transport predicates pass.
+- Count/state/log/exit hashes are `b15de9cd...`/`371a1803...`/`8bdf0801...`/
+  `9d9b1872...`; source-bound early-rejection evidence SHA is `aed9cc06...`.
+- VG032 is one manifest-bound collection at VG028-visited states: seed
+  `429131`, 512 uniform count-5--12 episodes, 4,096 steps, at least one
+  million legal labels, reach floors `95%/50%/10%` through Gate 3, and
+  nonzero phase-2/phase-3 records. VG028 alone drives the plant; SF016 labels
+  only.
+- Manifest/collector/runner/test/preregistration hashes are `d6da45a8...`/
+  `0428813e...`/`e0278410...`/`b644e910...`/`84150960...`. Collection can
+  authorize only a fresh all-anchor recurrent refit. No live authority is
+  granted.
