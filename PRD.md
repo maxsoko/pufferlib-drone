@@ -10643,3 +10643,25 @@ For each training/eval block, record:
   `0428813e...`/`e0278410...`/`b644e910...`/`84150960...`. Collection can
   authorize only a fresh all-anchor recurrent refit. No live authority is
   granted.
+
+### VQ2 VG032 admission and VG033 eight-source refit — 2026-07-31
+
+- VG032 completes its sole seed-`429131` collection from source commit
+  `04ee2edb...`, admitting `1,636,103` legal records in `1,094.757103 s`.
+  Ordered Gate-1/Gate-2/Gate-3/Gate-4 reach is `512/438/67/19`; phase
+  2/3/4 contains `734,846/67,253/13,244` records.
+- All 24 layout, phase, ordering, finite-action, envelope, and transport
+  predicates pass. Crashes/misses/timeouts `59/214/239` characterize the
+  actor-visited failure distribution and are not deployment admission.
+- Report/metadata/state/bootstrap hashes are `f725afd9...`/`b4d43848...`/
+  `b9a1a9fb...`/`c7db59e3...`. Exact completed resume exits zero, reproduces
+  the report byte-for-byte, and leaves terminal state unchanged. Admission
+  evidence SHA is `7887a69a...`.
+- VG033 preregisters one six-epoch, seed-`429132` full recurrent refit from
+  VG028. Each update explicitly balances all eight clean and successive
+  visited-state sources at `0.25/0.03/0.03/0.06/0.08/0.08/0.12/0.35`,
+  with 256-step BPTT and `4.0x` transition exposure.
+- Numerical admission requires balanced and VG032 improvement plus caps
+  `0.02/0.02/0.06/0.05/0.04/0.04/0.10/0.12`. Core/trainer/runner/tests/
+  preregistration hashes are `c76902c8...`/`cb2f4287...`/`3e85240b...`/
+  `065f147c...`,`335a5e10...`/`bc013468...`. VG033 remains offline-only.

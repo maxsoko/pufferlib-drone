@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import inspect
 import os
+from dataclasses import dataclass
 
 import pytest
 import torch
@@ -75,6 +76,24 @@ def test_vg028_configuration_and_source_weight_audit_are_exact() -> None:
     assert refit.source_weight_audit(expected_sums, 10, config)
     expected_sums["dagger6"] += 1e-5
     assert not refit.source_weight_audit(expected_sums, 10, config)
+
+
+def test_refit_core_accepts_a_separately_configured_additional_source() -> None:
+    @dataclass(frozen=True)
+    class ExtendedConfig(refit.SevenSourceConfig):
+        dagger7_objective_weight: float = 0.40
+
+    original_attributes = refit.EXTRA_OBJECTIVE_WEIGHT_ATTRIBUTES
+    try:
+        refit.EXTRA_OBJECTIVE_WEIGHT_ATTRIBUTES = {
+            "dagger7": "dagger7_objective_weight"
+        }
+        weights = refit.objective_weights(ExtendedConfig())
+        assert weights["dagger7"] == pytest.approx(0.40)
+        sums = {name: 7 * weight for name, weight in weights.items()}
+        assert refit.source_weight_audit(sums, 7, ExtendedConfig())
+    finally:
+        refit.EXTRA_OBJECTIVE_WEIGHT_ATTRIBUTES = original_attributes
 
 
 def test_vg028_frozen_inputs_and_all_dataset_loaders_verify() -> None:

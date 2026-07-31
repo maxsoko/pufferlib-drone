@@ -10651,3 +10651,30 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   `0428813e...`/`e0278410...`/`b644e910...`/`84150960...`. VG032 may
   authorize only a separately preregistered all-anchor recurrent refit.
   FlightSim, shadow, Training, and Submission remain unauthorized.
+
+### VQ2 VG032 admission / VG033 eight-source refit — 2026-07-31
+
+- VG032 completed once from source commit `04ee2edb...` without resume. It
+  admits `1,636,103` legal records from 512 exact-uniform count-5--12
+  episodes in `1,094.757103 s`; episode length min/mean/max is
+  `564/3195.513672/4096`.
+- Ordered Gate-1/Gate-2/Gate-3/Gate-4 reach is `512/438/67/19`. Phase
+  2/3/4 contributes `734,846/67,253/13,244` records. All 24 hard corpus
+  predicates pass; crash/miss/timeout `59/214/239` remain training-
+  distribution diagnostics.
+- Report/metadata/state/bootstrap/completed-resume-exit hashes are
+  `f725afd9...`/`b4d43848...`/`b9a1a9fb...`/`c7db59e3...`/`9a271f2a...`.
+  Completed resume is byte-identical to the report and leaves state unchanged.
+  Small evidence is hash-exact locally; retained arrays remain on the worker.
+  Admission SHA-256 is `7887a69a...`.
+- Preregister exactly one VG033 six-epoch recurrent refit from VG028 epoch 6,
+  seed `429132`, eight-agent source chunks, 256-step BPTT, AdamW `5e-6`, and
+  four transition exposures. Every update uses clean/VG009/recovered-VG012/
+  VG016/VG019/VG024/VG027/VG032 at weights
+  `0.25/0.03/0.03/0.06/0.08/0.08/0.12/0.35`.
+- Admission requires strict balanced and VG032 validation improvement, exact
+  weights, `4.0x` transition exposure, finite metrics, and per-source caps
+  `0.02/0.02/0.06/0.05/0.04/0.04/0.10/0.12`. Core/trainer/runner/core-test/
+  trainer-test/preregistration hashes are `c76902c8...`/`cb2f4287...`/
+  `3e85240b...`/`065f147c...`/`335a5e10...`/`bc013468...`. VG033 can
+  authorize only a fresh paired offline diagnostic; no live authority exists.

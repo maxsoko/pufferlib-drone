@@ -156,6 +156,9 @@ SOURCE_WEIGHTS = {
     "dagger5": 0.17,
     "dagger6": 0.30,
 }
+EXTRA_DATASET_SPECS: dict[str, dict[str, Any]] = {}
+EXTRA_OBJECTIVE_WEIGHT_ATTRIBUTES: dict[str, str] = {}
+NUMERICAL_ADMISSION_PREDICATE: Any = None
 
 
 @dataclass(frozen=True)
@@ -251,7 +254,7 @@ def current_source_identity() -> tuple[str, dict[str, str]]:
 
 
 def objective_weights(config: SevenSourceConfig) -> dict[str, float]:
-    return {
+    weights = {
         "clean": config.clean_objective_weight,
         "dagger1": config.dagger1_objective_weight,
         "dagger2": config.dagger2_objective_weight,
@@ -260,6 +263,13 @@ def objective_weights(config: SevenSourceConfig) -> dict[str, float]:
         "dagger5": config.dagger5_objective_weight,
         "dagger6": config.dagger6_objective_weight,
     }
+    weights.update(
+        {
+            name: float(getattr(config, attribute))
+            for name, attribute in EXTRA_OBJECTIVE_WEIGHT_ATTRIBUTES.items()
+        }
+    )
+    return weights
 
 
 def seven_source_loss(
@@ -565,6 +575,14 @@ def train(
             expected_metadata_sha256=DAGGER6_METADATA_SHA256,
         ),
     }
+    for name, spec in EXTRA_DATASET_SPECS.items():
+        kwargs: dict[str, Any] = {
+            "expected_report_sha256": spec["report_sha256"],
+            "expected_metadata_sha256": spec["metadata_sha256"],
+        }
+        if spec.get("report_path") is not None:
+            kwargs["report_path"] = spec["report_path"]
+        datasets[name] = VariableGateBCDataset(spec["dataset"], **kwargs)
     split_counts = {
         "clean": config.clean_validation_agents,
         "dagger1": config.dagger1_validation_agents,
@@ -574,6 +592,12 @@ def train(
         "dagger5": config.dagger5_validation_agents,
         "dagger6": config.dagger6_validation_agents,
     }
+    split_counts.update(
+        {
+            name: int(getattr(config, spec["validation_agents_attribute"]))
+            for name, spec in EXTRA_DATASET_SPECS.items()
+        }
+    )
     splits = {
         name: three_source._dataset_split(dataset.agents, split_counts[name])
         for name, dataset in datasets.items()
@@ -718,14 +742,9 @@ def train(
             if clean_item is None:
                 break
             items = {"clean": clean_item}
-            for name in (
-                "dagger1",
-                "dagger2",
-                "dagger3",
-                "dagger4",
-                "dagger5",
-                "dagger6",
-            ):
+            for name in datasets:
+                if name == "clean":
+                    continue
                 item = streams[name].next(model)
                 if item is None:
                     raise RuntimeError(f"VG028 cyclic {name} stream ended")
@@ -877,28 +896,41 @@ def train(
     selected_validation = (
         baseline_by_source if best_epoch == 0 else history[best_epoch - 1]["validation"]
     )
-    numerically_admitted = bool(
-        best_epoch > 0
-        and np.isfinite(best_score)
-        and best_score < float(baseline_validation["source_balanced_weighted_mse"])
-        and selected_validation["dagger3"]["weighted_mse"]
-        <= config.maximum_dagger3_validation_weighted_mse
-        and selected_validation["dagger4"]["weighted_mse"]
-        <= config.maximum_dagger4_validation_weighted_mse
-        and selected_validation["dagger6"]["weighted_mse"]
-        < baseline_validation["dagger6"]["weighted_mse"]
-        and selected_validation["clean"]["weighted_mse"]
-        <= config.maximum_clean_validation_weighted_mse
-        and selected_validation["dagger1"]["weighted_mse"]
-        <= config.maximum_dagger1_validation_weighted_mse
-        and selected_validation["dagger2"]["weighted_mse"]
-        <= config.maximum_dagger2_validation_weighted_mse
-        and selected_validation["dagger5"]["weighted_mse"]
-        <= config.maximum_dagger5_validation_weighted_mse
-        and selected_validation["dagger6"]["weighted_mse"]
-        <= config.maximum_dagger6_validation_weighted_mse
-        and source_balance_audit
-    )
+    if NUMERICAL_ADMISSION_PREDICATE is None:
+        numerically_admitted = bool(
+            best_epoch > 0
+            and np.isfinite(best_score)
+            and best_score
+            < float(baseline_validation["source_balanced_weighted_mse"])
+            and selected_validation["dagger3"]["weighted_mse"]
+            <= config.maximum_dagger3_validation_weighted_mse
+            and selected_validation["dagger4"]["weighted_mse"]
+            <= config.maximum_dagger4_validation_weighted_mse
+            and selected_validation["dagger6"]["weighted_mse"]
+            < baseline_validation["dagger6"]["weighted_mse"]
+            and selected_validation["clean"]["weighted_mse"]
+            <= config.maximum_clean_validation_weighted_mse
+            and selected_validation["dagger1"]["weighted_mse"]
+            <= config.maximum_dagger1_validation_weighted_mse
+            and selected_validation["dagger2"]["weighted_mse"]
+            <= config.maximum_dagger2_validation_weighted_mse
+            and selected_validation["dagger5"]["weighted_mse"]
+            <= config.maximum_dagger5_validation_weighted_mse
+            and selected_validation["dagger6"]["weighted_mse"]
+            <= config.maximum_dagger6_validation_weighted_mse
+            and source_balance_audit
+        )
+    else:
+        numerically_admitted = bool(
+            NUMERICAL_ADMISSION_PREDICATE(
+                best_epoch=best_epoch,
+                best_score=best_score,
+                baseline_validation=baseline_validation,
+                selected_validation=selected_validation,
+                source_balance_audit=source_balance_audit,
+                config=config,
+            )
+        )
     checkpoint = {
         "schema": CHECKPOINT_SCHEMA,
         "tag": TAG,
