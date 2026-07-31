@@ -1,0 +1,165 @@
+{
+  "schema": "vq2_vg042_phase_balanced_refit_admission_v1",
+  "tag": "vq2_vg042_variable_gate_phase_balanced_refit_001",
+  "date": "2026-07-31",
+  "source_commit": "b597824de705842cfdf2a013b9261bbf1b8d8b66",
+  "completed": true,
+  "numerically_admitted": true,
+  "exit_code": 0,
+  "best_epoch": 2,
+  "epochs_completed": 4,
+  "optimizer_updates": 23343,
+  "wall_time_seconds": 2506.6442608889192,
+  "baseline_validation": {
+    "source_balanced_weighted_mse": 0.04200663305998889,
+    "vg039_phase_balanced_weighted_mse": 0.1056101406172477,
+    "vg039_unweighted_weighted_mse": 0.09389296697540674,
+    "vg039_phase3_weighted_mse": 0.0479320994632177,
+    "vg039_phase4_weighted_mse": 0.12338652824191018
+  },
+  "selected_validation": {
+    "clean": 0.005953798052410267,
+    "vg009": 0.007613442774809356,
+    "recovered_vg012": 0.03229183094234518,
+    "vg016": 0.037794612977221226,
+    "vg019": 0.016818686750635796,
+    "vg024": 0.01306171505811652,
+    "vg027": 0.06123962653004749,
+    "vg032": 0.038662893900896514,
+    "vg039_phase_balanced": 0.06224284839451934,
+    "vg039_unweighted": 0.04384532941857544,
+    "vg039_phase3": 0.03379558681128832,
+    "vg039_phase4": 0.08827750825232873,
+    "source_balanced": 0.0329404755955947
+  },
+  "admission_audit": {
+    "source_balanced_improvement_factor": 1.2752284932281504,
+    "vg039_phase_balanced_improvement_factor": 1.6967433744010176,
+    "vg039_phase3_improvement_factor": 1.4182946350618637,
+    "vg039_phase4_improvement_factor": 1.3977119504690516,
+    "all_nine_preservation_caps_pass": true,
+    "all_epoch_source_weight_audits_pass": true,
+    "minimum_transition_window_exposure": 4.0,
+    "recurrent_bptt_steps": 256,
+    "genuine_episode_boundaries": true,
+    "causal_sequences_preserved": true,
+    "row_weight_uses_only_public_phase": true,
+    "row_weight_enters_actor_input": false,
+    "all_report_values_finite": true
+  },
+  "source_weights_per_optimizer_update": {
+    "clean": 0.25,
+    "vg009": 0.03,
+    "recovered_vg012": 0.03,
+    "vg016": 0.06,
+    "vg019": 0.08,
+    "vg024": 0.08,
+    "vg027": 0.12,
+    "vg032": 0.15,
+    "vg039": 0.2
+  },
+  "vg039_phase_row_weights": {
+    "phase0": 0.25,
+    "phase1": 0.5,
+    "phase2": 1.0,
+    "phase3": 6.0,
+    "phase4": 32.0,
+    "phase5_plus": 32.0
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "optimizer_updates": 5789,
+      "source_balanced_weighted_mse": 0.036401673148961144,
+      "vg039_phase_balanced_weighted_mse": 0.06467480792519648,
+      "vg039_unweighted_weighted_mse": 0.044482838728894185,
+      "vg039_phase3_weighted_mse": 0.047598112280138216,
+      "vg039_phase4_weighted_mse": 0.08845556522087904,
+      "source_weight_audit": true,
+      "transition_window_exposure": 4.0
+    },
+    {
+      "epoch": 2,
+      "optimizer_updates": 11597,
+      "source_balanced_weighted_mse": 0.0329404755955947,
+      "vg039_phase_balanced_weighted_mse": 0.06224284839451934,
+      "vg039_unweighted_weighted_mse": 0.04384532941857544,
+      "vg039_phase3_weighted_mse": 0.03379558681128832,
+      "vg039_phase4_weighted_mse": 0.08827750825232873,
+      "source_weight_audit": true,
+      "transition_window_exposure": 4.0
+    },
+    {
+      "epoch": 3,
+      "optimizer_updates": 17502,
+      "source_balanced_weighted_mse": 0.035665910904911724,
+      "vg039_phase_balanced_weighted_mse": 0.061975202588865165,
+      "vg039_unweighted_weighted_mse": 0.04205534944526456,
+      "vg039_phase3_weighted_mse": 0.04440116429293501,
+      "vg039_phase4_weighted_mse": 0.08611722333166491,
+      "source_weight_audit": true,
+      "transition_window_exposure": 4.0
+    },
+    {
+      "epoch": 4,
+      "optimizer_updates": 23343,
+      "source_balanced_weighted_mse": 0.033537543065295806,
+      "vg039_phase_balanced_weighted_mse": 0.058142958476647015,
+      "vg039_unweighted_weighted_mse": 0.03943377745961612,
+      "vg039_phase3_weighted_mse": 0.04134944813172763,
+      "vg039_phase4_weighted_mse": 0.08089527286747718,
+      "source_weight_audit": true,
+      "transition_window_exposure": 4.0
+    }
+  ],
+  "artifact_sha256": {
+    "checkpoint": "876b0ecc4dae769f6a9dd04a0114e9623961cf46397499a41d326bdc74141ddc",
+    "report": "2f4c1c9b3055ec17445b2dacc5d0fcd3bf9e9387c0b340e06eefd74fd96b953f",
+    "completed_state": "3925f8156367b8d51bb04790a662b0d7d3e04874c278633b25e3a5635a4b3b5d",
+    "preflight_abort_log": "a1e7381d8cde6c22eea33b9c88801559871a38641ec2cd84af1b665c65a15d1e",
+    "repaired_runner_log": "0a6a2e8198e69e65f6f2acfbfebfc422a64ce553c0cbb1f6d955a0ef7e3004ad",
+    "completed_resume_log": "2f4c1c9b3055ec17445b2dacc5d0fcd3bf9e9387c0b340e06eefd74fd96b953f",
+    "completed_resume_exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  "input_sha256": {
+    "goal_prompt": "03f085d32a217889f56600ac2600bead24e087ee47322eb5aa2e208f231f2aa1",
+    "preregistration": "06be595b1ced85f1f4054f655c592e9781ecda33ca4d618e17eb825cb9e3d972",
+    "parent_checkpoint": "56a8e3b84770c1a54afbf11ac2503478221f7829c28723da0f7dfcfa2a7aac26",
+    "parent_report": "033a7f1f5d1bfbe82c1cdd7b3d63407d99c220a899eb4420b259379728563f60",
+    "parent_admission": "dbf0fbb41ebcca80f5284377db0c8b15d9be18a8880aa29a7a78513558617d44",
+    "vg039_report": "a0bdcd0d60f66f7de55323a08b3c4695a0333b5bf88a93454d56d75e61eb21e1",
+    "vg039_metadata": "89134752057b0dd7759031aaf524a93f0a85096bd1b8973ed6daebb5715c74ac",
+    "vg039_admission": "e01eb2e28c65f827cfb39916c28d56320c57a4c23513ee61553447bd236b11cc",
+    "vg041_rejection": "a9eb3079c7e59cf52594ce89c07182356724d99a0ab545c7e96eb9f954a55dd9",
+    "preflight_abort": "a66277e69f10fca99f9d0fb702560a4c6bea168b1ce7abfc17de2e0973ec9b15",
+    "refit_core": "6b0ff918012f4827113fcef70865d163357b5b51e9b7d9b9da813d97ff5a9ab7",
+    "trainer": "4959f5c2638a0911a4a7c92e6375d78baffa6ae8eeace6cec97549d11a9ba46d",
+    "runner": "d9ec5e93ff25fac0635f608f804fe2b29f134f85275e6b8da0f63bea78ec0b4b",
+    "test": "1b81716ecd85f58ba11586e94704d35e9097abeab100c5ba7b425aaec69a55c5"
+  },
+  "verification": {
+    "remote_completed_resume_exit_zero": true,
+    "remote_completed_resume_state_unchanged": true,
+    "remote_completed_resume_output_equals_report": true,
+    "remote_to_local_artifact_hashes_exact": true,
+    "independent_checkpoint_equals_selected_best_state": true,
+    "history_is_exact_epochs_1_through_4": true,
+    "all_source_hashes_embedded": true
+  },
+  "runtime": {
+    "python": "3.12.3",
+    "torch": "2.10.0a0+a36e1d39eb.nv26.01.42222806",
+    "torch_cuda": "13.1",
+    "numpy": "2.1.0",
+    "machine": "x86_64"
+  },
+  "safety": {
+    "actor_input_privileged_values": 0,
+    "teacher_blend": 0.0,
+    "teacher_plant_actions": 0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "submission_authorized": false
+  },
+  "next_authority": "One separately preregistered same-seed paired count-5 teacher-free diagnostic against VG033; no shadow or live activity is authorized."
+}

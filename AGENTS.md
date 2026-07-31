@@ -10896,3 +10896,25 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   No optimizer update occurred. Abort evidence SHA is `a66277e6...`; the
   repaired trainer imports the helper from its defining module and directly
   tests that path. Repaired preregistration SHA is `06be595b...`.
+
+### VQ2 VG042 admission / VG043 paired count-5 diagnostic — 2026-07-31
+
+- Repaired VG042 completed its sole four-epoch seed-`429156` refit from
+  source commit `b597824d...` in `2,506.644261 s` and `23,343` updates,
+  selecting epoch 2. Balanced validation improves
+  `0.042006633060 -> 0.032940475596`.
+- Phase-balanced VG039 validation improves
+  `0.105610140617 -> 0.062242848395`; phase 3 improves
+  `0.047932099463 -> 0.033795586811`, phase 4 improves
+  `0.123386528242 -> 0.088277508252`, and ordinary VG039 improves
+  `0.093892966975 -> 0.043845329419`. All nine caps and hard audits pass.
+- Checkpoint/report/state/repaired-log hashes are `876b0ecc...`/
+  `2f4c1c9b...`/`3925f815...`/`0a6a2e81...`; completed resume is
+  report-exact and state-immutable. Admission SHA is `4b18462a...`.
+- Preregister VG043: one concurrent paired count-5 diagnostic of VG033
+  versus VG042, 32 episodes each, fresh seed `429157`, four threads, and
+  2,560 steps. Require no Gate-1/crash regression, nonzero Gate-3-or-finish
+  signal, strict downstream improvement, and zero hard fault.
+- Parent/candidate manifest, runner, test, and preregistration hashes are
+  `ecb6dc36...`/`c74dd150...`/`197006cd...`/`931631e2...`/`d6250ba7...`.
+  VG043 is offline-only; no shadow, Training, or Submission authority exists.

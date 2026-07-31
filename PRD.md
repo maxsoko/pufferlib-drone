@@ -10846,3 +10846,24 @@ For each training/eval block, record:
   zero optimizer updates. Abort evidence SHA is `a66277e6...`; the repair
   imports and directly tests the defining-module helper. Repaired
   preregistration SHA is `06be595b...`.
+
+### VQ2 VG042 admission and VG043 paired count-5 diagnostic — 2026-07-31
+
+- Repaired VG042 completes its sole four-epoch seed-`429156` refit from
+  commit `b597824d...` in `2,506.644261 s`, selecting epoch 2 after
+  `23,343` updates. Balanced validation improves
+  `0.042006633060 -> 0.032940475596`.
+- Phase-balanced VG039 improves `0.105610140617 -> 0.062242848395`;
+  phase-3/4 improve `0.047932099463/0.123386528242 ->
+  0.033795586811/0.088277508252`; unweighted VG039 improves
+  `0.093892966975 -> 0.043845329419`. All caps and hard audits pass.
+- Checkpoint/report/state/log hashes are `876b0ecc...`/`2f4c1c9b...`/
+  `3925f815...`/`0a6a2e81...`; completed resume is exact. Admission SHA is
+  `4b18462a...`.
+- VG043 compares VG033 and VG042 concurrently on 32 identical fresh count-5
+  episodes, seed `429157`, four threads, and 2,560 steps, requiring strict
+  Gate-3-or-finish improvement, no Gate-1/crash regression, and zero hard
+  policy/phase/action/transport fault.
+- Parent/candidate manifest, runner, test, and preregistration hashes are
+  `ecb6dc36...`/`c74dd150...`/`197006cd...`/`931631e2...`/`d6250ba7...`.
+  No live authority is granted.
