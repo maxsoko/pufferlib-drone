@@ -177,6 +177,16 @@ def test_count11_summary_retains_all_ordered_gate_reach() -> None:
     assert summary["hard_transport_pass"]
 
 
+def test_count5_summary_accepts_generic_component_schema() -> None:
+    report = _count_report(
+        phase_distribution={5: 16}, crashes=0, successes=16, num_gates=5,
+    )
+    report["schema"] = "vq2_staged_gate_count_component_v1"
+    summary = comparator.summarize_count(report, num_gates=5)
+    assert summary["successes"] == 16
+    assert summary["gate_reach"]["5"] == 16
+
+
 def test_vg029_real_manifests_bind_admitted_parent_and_candidate() -> None:
     parent = component.load_manifest(PARENT_MANIFEST)
     candidate = component.load_manifest(CANDIDATE_MANIFEST)

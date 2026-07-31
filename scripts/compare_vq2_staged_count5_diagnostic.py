@@ -35,13 +35,13 @@ def summarize_count(
     *,
     num_gates: int = 5,
 ) -> dict[str, Any]:
-    expected_schema = (
-        "vq2_staged_count5_component_v1"
-        if num_gates == 5
-        else "vq2_staged_gate_count_component_v1"
-    )
+    expected_schemas = {"vq2_staged_gate_count_component_v1"}
+    if num_gates == 5:
+        # The original count-5 tool used a count-specific alias. Generalized
+        # gate-count runners use the equivalent generic component schema.
+        expected_schemas.add("vq2_staged_count5_component_v1")
     if (
-        report.get("schema") != expected_schema
+        report.get("schema") not in expected_schemas
         or not report.get("completed")
         or report.get("num_gates") != num_gates
         or report.get("agents") != report.get("episodes")

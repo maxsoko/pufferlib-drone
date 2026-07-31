@@ -54,6 +54,7 @@ PREREGISTRATION = ROOT / "docs/vq2_vg066_sparse_early_head_count5_bracket_prereg
 RUNNER = ROOT / "scripts/run_vq2_vg066_vast.sh"
 DEFAULT_OUTPUT = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
 SPARSE_PHASES = (1, 2, 3)
+EXTRA_SOURCE_PATHS: tuple[Path, ...] = (Path(__file__).resolve(),)
 
 
 def verify_inputs() -> None:
@@ -152,6 +153,7 @@ def configure() -> None:
     bracket.REJECTION = REJECTION; bracket.REJECTION_SHA256 = REJECTION_SHA256
     bracket.PREREGISTRATION = PREREGISTRATION; bracket.RUNNER = RUNNER
     bracket.DEFAULT_OUTPUT = DEFAULT_OUTPUT; bracket.ACTOR_CLASS = VQ2IndexedPhaseResidualActor
+    bracket.EXTRA_SOURCE_PATHS = EXTRA_SOURCE_PATHS
     bracket.verify_inputs = verify_inputs; bracket.load_endpoints = load_endpoints
     bracket.qualifies = qualifies; bracket.selection_key = selection_key
 

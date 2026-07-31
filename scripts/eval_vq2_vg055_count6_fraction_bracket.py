@@ -69,6 +69,7 @@ PREREGISTRATION = ROOT / "docs/vq2_vg055_count6_fraction_bracket_preregistration
 RUNNER = ROOT / "scripts/run_vq2_vg055_vast.sh"
 DEFAULT_OUTPUT = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
 ACTOR_CLASS = VQ2PhaseRecurrentActor
+EXTRA_SOURCE_PATHS: tuple[Path, ...] = ()
 
 
 def runtime_manifest() -> dict[str, str]:
@@ -171,6 +172,7 @@ def source_identity() -> dict[str, Any]:
         ROOT / "pufferlib/vq2_public_phase.py",
         ROOT / "pufferlib/vq2_recurrent.py",
         ROOT / "pufferlib/vq2_recurrent_phase.py",
+        *EXTRA_SOURCE_PATHS,
     )
     hashes = {str(path.relative_to(ROOT)): sha256_path(path) for path in paths}
     hashes["compiled_extension"] = sha256_path(extension)

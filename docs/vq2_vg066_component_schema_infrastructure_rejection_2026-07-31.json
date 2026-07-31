@@ -1,0 +1,25 @@
+{
+  "schema": "vq2_vg066_component_schema_infrastructure_rejection_v1",
+  "tag": "vq2_vg066_sparse_early_head_count5_bracket_001",
+  "terminally_rejected": true,
+  "source_commit": "fc57edff8700e20652c177e21e99adcea955e93e",
+  "completed_components": 1,
+  "baseline_component": {
+    "path": "alpha_0p000/offset_192.json",
+    "episodes": 64,
+    "successes": 15,
+    "crashes": 19,
+    "ordered_gate_reach": [64, 59, 38, 35, 15],
+    "hard_transport_pass": true
+  },
+  "candidate_components_completed": 0,
+  "failure": "The generic gate-count component schema was not accepted by the count-5 summarizer alias check.",
+  "repair": "The summarizer now accepts both equivalent schemas and a regression test covers the generic count-5 component.",
+  "checkpoint_written": false,
+  "report_written": false,
+  "unchanged_retry_forbidden": true,
+  "next_authority": "one_distinct_source_locked_sparse_head_count5_bracket_with_the_repaired_schema_contract_and_fresh_seed_offset",
+  "live_authority": false,
+  "flight_sim_packets_sent": 0,
+  "submission_authorized": false
+}

@@ -1,0 +1,16 @@
+{
+  "schema": "vq2_vg066_component_schema_infrastructure_repair_v1",
+  "tag": "vq2_vg066_sparse_early_head_count5_bracket_001",
+  "failure_source_commit": "fc57edff8700e20652c177e21e99adcea955e93e",
+  "completed_components_before_failure": 1,
+  "completed_component": "alpha_0p000/offset_192.json",
+  "failure": "The generalized evaluator emitted vq2_staged_gate_count_component_v1 for a count-5 component while the summarizer accepted only the older count-specific alias.",
+  "repair": "Accept both equivalent component schemas for num_gates=5; preserve the immutable completed baseline component and resume before any candidate alpha.",
+  "policy_candidate_components_completed": 0,
+  "checkpoint_written": false,
+  "report_written": false,
+  "resume_authorized": true,
+  "live_authority": false,
+  "flight_sim_packets_sent": 0,
+  "submission_authorized": false
+}
