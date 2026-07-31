@@ -4,6 +4,7 @@ import torch
 
 import scripts.eval_vq2_lc058_phase2_bias_milestone as lc058
 import scripts.eval_vq2_lc059_phase2_bias_milestone as lc059
+import scripts.eval_vq2_lc060_phase2_bias_confirmation as lc060
 from scripts.eval_vq2_variable_gate_oracle import sha256_path
 
 
@@ -52,3 +53,8 @@ def test_selection_requires_gain_without_terminal_regression() -> None:
 def test_lc059_binds_rejection_without_verify_recursion() -> None:
     assert lc059._BASE_VERIFY_INPUTS is not lc059.verify_inputs
     assert sha256_path(lc059.REJECTION) == lc059.REJECTION_SHA256
+
+
+def test_lc060_keeps_total_work_at_256_episodes() -> None:
+    assert lc060.GROUP_SIZE * len(lc060.BIAS_CANDIDATES) == 256
+    assert sha256_path(lc060.LC059_REPORT) == lc060.LC059_REPORT_SHA256

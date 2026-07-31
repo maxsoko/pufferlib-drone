@@ -71,6 +71,11 @@ RUNNER = ROOT / "scripts/run_vq2_lc058_vast.sh"
 TEST = ROOT / "tests/test_eval_vq2_lc058_phase2_bias_milestone.py"
 DEFAULT_OUTPUT = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
 EXTRA_SOURCE_PATHS: tuple[Path, ...] = ()
+NEXT_AUTHORITY_SELECTED = (
+    "Run one independent-seed Gate-3 milestone confirmation of the selected bias; "
+    "do not promote from this screen alone."
+)
+NEXT_AUTHORITY_NONE = "Reject the constant-bias family and retain LC048."
 
 
 def group_slice(group: int) -> slice:
@@ -373,6 +378,8 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
     items: list[dict[str, Any]] = []
     for group, (name, bias) in enumerate(BIAS_CANDIDATES):
         selected = group_slice(group)
+        baseline_passed = passed[group_slice(0)]
+        candidate_passed = passed[selected]
         candidate = candidate_state(parent_state, bias)
         milestone_index = np.minimum(maximum_raw_index[selected], TARGET_RAW_INDEX)
         distribution = {
@@ -395,6 +402,9 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
             "candidate_state_sha256": state_sha256(candidate),
             "gate3_passes": int(passed[selected].sum()),
             "gate3_pass_rate": float(passed[selected].mean()),
+            "paired_gate3_gains_vs_baseline": int((candidate_passed & ~baseline_passed).sum()),
+            "paired_gate3_losses_vs_baseline": int((~candidate_passed & baseline_passed).sum()),
+            "paired_gate3_net_vs_baseline": int(candidate_passed.sum() - baseline_passed.sum()),
             "pre_gate3_terminals": int(prepass_terminal[selected].sum()),
             "unresolved": int((~resolved[selected]).sum()),
             "gate3_resolve_step_mean": float(pass_steps.mean()) if pass_steps.size else None,
@@ -421,6 +431,7 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
         "causal_screen_selected": None if selected is None else selected,
         "selection_requires_independent_confirmation": selected is not None,
         "candidate_groups": GROUPS, "group_size": GROUP_SIZE,
+        "minimum_pass_gain": MINIMUM_PASS_GAIN,
         "total_agents": TOTAL_AGENTS, "episodes": EPISODES, "threads": THREADS,
         "seed": SEED, "num_gates": NUM_GATES, "target_raw_index": TARGET_RAW_INDEX,
         "max_steps": MAX_STEPS, "vector_steps": vector_steps,
@@ -436,9 +447,7 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
             "flight_sim_packets_sent": 0, "submission_authorized": False,
         },
         "next_authority": (
-            "Run one independent-seed Gate-3 milestone confirmation of the selected bias; do not promote from LC058 alone."
-            if selected is not None else
-            "Reject the constant-bias family and retain LC048."
+            NEXT_AUTHORITY_SELECTED if selected is not None else NEXT_AUTHORITY_NONE
         ),
     }
     write_json_once(report_path, report)
