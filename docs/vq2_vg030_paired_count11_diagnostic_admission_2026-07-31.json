@@ -1,0 +1,107 @@
+{
+  "schema": "vq2_vg030_paired_count11_diagnostic_admission_v1",
+  "tag": "vq2_vg030_vg028_paired_count11_diagnostic_001",
+  "date": "2026-07-31",
+  "source_commit": "c263c735d2274960500c498911a2d11e97dd5a4a",
+  "completed": true,
+  "qualified_for_full_screen": true,
+  "exit_code": 0,
+  "fixture": {
+    "num_gates": 11,
+    "agents_per_actor": 32,
+    "episodes_per_actor": 32,
+    "seed": 429122,
+    "num_threads_per_actor": 4,
+    "max_steps": 2560,
+    "components_concurrent": true
+  },
+  "parent": {
+    "tag": "vq2_vg030_vg025_parent_count11_32",
+    "checkpoint_sha256": "85671c31a7c7a25cf49414cd51259357a2efd64b5d2b441fea27c51b93bf77aa",
+    "successes": 0,
+    "crashes": 2,
+    "misses": 14,
+    "timeouts": 16,
+    "mean_gates_passed": 1.21875,
+    "gate1_reach": 32,
+    "gate2_reach": 7,
+    "gate3_reach": 0,
+    "gate4_reach": 0,
+    "vector_steps": 2560,
+    "wall_time_seconds": 6.824612956959754,
+    "hard_transport_pass": true
+  },
+  "candidate": {
+    "tag": "vq2_vg030_vg028_candidate_count11_32",
+    "checkpoint_sha256": "ec1206b5dbccb2ee679fa049534956b189b419da2b927f5e3a61eeaf5a359e65",
+    "successes": 0,
+    "crashes": 2,
+    "misses": 6,
+    "timeouts": 24,
+    "mean_gates_passed": 1.90625,
+    "gate1_reach": 32,
+    "gate2_reach": 25,
+    "gate3_reach": 4,
+    "gate4_reach": 0,
+    "vector_steps": 2560,
+    "wall_time_seconds": 6.781051971018314,
+    "hard_transport_pass": true
+  },
+  "delta": {
+    "successes": 0,
+    "crashes": 0,
+    "gate1_reach": 0,
+    "gate2_reach": 18,
+    "gate3_reach": 4,
+    "gate4_reach": 0,
+    "mean_gates_passed": 0.6875
+  },
+  "criteria": {
+    "same_seed_and_episode_count": true,
+    "both_hard_transport_pass": true,
+    "gate1_not_regressed": true,
+    "crash_count_not_regressed": true,
+    "ordered_gate3_or_finish_signal": true,
+    "downstream_improves_parent": true
+  },
+  "artifact_sha256": {
+    "aggregate_report": "9c065836e5cc8c1a05799b06f9c0867de4bed60172ca7ad374d7a2bd1a465c2a",
+    "parent_count_report": "7783e697311434a3d4fcccab7e45bf1681d4f532048c0284cdd566ee9194cced",
+    "candidate_count_report": "5af2b623ce21e42cc6ce2e75f1b28fabb4bb700292f19a5a570cc11673765472",
+    "parent_terminal_state": "64b3b0b54781f39ba6aabd555beedb67613888d6e9cb6504f509cf5406abfa9d",
+    "candidate_terminal_state": "be9108681a7c52c28ff130929132835fa4a3e6f71a7d58c70eb6589d95f627a0",
+    "runner_log": "bfe5d41b64eb03515bb5da2edd3ec6a468ce7c417d15a357459c57abb064b996",
+    "runner_exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "completed_resume_log": "9c065836e5cc8c1a05799b06f9c0867de4bed60172ca7ad374d7a2bd1a465c2a",
+    "completed_resume_exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  "input_sha256": {
+    "candidate_checkpoint": "ec1206b5dbccb2ee679fa049534956b189b419da2b927f5e3a61eeaf5a359e65",
+    "candidate_report": "b51b7a9b25bc9f213a8b93a3d60fca6a2226d2511f9475c0a6da7e12cd21909e",
+    "candidate_admission": "3282c98fab562a9593261538f452226190bc51b10e5e64495957cd348403755b",
+    "vg029_admission": "42ac6e99c15c326bfef6ebac4dffd65f9c32a992e3fc28c4dae8fe3b55072b6e",
+    "parent_manifest": "929f10635e663f0f2b2e88bb6be87df9198b7e6690af452b7e738bd0fe3c22a9",
+    "candidate_manifest": "d89d641b6619b13b35762639e0c721f5e1292453460040b603229c8f63eedfa0",
+    "preregistration": "b0c5559fba86550591f1f317e1f34250c36c5f18a3d148dd4cf824c95c2629d1"
+  },
+  "verification": {
+    "focused_tests_passed": 35,
+    "native_regression_suites_passed": 2,
+    "sm89_float32_build_passed": true,
+    "completed_resume_exit_zero": true,
+    "completed_resume_outputs_unchanged": true,
+    "remote_to_local_artifact_hashes_exact": true
+  },
+  "safety": {
+    "actor_input_privileged_values": 0,
+    "teacher_blend": 0.0,
+    "teacher_plant_actions": 0,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "shadow_authorized": false,
+    "training_authorized": false,
+    "submission_authorized": false
+  },
+  "next_authority": "Run one separately preregistered fresh counts-5/8/11/12 256-course teacher-free screen of VG028; no shadow, VQ2 Training, or Submission action is authorized."
+}

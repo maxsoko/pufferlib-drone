@@ -10603,3 +10603,21 @@ For each training/eval block, record:
   `925ee589...`/`53d30a1e...`/`8a4b19ed...`/`b337cbea...`/`b0c5559f...`;
   manifest hashes are `929f1063...`/`d89d641b...`. No live authority is
   granted.
+
+### VQ2 VG030 admission and VG031 full screen — 2026-07-31
+
+- VG030 passes its sole paired count-11 diagnostic from source commit
+  `c263c735...`. VG028 versus VG025 Gate-1/Gate-2/Gate-3 reach is `32/25/4`
+  versus `32/7/0`; mean gates rise `1.21875 -> 1.90625`, and crash count is
+  tied at two. All deterministic action, phase, ordering, envelope, and
+  transport predicates pass.
+- Aggregate/parent/candidate/state/runner hashes are `9c065836...`/
+  `7783e697...`/`5af2b623...`/`64b3b0b5...`,`be910868...`/`bfe5d41b...`.
+  Completed resume is immutable. Admission evidence SHA is `d44cacc1...`.
+- VG031 screens VG028 on 256 fresh teacher-free courses: 64 each at counts
+  5/8/11/12 with seeds `429123/429126/429129/429130`, four native threads,
+  and the existing horizon. Admission requires at least 231 ordered finishes
+  and zero crash or hard policy/phase/action fault.
+- Wrapper/runner/test/preregistration hashes are `2930c82f...`/
+  `ff27bca2...`/`e59fd9d3...`/`62f15082...`. This is offline-only and grants
+  no live authority.
