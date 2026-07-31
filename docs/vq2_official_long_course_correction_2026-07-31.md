@@ -61,3 +61,13 @@ speedup was only `1.177568x`, exactly exposing the inherited one-thread launch
 mistake. Count report hashes are `5f7c1b21...` and `b1a83357...`; aggregate
 SHA-256 is `c4fa43cf4af7a20ed3728d5ba869a67bc6b7d85c2662ef105d58c0ce151f1903`.
 It sends zero FlightSim packets and grants no actor or live authority.
+
+LC002 corrects the thread contract and again passes `64/64` at both 20 and 24
+gates. It reaches `219,916` and `193,337` native agent steps/s, or `6.702488x`
+the one-agent baseline, with exact `OMP_NUM_THREADS=32` evidence. Aggregate
+SHA-256 is `874da287be8451fb84055001d87abec288b6f573783b4d51f8d82c912e208e4c`.
+This is a large improvement but misses the preregistered `10x` gate, so LC002
+is rejected as the requested Puffer throughput proof. LC003 now measures the
+actual persistent-buffer CUDA rollout-plus-optimizer path; it is explicitly
+throughput-only because its native benchmark actor consumes the privileged
+training suffix and no weight is saved.

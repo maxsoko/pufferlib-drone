@@ -11189,3 +11189,10 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   limits measured vector speedup to `1.177568x`, so throughput is rejected and
   cannot be relabeled. LC002 uses fresh seeds, explicit 32-thread vector jobs,
   and a `10x` measured speedup gate. No FlightSim packet or live authority.
+- LC002 again passes `64/64` at 20/24 gates and proves exact 32-thread runtime,
+  but `219,916` count-20 agent steps/s is only `6.702488x` the serial baseline;
+  aggregate SHA is `874da287...`. Reject it as a `10x` throughput proof. LC003
+  source-locks the actual PuffeRL persistent-buffer CUDA rollout-plus-train path
+  at 1,024 agents/16 buffers/128 threads. Its actor consumes the privileged
+  training suffix, so no checkpoint may be written and it has no deployment or
+  live authority regardless of speed.

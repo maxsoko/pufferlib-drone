@@ -11085,3 +11085,9 @@ For each training/eval block, record:
   vector speedup, so throughput is explicitly rejected. LC002 corrects only
   that launch mechanism with fresh seeds and requires measured `>=10x` speedup.
   Both are offline-only and send zero FlightSim packets.
+- LC002's correct 32-thread run passes both long courses but reaches only
+  `6.702488x` (`219,916` count-20 steps/s), so the `10x` throughput claim is
+  rejected; aggregate SHA is `874da287...`. LC003 will measure native PuffeRL's
+  asynchronous persistent-buffer rollout-plus-optimizer path. It is explicitly
+  throughput-only, consumes privileged training observations, saves no policy,
+  and grants no deployment or live authority.
