@@ -1,0 +1,35 @@
+{
+  "schema": "vq2_vg067_sparse_early_head_count5_bracket_rejection_v1",
+  "tag": "vq2_vg067_sparse_early_head_count5_bracket_repaired_001",
+  "completed": true,
+  "numerically_admitted": false,
+  "source_commit": "275dc3b44fc598d82f8b1a8805c979b6c442fa1b",
+  "parent": {
+    "episodes": 64,
+    "successes": 14,
+    "crashes": 23,
+    "ordered_gate_reach": [64, 59, 37, 35, 14],
+    "mean_gates_passed": 3.265625
+  },
+  "scale_outcomes": {
+    "0.25": {"successes": 7, "crashes": 26, "ordered_gate_reach": [64, 56, 24, 17, 7]},
+    "0.50": {"successes": 0, "crashes": 25, "ordered_gate_reach": [64, 43, 7, 5, 0]},
+    "0.75": {"successes": 0, "crashes": 36, "ordered_gate_reach": [64, 5, 0, 0, 0]},
+    "1.00": {"successes": 0, "crashes": 62, "ordered_gate_reach": [64, 0, 0, 0, 0]}
+  },
+  "finding": "Even the smallest tested scale of the linear heads-1--3 residual reduces completion and increases crashes. Larger scales collapse progressively earlier. Close the linear hidden-feature residual line.",
+  "artifact_sha256": {
+    "report": "ae2566665df26c131f2a653c434b0390c58f8d5684126300f0521556eb9f3d22",
+    "state": "c3150844adf61403f1eb038bc71b356a831c7e52240fba7f69e822450bc0f52c",
+    "completed_resume": "ae2566665df26c131f2a653c434b0390c58f8d5684126300f0521556eb9f3d22"
+  },
+  "unchanged_retry_forbidden": true,
+  "next_authority": "one_source_locked_zero_initialized_public_indexed_nonlinear_Puffer_residual_fit_on_the_admitted_VG063_warmed_feature_corpus",
+  "live_authority": false,
+  "safety": {
+    "teacher_plant_actions": 0,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "submission_authorized": false
+  }
+}
