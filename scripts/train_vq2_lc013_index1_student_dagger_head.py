@@ -62,6 +62,18 @@ TEST = ROOT / "tests/test_train_vq2_lc013_index1_student_dagger_head.py"
 DEFAULT_OUTPUT = (
     ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
 )
+PARENT_CHECKPOINT_SCHEMA_EXPECTED = (
+    "vq2_lc010s_phase_independent_early_stop_checkpoint_v1"
+)
+PARENT_REPORT_SCHEMA_EXPECTED = (
+    "vq2_lc010s_phase_independent_early_stop_report_v1"
+)
+DATASET_REPORT_SCHEMA_EXPECTED = "vq2_lc012_index1_student_dagger_report_v1"
+EXPECTED_FEATURE_RECORDS = 215_813
+EXTRA_SOURCE_PATHS: tuple[Path, ...] = ()
+NEXT_AUTHORITY_ADMITTED = (
+    "One source-locked bounded teacher-free LC013 prefix screen."
+)
 CONFIG = base.TrainConfig(
     seed=431130,
     epochs=10,
@@ -94,6 +106,7 @@ def source_paths() -> tuple[Path, ...]:
         ROOT / "pufferlib/vq2_recurrent_phase_residual.py",
         ROOT / "scripts/collect_vq2_lc012_index1_student_dagger_features.py",
         ROOT / "scripts/train_vq2_vg068_indexed_mlp_intervention_features.py",
+        *EXTRA_SOURCE_PATHS,
     )
 
 
@@ -111,27 +124,29 @@ def verify_inputs() -> dict[str, Any]:
     report = json.loads(DATASET_REPORT.read_text())
     phases = report.get("feature_phase_records", [])
     if (
-        parent.get("schema")
-        != "vq2_lc010s_phase_independent_early_stop_report_v1"
+        parent.get("schema") != PARENT_REPORT_SCHEMA_EXPECTED
         or not parent.get("numerically_admitted")
         or parent.get("checkpoint_sha256") != PARENT_CHECKPOINT_SHA256
-        or report.get("schema") != "vq2_lc012_index1_student_dagger_report_v1"
+        or report.get("schema") != DATASET_REPORT_SCHEMA_EXPECTED
         or not report.get("training_dataset_admitted")
         or report.get("failed_admission_predicates")
-        or report.get("feature_records") != 215_813
+        or report.get("feature_records") != EXPECTED_FEATURE_RECORDS
         or report.get("feature_sha256") != FEATURES_SHA256
         or FEATURES.stat().st_size
         != report.get("feature_records") * report.get("feature_itemsize")
         or len(phases) != LONG_COURSE_GATE_CAP + 1
-        or phases[1] != report.get("feature_records")
-        or sum(phases[:1] + phases[2:]) != 0
+        or phases[TARGET_PHASES[0]] != report.get("feature_records")
+        or sum(
+            value for index, value in enumerate(phases)
+            if index != TARGET_PHASES[0]
+        ) != 0
         or report.get("teacher_plant_actions_executed") != 0
         or report.get("student_plant_actions_executed")
         != report.get("total_plant_actions_executed")
         or report.get("safety", {}).get("flight_sim_packets_sent") != 0
         or report.get("safety", {}).get("submission_authorized")
     ):
-        raise RuntimeError("LC012 is not the admitted phase-1 DAgger corpus")
+        raise RuntimeError("input is not the admitted target-phase DAgger corpus")
     return report
 
 
@@ -151,15 +166,14 @@ def load_model(
     parent = torch.load(PARENT_CHECKPOINT, map_location="cpu", weights_only=False)
     contract = parent.get("model", {})
     if (
-        parent.get("schema")
-        != "vq2_lc010s_phase_independent_early_stop_checkpoint_v1"
+        parent.get("schema") != PARENT_CHECKPOINT_SCHEMA_EXPECTED
         or not parent.get("numerically_admitted")
         or contract.get("class") != "VQ2UnboundedProgressMLPResidualActor"
         or contract.get("hidden_size") != 256
         or contract.get("residual_size") != config.residual_size
         or contract.get("residual_heads") != LONG_COURSE_GATE_CAP + 1
     ):
-        raise RuntimeError("LC013 parent Puffer contract changed")
+        raise RuntimeError("target-head trainer parent Puffer contract changed")
     model = VQ2UnboundedProgressMLPResidualActor(
         hidden_size=256, residual_size=config.residual_size,
         initial_std=float(contract["initial_std"]),
@@ -265,9 +279,7 @@ def configure() -> None:
     base.DEFAULT_OUTPUT = DEFAULT_OUTPUT
     base.CONFIG = CONFIG
     base.MODEL_CLASS_NAME = "VQ2UnboundedProgressMLPResidualActor"
-    base.NEXT_AUTHORITY_ADMITTED = (
-        "One source-locked bounded teacher-free LC013 prefix screen."
-    )
+    base.NEXT_AUTHORITY_ADMITTED = NEXT_AUTHORITY_ADMITTED
     base.source_paths = source_paths
     base.verify_inputs = verify_inputs
     base.source_identity = source_identity
