@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Restore only VG071 head 1 in LC010S and run one bounded 24-gate screen."""
+"""Restore selected VG071 heads in LC010S and run one bounded 24-gate screen."""
 
 from __future__ import annotations
 
@@ -83,6 +83,11 @@ RESIDUAL_NAMES = (
     "indexed_phase_residual_output",
     "indexed_phase_residual_output_bias",
 )
+RESTORED_PHASES = (1,)
+MIN_MEAN_GATES = 1.09375
+MIN_MAXIMUM_INDEX = 2
+MAX_CRASH_RATE = 0.50
+EXTRA_EVIDENCE_PATHS: tuple[Path, ...] = ()
 
 
 def state_sha256(state: dict[str, torch.Tensor]) -> str:
@@ -149,17 +154,26 @@ def build_candidate(
         initial_std=float(contract["initial_std"]),
     )
     reference.load_converted_state(legacy["model_state"])
+    restored_phases = tuple(sorted(set(int(phase) for phase in RESTORED_PHASES)))
+    if not restored_phases:
+        raise RuntimeError("at least one VG071 residual head must be restored")
     with torch.no_grad():
         for name in RESIDUAL_NAMES:
-            getattr(actor, name)[1].copy_(getattr(reference, name)[1].to(device))
+            target = getattr(actor, name)
+            source = getattr(reference, name).to(device)
+            if restored_phases[0] < 0 or restored_phases[-1] >= target.shape[0]:
+                raise RuntimeError(f"restored phase is outside {name}: {restored_phases}")
+            for phase in restored_phases:
+                target[phase].copy_(source[phase])
     state = {name: value.detach().cpu() for name, value in actor.state_dict().items()}
     for name, value in state.items():
         if name in RESIDUAL_NAMES:
-            keep = torch.arange(value.shape[0]) != 1
+            keep = torch.ones(value.shape[0], dtype=torch.bool)
+            keep[list(restored_phases)] = False
             if not torch.equal(value[keep], parent["model_state"][name][keep]):
-                raise RuntimeError(f"LC015 changed a non-target row: {name}")
+                raise RuntimeError(f"head rollback changed a non-target row: {name}")
         elif not torch.equal(value, parent["model_state"][name]):
-            raise RuntimeError(f"LC015 changed frozen Puffer state: {name}")
+            raise RuntimeError(f"head rollback changed frozen Puffer state: {name}")
     actor.eval()
     payload = {
         **parent,
@@ -171,7 +185,7 @@ def build_candidate(
         "numerically_admitted": False,
         "surgery": {
             "operation": "restore_converted_vg071_residual_head",
-            "restored_phase": 1,
+            "restored_phases": list(restored_phases),
             "lc010s_checkpoint_sha256": LC010S_CHECKPOINT_SHA256,
             "vg071_checkpoint_sha256": VG071_CHECKPOINT_SHA256,
         },
@@ -192,7 +206,7 @@ def configure() -> None:
     core.MAX_STEPS_OVERRIDE = MAX_STEPS
     core.EXTRA_SOURCE_PATHS = (
         Path(__file__).resolve(), LC010S_REPORT, VG071_CHECKPOINT, VG071_REPORT,
-        LC011_REPORT, LC014_REPORT,
+        LC011_REPORT, LC014_REPORT, *EXTRA_EVIDENCE_PATHS,
     )
 
 
@@ -214,12 +228,15 @@ def run(
         target: torch.device,
     ) -> tuple[VQ2UnboundedProgressMLPResidualActor, dict[str, Any]]:
         if target != device:
-            raise RuntimeError("LC015 actor device changed")
+            raise RuntimeError("head-rollback actor device changed")
         return actor, payload
 
     core.load_converted_actor = load_actor
     core.conversion_metadata = lambda _: {
-        "operation": "restore only converted VG071 residual head 1",
+        "operation": (
+            "restore converted VG071 residual heads "
+            + ",".join(str(phase) for phase in RESTORED_PHASES)
+        ),
         "candidate_state_sha256": candidate_state_sha,
         "whole_output_recurrent_puffer": True,
         "teacher_runtime_actions": 0,
@@ -236,9 +253,9 @@ def run(
     crash_rate = float(component["metrics"]["env/crash"])
     admitted = bool(
         component["transport_pass"]
-        and mean_gates > 1.09375
-        and maximum_index >= 2
-        and crash_rate <= 0.50
+        and mean_gates > MIN_MEAN_GATES
+        and maximum_index >= MIN_MAXIMUM_INDEX
+        and crash_rate <= MAX_CRASH_RATE
     )
     output.mkdir(parents=True)
     write_json_once(output / "count_24.json", component)
@@ -276,7 +293,7 @@ def run(
         },
         "next_authority": (
             "One fresh bounded student-state collection at the first weak phase."
-            if admitted else "Reject LC015 and retain converted VG071 as the frontier."
+            if admitted else "Reject the rollback candidate and retain the prior frontier."
         ),
     }
     write_json_once(output / "report.json", report)
