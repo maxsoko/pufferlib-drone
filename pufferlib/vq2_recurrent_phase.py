@@ -1,9 +1,10 @@
 """Recurrent VQ2 actor with one public official-progress scalar.
 
 The first 4,118 values retain the frozen legal camera/IMU/actuator/action/timing
-ABI. For the variable-gate lineage, the final value is held
+ABI. For the historical variable-gate lineage, the final value is held
 ``active_gate_index / 16`` from public race status. The fixed denominator is
-the native engine cap and does not reveal or assume the course gate count. No
+the native engine cap and does not reveal or assume the course gate count. The
+separate long-course actor owns the unsaturated ``index / 6`` contract. No
 state estimate, gate geometry, or privileged decoder enters this module.
 """
 

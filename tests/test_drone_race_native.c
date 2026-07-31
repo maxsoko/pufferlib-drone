@@ -160,15 +160,39 @@ static int test_variable_gate_randomized_courses_are_valid(void) {
 static int test_gate_count_logging_reaches_engine_cap(void) {
     DroneRace env = {0};
     DroneRaceAgent agent = {0};
-    env.num_gates = 12;
-    agent.current_gate = 12;
+    CHECK(DRONE_RACE_MAX_GATES == 32,
+        "native long-course capacity must cover the observed 20-plus gates");
+    env.num_gates = DRONE_RACE_MAX_GATES;
+    agent.current_gate = DRONE_RACE_MAX_GATES;
     agent.valid_run = 1;
     add_log(&env, &agent, true);
-    CHECK(env.log.gate_count_episode[11] == 1.0f
-            && env.log.gate_count_success[11] == 1.0f,
-        "12-gate completion must be retained in per-count diagnostics");
+    CHECK(env.log.gate_count_episode[DRONE_RACE_MAX_GATES - 1] == 1.0f
+            && env.log.gate_count_success[DRONE_RACE_MAX_GATES - 1] == 1.0f,
+        "32-gate completion must be retained in per-count diagnostics");
     CHECK(env.log.gate_count_episode[5] == 0.0f,
         "per-count diagnostics must not contaminate the six-gate anchor");
+    return 0;
+}
+
+static int test_unbounded_public_progress_exceeds_one(void) {
+    DroneRace env = make_test_env_with_interface(
+        DRONE_RACE_INTERFACE_ATTITUDE_SETPOINT);
+    env.num_gates = 24;
+    env.pos_bound = 800.0f;
+    env.observable_gate_progress = 1;
+    env.observable_gate_index_denominator = 6.0f;
+    env.observable_gate_progress_unbounded = 1;
+    build_course(&env);
+    DroneRaceAgent* agent = &env.agents[0];
+    agent->current_gate = 20;
+    compute_observations(&env);
+    CHECK(fabsf(env.observations[23] - 20.0f / 6.0f) < 1e-6f,
+        "20-gate public progress must not saturate at one");
+    env.observable_gate_progress_unbounded = 0;
+    compute_observations(&env);
+    CHECK(env.observations[23] == 1.0f,
+        "default-off flag must preserve historical saturated progress");
+    free_test_env(&env);
     return 0;
 }
 
@@ -2333,6 +2357,7 @@ int main(void) {
     if (test_variable_gate_count_is_fixed_and_uniform_per_env()) return 1;
     if (test_variable_gate_randomized_courses_are_valid()) return 1;
     if (test_gate_count_logging_reaches_engine_cap()) return 1;
+    if (test_unbounded_public_progress_exceeds_one()) return 1;
     if (test_gate_crossing_geometry()) return 1;
     if (test_terminal_crossing_is_bucketed_by_gate()) return 1;
     if (test_ordered_crossing_and_envelope_diagnostics_are_log_only()) return 1;

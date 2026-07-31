@@ -44,7 +44,7 @@
 #define DRONE_RACE_OBS_SIZE 32
 #endif
 #define DRONE_RACE_NUM_ATNS 4
-#define DRONE_RACE_MAX_GATES 16
+#define DRONE_RACE_MAX_GATES 32
 #define DRONE_RACE_INTERFACE_NATIVE_MOTOR 0
 #define DRONE_RACE_INTERFACE_TS002_VELOCITY_YAW 1
 #define DRONE_RACE_INTERFACE_ATTITUDE_SETPOINT 2
@@ -542,6 +542,10 @@ typedef struct {
     int gate_position_resample_attempts;
     int observable_gate_index;
     float observable_gate_index_denominator;
+    // Default-off long-course ABI: preserve the fixed public index/scale
+    // value above one instead of saturating it. Official completion never
+    // derives from this scalar; it remains an observable progress feature.
+    int observable_gate_progress_unbounded;
     // New six-gate policy contract: observation 23 is normalized official
     // progress and observations 24..31 are reserved zeros. The legacy
     // three-phase adapter remains unchanged when this flag is disabled.

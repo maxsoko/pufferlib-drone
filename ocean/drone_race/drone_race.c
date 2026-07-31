@@ -1140,15 +1140,22 @@ static void compute_visual_observation(DroneRace* env, int agent_index) {
         env->observable_gate_index_denominator > 0.0f
             ? env->observable_gate_index_denominator
             : (float)fmaxf(env->num_gates, 1);
-    obs[idx++] = clampf(
-        (float)agent->current_gate / visual_gate_phase_denominator,
-        0.0f,
-        1.0f);
+    float visual_gate_phase =
+        (float)agent->current_gate / visual_gate_phase_denominator;
+    obs[idx++] = env->observable_gate_progress_unbounded
+        ? fmaxf(visual_gate_phase, 0.0f)
+        : clampf(visual_gate_phase, 0.0f, 1.0f);
     obs[idx++] = clampf(active_gate->radius / 3.0f, 0.0f, 1.0f);
     if (idx != DRONE_RACE_VISUAL_OBS_SIZE) {
         abort();
     }
+    int unbounded_visual_phase_index =
+        DRONE_RACE_VISUAL_PRIVILEGED_OFFSET + 32;
     for (int value = 0; value < DRONE_RACE_VISUAL_OBS_SIZE; value++) {
+        if (env->observable_gate_progress_unbounded
+                && value == unbounded_visual_phase_index) {
+            continue;
+        }
         obs[value] = clampf(obs[value], -1.0f, 1.0f);
     }
 }
@@ -2213,8 +2220,10 @@ static void compute_one_observation(DroneRace* env, int i) {
         float denominator = env->observable_gate_index_denominator > 0.0f
             ? env->observable_gate_index_denominator
             : (float)fmaxf(env->num_gates, 1);
-        obs[idx++] = clampf(
-            (float)agent->current_gate / denominator, 0.0f, 1.0f);
+        float gate_progress = (float)agent->current_gate / denominator;
+        obs[idx++] = env->observable_gate_progress_unbounded
+            ? fmaxf(gate_progress, 0.0f)
+            : clampf(gate_progress, 0.0f, 1.0f);
         for (int gate_phase = 0; gate_phase < 6; gate_phase++) {
             obs[idx++] = env->observable_gate_phase_onehot
                     && agent->current_gate == gate_phase
@@ -2223,6 +2232,7 @@ static void compute_one_observation(DroneRace* env, int i) {
         }
         idx += 2;
         for (int j = 0; j < DRONE_RACE_OBS_SIZE; j++) {
+            if (env->observable_gate_progress_unbounded && j == 23) continue;
             obs[j] = clampf(obs[j], -1.0f, 1.0f);
         }
         return;
@@ -2413,8 +2423,10 @@ static void compute_one_observation(DroneRace* env, int i) {
             float denominator = env->observable_gate_index_denominator > 0.0f
                 ? env->observable_gate_index_denominator
                 : (float)fmaxf(env->num_gates, 1);
-            obs[idx++] = clampf(
-                (float)agent->current_gate / denominator, 0.0f, 1.0f);
+            float gate_progress = (float)agent->current_gate / denominator;
+            obs[idx++] = env->observable_gate_progress_unbounded
+                ? fmaxf(gate_progress, 0.0f)
+                : clampf(gate_progress, 0.0f, 1.0f);
             for (int gate_phase = 0; gate_phase < 6; gate_phase++) {
                 obs[idx++] = env->observable_gate_phase_onehot
                         && agent->current_gate == gate_phase
@@ -2446,6 +2458,11 @@ static void compute_one_observation(DroneRace* env, int i) {
         compute_drone_observations(&agent->drone, obs);
     }
     for (int j = 0; j < DRONE_RACE_OBS_SIZE; j++) {
+        if (env->observable_gate_progress_unbounded
+                && env->observable_gate_progress
+                && j == 23) {
+            continue;
+        }
         obs[j] = clampf(obs[j], -1.0f, 1.0f);
     }
 }

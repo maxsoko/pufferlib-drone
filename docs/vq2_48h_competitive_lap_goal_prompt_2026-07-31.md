@@ -1,4 +1,4 @@
-# VQ2 48-hour competitive-lap goal prompt — 2026-07-31
+# VQ2 deadline competitive-lap goal prompt — 2026-07-31
 
 This is the authoritative sprint prompt from `2026-07-31T00:22:45-04:00`
 through the hard deadline `2026-08-02T00:22:45-04:00` (48 hours). Read
@@ -7,6 +7,24 @@ through the hard deadline `2026-08-02T00:22:45-04:00` (48 hours). Read
 This prompt supersedes the older goal prompt only for deadline, execution
 priority, current frontier, and Submission authority. It does not weaken any
 competition-legality, collision, evidence, source-lock, or lifecycle rule.
+
+## Operator correction and remaining time — 2026-07-31
+
+Approximately `36 hours` remain. The operator directly inspected the official
+VQ2 simulator and reports approximately `20` gates, potentially more. This
+supersedes the earlier approximately-11 interpretation and quarantines every
+5--12- or six-gate result as short-curriculum evidence only. The exact official
+count remains runtime-authoritative: never hardcode `20`, never cap public
+progress at Gate 16, and never infer a finish from an index. A valid VQ2 lap is
+proved only by a nonnegative official `race_finish_time_ns`; the final observed
+`active_gate_index` records the actual course count after the finish.
+
+The remaining sprint is completion-first. Stop broad short-course searches.
+First prove the native teacher and legal observation/action pipeline on fresh
+20- and 24-gate courses, then train and screen the recurrent Puffer actor on
+20--24+ gates with unbounded public progress. Vast utilization is an explicit
+gate: record agent steps/s and wall time, benchmark serial versus vectorized and
+asynchronous Puffer paths, and use the fastest reproducible configuration.
 
 ## Goal
 
@@ -23,8 +41,9 @@ emit, mix, clip, schedule, override, or select a runtime action.
 A valid lap requires monotonically ordered completion of the full official VQ2
 course, a nonnegative `race_finish_time_ns`, no collision or invalid reason,
 command rate below 100 Hz, clean lifecycle accounting, final disarm, and
-passive disarm proof. Do not assume the course has six gates; the VQ2 UI
-indicates approximately 11 and runtime track transfer is absent.
+passive disarm proof. Do not assume a fixed course count; direct operator
+inspection indicates approximately 20 or more gates and runtime track transfer
+is absent.
 
 Optimize lexicographically:
 
@@ -62,15 +81,16 @@ crash.
   aliasing and elapsed-clock behavior were absent from its old native screen.
   Live commands remain frozen until a new candidate passes all offline and
   shadow gates.
-- VG025 epoch 5 is the admitted six-source actor. VG026 is rejected at
-  `0/256` finishes, although it reaches Gate 2 on `97/256` and Gate 3 on
-  `2/256`.
-- VG027 is admitted with `1,541,730` legal visited-state labels, Gate-1 reach
-  `512/512`, Gate-2 reach `197/512`, Gate-3 reach `2/512`, and no Gate-4
-  reach. It authorizes one separately preregistered seven-source refit.
-- VG028 is the immediate runnable experiment. At sprint start its admission,
-  preregistration, trainer, runner, and test surface are local and untracked;
-  the retained Vast worker is running but idle at commit `8045af9`.
+- VG071 is the latest short-curriculum diagnostic: `25/128` five-gate finishes
+  with `39/128` crashes versus its parent's `20/128` and `47/128`. It grants no
+  long-course, replay, shadow, or live authority. VG070/VG071 and all earlier
+  5--12-gate results are quarantined as representation and transition evidence.
+- The old native and actor ceiling was Gate 16. It must be removed with a
+  default-preserving conversion proof before any long-course training claim.
+- The retained Vast worker is available but was materially underutilized by
+  sequential evaluation. New work must benchmark and exploit vectorized native
+  rollout, batched GPU learning, and independent-process concurrency where
+  deterministic identity permits.
 
 Always re-check the repository, remote process, and evidence state before
 acting. Continue from newer valid evidence if another turn has advanced it.
@@ -102,8 +122,8 @@ acting. Continue from newer valid evidence if another turn has advanced it.
 
 ### T+6 to T+10 hours — cheap teacher-free decision
 
-Run a fresh, deterministic, zero-teacher, count-5 diagnostic before spending
-the full 256-course screen.
+Run fresh deterministic zero-teacher 20- and 24-gate diagnostics before
+spending a larger full-course screen.
 
 - Use enough agents to expose the Gate-1 transition quickly, with source-locked
   fresh seeds and the deployment ABI.
@@ -114,9 +134,10 @@ the full 256-course screen.
 - If it fails this rung, do not spend hours proving `0/256`. Preserve the
   diagnostic, identify the first causal divergence, and immediately start the
   next visited-state repair loop.
-- If it passes, screen fresh counts 5 and 11, then run the full counts
-  5/8/11/12 admission. Final offline admission remains at least `231/256`
-  ordered finishes with zero crash and zero hard fault.
+- If it passes, screen fresh 20--24+ counts. Final offline admission remains at
+  least `90%` ordered finishes with zero crash and zero hard fault, followed by
+  a larger disjoint confirmation. This threshold is an offline promotion gate,
+  never a substitute for an official finish.
 
 ### T+10 to T+34 hours — rapid repair loops
 

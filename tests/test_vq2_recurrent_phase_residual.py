@@ -12,6 +12,7 @@ from pufferlib.vq2_recurrent_phase_residual import (
     VQ2IndexedPhaseMLPResidualActor,
     VQ2IndexedPhaseResidualActor,
     VQ2PhaseResidualActor,
+    VQ2UnboundedProgressMLPResidualActor,
 )
 
 
@@ -99,3 +100,46 @@ def test_indexed_phase_mlp_changes_only_selected_head() -> None:
     changed, _ = actor.forward_step(observation, state)
     assert not torch.equal(changed.mean[0], baseline.mean[0])
     torch.testing.assert_close(changed.mean[1], baseline.mean[1], rtol=0, atol=0)
+
+
+def test_unbounded_conversion_preserves_legacy_indices() -> None:
+    torch.manual_seed(43)
+    legacy = VQ2IndexedPhaseMLPResidualActor(hidden_size=32, residual_size=8)
+    with torch.no_grad():
+        legacy.phase_embedding.weight.normal_(std=0.1)
+        legacy.indexed_phase_residual_output.normal_(std=0.05)
+        legacy.indexed_phase_residual_output_bias.normal_(std=0.02)
+    converted = VQ2UnboundedProgressMLPResidualActor(
+        hidden_size=32, residual_size=8
+    )
+    converted.load_converted_state(legacy.state_dict())
+    legal = torch.randn(2, 9, LEGAL_OBS_SIZE)
+    indices = torch.tensor([0, 1, 2, 4, 6, 8, 11, 15, 16], dtype=torch.float32)
+    old_observation = torch.cat(
+        (legal, (indices / 16.0).view(1, 9, 1).expand(2, -1, -1)), -1
+    )
+    new_observation = torch.cat(
+        (legal, (indices / 6.0).view(1, 9, 1).expand(2, -1, -1)), -1
+    )
+    with torch.no_grad():
+        expected, expected_state = legacy.forward_sequence(old_observation)
+        actual, actual_state = converted.forward_sequence(new_observation)
+    torch.testing.assert_close(actual.mean, expected.mean, rtol=2e-6, atol=2e-6)
+    torch.testing.assert_close(actual_state, expected_state, rtol=2e-6, atol=2e-6)
+
+
+def test_unbounded_actor_tracks_twenty_and_falls_back_beyond_native_cap() -> None:
+    torch.manual_seed(47)
+    actor = VQ2UnboundedProgressMLPResidualActor(hidden_size=32, residual_size=8)
+    baseline = VQ2UnboundedProgressMLPResidualActor(hidden_size=32, residual_size=8)
+    baseline.load_state_dict(actor.state_dict())
+    with torch.no_grad():
+        actor.indexed_phase_residual_output_bias[20].fill_(0.2)
+        actor.indexed_phase_residual_output_bias[32].fill_(0.4)
+    observation = torch.zeros(2, PHASE_LEGAL_OBS_SIZE)
+    observation[:, -1] = torch.tensor([20.0 / 6.0, 33.0 / 6.0])
+    with torch.no_grad():
+        selected, _ = actor.forward_step(observation)
+        reference, _ = baseline.forward_step(observation)
+    assert not torch.equal(selected.mean[0], reference.mean[0])
+    torch.testing.assert_close(selected.mean[1], reference.mean[1], rtol=0, atol=0)
