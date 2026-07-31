@@ -1,0 +1,68 @@
+{
+  "schema": "vq2_vg063_horizon_corrected_intervention_admission_v1",
+  "tag": "vq2_vg063_horizon_corrected_intervention_features_001",
+  "date": "2026-07-31",
+  "source_commit": "8f42be28943fbbabfa3fe36c5485fd2901f3c037",
+  "completed": true,
+  "training_dataset_admitted": true,
+  "episodes": 512,
+  "course_count_distribution": {
+    "5": 64,
+    "6": 64,
+    "7": 64,
+    "8": 64,
+    "9": 64,
+    "10": 64,
+    "11": 64,
+    "12": 64
+  },
+  "outcome": {
+    "successes": 512,
+    "success_rate": 1.0,
+    "crashes": 0,
+    "timeouts": 0,
+    "ordered_gate_reach": [512, 512, 512, 512, 512, 448, 384, 320, 256, 192, 128, 64],
+    "mean_completion_time_seconds": 146.2193603515625,
+    "episode_length_min": 4170,
+    "episode_length_mean": 9358.0390625,
+    "episode_length_max": 16003
+  },
+  "dataset": {
+    "feature_schema": "vq2_indexed_residual_hidden_feature_v1",
+    "feature_itemsize": 550,
+    "feature_records": 4666436,
+    "feature_phase_records": [0, 572752, 630000, 627072, 634101, 551654, 473560, 389079, 317309, 237446, 155519, 77944, 0, 0, 0, 0, 0],
+    "feature_sha256": "ccfc07e578e1f16900b9d020c5c9063676058c518b8524bf5452738566181580",
+    "parent_checkpoint_sha256": "56a8e3b84770c1a54afbf11ac2503478221f7829c28723da0f7dfcfa2a7aac26"
+  },
+  "transport": {
+    "executed_action_max_error": 0.0,
+    "phase_changes_off_tick": 0,
+    "phase_decreases": 0,
+    "phase_skips": 0,
+    "raw_phase_encoding_max_error": 0.0,
+    "nonfinite_values": 0,
+    "teacher_action_envelope_violations": 0
+  },
+  "artifact_sha256": {
+    "report": "d74f16bdd6d9da17a4fffedf52e53cb34173940d0e6943b755c3c683bd1a583d",
+    "state": "b19cc4f1aa0dc3d7a8baa11e9ef52cef4d6ac9056f8513930009cd95043f7b54",
+    "completed_resume": "d74f16bdd6d9da17a4fffedf52e53cb34173940d0e6943b755c3c683bd1a583d"
+  },
+  "verification": {
+    "all_admission_predicates_pass": true,
+    "completed_resume_output_equals_report": true,
+    "remote_to_local_small_evidence_hashes_exact": true,
+    "retained_remote_feature_array_hash_bound": true
+  },
+  "live_authority": false,
+  "safety": {
+    "training_only_teacher_plant_actions": 4666436,
+    "runtime_teacher_authorized": false,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "submission_authorized": false
+  },
+  "next_authority": "One separately preregistered teacher-free indexed recurrent Puffer distillation from the retained VG063 feature array; no deterministic screen, shadow, or live authority."
+}
