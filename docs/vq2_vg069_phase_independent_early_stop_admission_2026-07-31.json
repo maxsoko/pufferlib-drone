@@ -1,0 +1,70 @@
+{
+  "schema": "vq2_vg069_phase_independent_early_stop_admission_v1",
+  "tag": "vq2_vg069_phase_independent_early_stop_001",
+  "completed": true,
+  "numerically_admitted": true,
+  "source_commit": "3aaa85f38ba3eac458975425c62bcadfb44cedd7",
+  "artifact_sha256": {
+    "checkpoint": "5e04e36cbc0b048b0863260b87f414de70745ef01bf45ca4d1cc3c7d8e1225f6",
+    "report": "466d76224ff556f78d996e3c710aadeedb0104708414eaab5b6ae116dc93bc85",
+    "state": "ee7b3622e3ecd9ce0b505d2cf57949b4bdf561ae8bde078467bf418b0dd27450"
+  },
+  "admission_evidence": {
+    "vg068_history_replay_max_abs_error": 0.0,
+    "base_parameters_exact": true,
+    "non_target_outputs_zero": true,
+    "trainable_l2": 22.040327072143555,
+    "baseline_phase_balanced_action_mse": 0.004833536377442265,
+    "selected_phase_balanced_action_mse": 0.0022823780127805217,
+    "aggregate_improvement_factor": 2.1177632935368926,
+    "best_phase_epochs": {
+      "1": 5,
+      "2": 10,
+      "3": 10,
+      "4": 10,
+      "5": 10,
+      "6": 0,
+      "7": 4,
+      "8": 10,
+      "9": 4,
+      "10": 0,
+      "11": 9
+    },
+    "phase_improvement_factors": {
+      "1": 2.110597571104824,
+      "2": 2.6927380722004193,
+      "3": 3.4338979099348093,
+      "4": 1.7498129239381335,
+      "5": 1.647051246773174,
+      "6": 1.0,
+      "7": 1.1994395531325066,
+      "8": 1.1291057852061808,
+      "9": 1.0827282405826644,
+      "10": 1.0,
+      "11": 1.1102672877173851
+    }
+  },
+  "admission_predicates": {
+    "aggregate_improvement_at_least_2x": true,
+    "phases_1_through_3_each_improve_at_least_2x": true,
+    "no_phase_regresses": true,
+    "exact_vg068_history_replay": true,
+    "base_parameters_exact": true,
+    "inactive_outputs_zero": true
+  },
+  "authorized_successor": {
+    "tag": "vq2_vg070_nonlinear_residual_count5_scale_bracket_001",
+    "scope": "One teacher-free count-5 scale bracket on fresh native episodes, with zero teacher blend and the complete recurrent Puffer actor emitting every action.",
+    "rollout_authority": true,
+    "live_authority": false
+  },
+  "safety": {
+    "teacher_plant_actions": 0,
+    "runtime_teacher_actions": 0,
+    "flight_sim_packets_sent": 0,
+    "windows_shadow_packets_sent": 0,
+    "vq2_training_packets_sent": 0,
+    "submission_authorized": false
+  },
+  "live_authority": false
+}
