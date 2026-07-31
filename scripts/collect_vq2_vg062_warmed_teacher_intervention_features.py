@@ -94,6 +94,11 @@ PREREGISTRATION = ROOT / "docs/vq2_vg062_warmed_teacher_intervention_preregistra
 RUNNER = ROOT / "scripts/run_vq2_vg062_vast.sh"
 DEFAULT_OUTPUT = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
 EXTRA_SOURCE_PATHS: tuple[Path, ...] = ()
+PHASE_INDEX_SCALE = float(ENGINE_GATE_CAP)
+PLANT_ACTION_CONTRACT = (
+    "VG033 deterministic mean through held public phase 0; "
+    "training-only SF016 oracle query at held public phases 1+"
+)
 
 
 FEATURE_DTYPE = np.dtype([
@@ -377,9 +382,9 @@ def collect(
                     phase_changes_off_tick += int(changed.sum())
                 delta = held_phase[active] - previous_phase[active]
                 phase_decreases += int((delta < -1e-7).sum())
-                phase_skips += int((delta > 1.0 / ENGINE_GATE_CAP + 1e-7).sum())
+                phase_skips += int((delta > 1.0 / PHASE_INDEX_SCALE + 1e-7).sum())
                 previous_phase = held_phase.copy()
-                phase_index = np.rint(held_phase * ENGINE_GATE_CAP).astype(np.int32)
+                phase_index = np.rint(held_phase * PHASE_INDEX_SCALE).astype(np.int32)
 
                 legal = observations[:, :LEGAL_OBS_SIZE].to(device)
                 phase_tensor = torch.from_numpy(held_phase[:, None]).to(device)
@@ -499,10 +504,7 @@ def collect(
         "phase_decreases": phase_decreases, "phase_skips": phase_skips,
         "raw_phase_encoding_max_error": raw_phase_encoding_max_error,
         "nonfinite_values": nonfinite_values,
-        "plant_action_contract": (
-            "VG033 deterministic mean through held public phase 0; "
-            "training-only SF016 oracle query at held public phases 1+"
-        ),
+        "plant_action_contract": PLANT_ACTION_CONTRACT,
         "safety": {
             "training_only_teacher_plant_actions": int(teacher_steps_by_agent.sum()),
             "runtime_teacher_authorized": False, "student_updates": 0,
