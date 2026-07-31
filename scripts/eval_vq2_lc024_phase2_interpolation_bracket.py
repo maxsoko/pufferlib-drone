@@ -119,9 +119,9 @@ def verify_inputs() -> None:
         or fit.get("schema") != FIT_REPORT_SCHEMA_EXPECTED
         or not fit.get("numerically_admitted")
         or fit.get("checkpoint_sha256") != FIT_CHECKPOINT_SHA256
-        or fit.get("selected_validation", {}).get("phases", {}).get("2", {}).get(
-            "improvement_factor", 0.0
-        ) < FIT_MINIMUM_IMPROVEMENT
+        or fit.get("selected_validation", {}).get("phases", {}).get(
+            str(TARGET_PHASE), {}
+        ).get("improvement_factor", 0.0) < FIT_MINIMUM_IMPROVEMENT
         or fit.get("safety", {}).get("flight_sim_packets_sent") != 0
         or fit.get("safety", {}).get("submission_authorized")
     ):
@@ -202,7 +202,7 @@ def configure(alpha: float) -> None:
     base.MIN_MAXIMUM_INDEX = HISTORICAL_MINIMUM_MAX_INDEX
     base.MAX_CRASH_RATE = 0.50
     base.CONVERSION_OPERATION = (
-        f"interpolate phase-2 head toward LC023 at alpha {alpha:.3f}"
+        f"interpolate phase-{TARGET_PHASE} head toward fit at alpha {alpha:.3f}"
     )
     base.EXTRA_EVIDENCE_PATHS = (
         Path(__file__).resolve(), LC021_REPORT, PARENT_CHECKPOINT, PARENT_REPORT,
@@ -288,7 +288,8 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
             "submission_authorized": False,
         },
         "next_authority": (
-            "Retain the selected phase-2 interpolation for a larger offline screen."
+            f"Retain the selected phase-{TARGET_PHASE} interpolation for a "
+            "larger offline screen."
             if selected else "Reject LC024 and retain the unchanged LC021 Puffer."
         ),
     }
