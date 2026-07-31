@@ -10685,3 +10685,20 @@ For each training/eval block, record:
 - Parent/candidate manifest, runner, dedicated test, and preregistration
   hashes are `601a1706...`/`3dc5a6d7...`/`a941ec38...`/`13f33e5b...`/
   `65195bab...`. This remains offline-only.
+
+### VQ2 VG034 admission and VG035 paired count-11 diagnostic — 2026-07-31
+
+- VG034 passes once from source commit `0ac081df...` on 32 fresh paired
+  count-5 episodes, seed `429133`. VG033 versus VG028 Gate-1/Gate-2/Gate-3
+  reach is `32/31/8` versus `32/25/3`; crashes improve `2 -> 1` and mean
+  gates improve `1.90625 -> 2.21875`.
+- Both actors pass all action, phase, ordering, envelope, and transport
+  checks. Aggregate/parent/candidate/state hashes are `8c6202d2...`/
+  `a65ef909...`/`b4be8478...`/`5aa29e80...`,`56f8f063...`; completed
+  resume is exact. Admission evidence SHA is `858adb9e...`.
+- VG035 is the fresh paired count-11 rung: 32 episodes per actor, seed
+  `429134`, four threads, and 2,560 steps, with the same strict downstream,
+  crash, Gate-1, and hard-fault requirements.
+- Parent/candidate manifest, runner, dedicated test, and preregistration
+  hashes are `de4dcb1f...`/`479cdc9c...`/`c9a17edf...`/`d4e22f00...`/
+  `c7182d10...`. No live authority is granted.

@@ -10703,3 +10703,24 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   hashes are `601a1706...`/`3dc5a6d7...`/`a941ec38...`/`13f33e5b...`/
   `65195bab...`. VG034 is offline-only; no shadow, Training, or Submission
   authority is granted.
+
+### VQ2 VG034 admission / VG035 paired count-11 diagnostic — 2026-07-31
+
+- VG034 completed once from source commit `0ac081df...` on 32 identical fresh
+  count-5 courses per actor, seed `429133`, four threads, and 2,560 steps.
+  VG033 versus VG028 Gate-1/Gate-2/Gate-3 reach is `32/31/8` versus
+  `32/25/3`; mean gates improves `1.90625 -> 2.21875` and crashes improve
+  `2 -> 1`.
+- Both actors pass every deterministic action, history, public-phase,
+  ordering, envelope, and transport predicate. Aggregate/parent/candidate/
+  parent-state/candidate-state hashes are `8c6202d2...`/`a65ef909...`/
+  `b4be8478...`/`5aa29e80...`/`56f8f063...`; completed resume is
+  byte-identical. Admission evidence SHA is `858adb9e...`.
+- Preregister VG035: 32 same-seed fresh count-11 episodes per actor, seed
+  `429134`, four threads, and 2,560 steps. Retain the VG034 gates: no
+  Gate-1/crash regression, nonzero Gate-3-or-finish signal, strict downstream
+  improvement, and zero hard fault.
+- Parent/candidate manifest, runner, dedicated test, and preregistration
+  hashes are `de4dcb1f...`/`479cdc9c...`/`c9a17edf...`/`d4e22f00...`/
+  `c7182d10...`. VG035 may authorize only a fresh full offline screen; live
+  authority remains zero.
