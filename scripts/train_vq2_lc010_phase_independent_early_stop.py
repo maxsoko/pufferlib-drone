@@ -21,10 +21,10 @@ import scripts.train_vq2_vg068_indexed_mlp_intervention_features as fit_core
 import scripts.train_vq2_vg069_phase_independent_early_stop as replay
 
 
-TAG = "vq2_lc010_phase_independent_early_stop_001"
-SCHEMA = "vq2_lc010_phase_independent_early_stop_report_v1"
-STATE_SCHEMA = "vq2_lc010_phase_independent_early_stop_state_v1"
-CHECKPOINT_SCHEMA = "vq2_lc010_phase_independent_early_stop_checkpoint_v1"
+TAG = "vq2_lc010r_phase_independent_early_stop_001"
+SCHEMA = "vq2_lc010r_phase_independent_early_stop_report_v1"
+STATE_SCHEMA = "vq2_lc010r_phase_independent_early_stop_state_v1"
+CHECKPOINT_SCHEMA = "vq2_lc010r_phase_independent_early_stop_checkpoint_v1"
 LC009_REPORT = (
     ROOT
     / "logs/drone_race_full_policy_six_gate_bootstrap"
@@ -51,7 +51,7 @@ def source_paths() -> tuple[Path, ...]:
 
 
 def verify_inputs() -> dict[str, Any]:
-    corpus = lc009.verify_inputs()
+    lc009.verify_inputs()
     if sha256_path(LC009_REPORT) != LC009_REPORT_SHA256:
         raise RuntimeError("LC010 bound LC009 report changed")
     report = json.loads(LC009_REPORT.read_text())
@@ -68,7 +68,7 @@ def verify_inputs() -> dict[str, Any]:
         or report.get("safety", {}).get("submission_authorized")
     ):
         raise RuntimeError("LC009 rejection is not the fixed LC010 replay source")
-    return corpus
+    return report
 
 
 def source_identity() -> tuple[str, dict[str, str]]:
