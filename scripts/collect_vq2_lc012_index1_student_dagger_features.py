@@ -73,6 +73,7 @@ CHECKPOINT_SCHEMA_EXPECTED = (
     "vq2_lc010s_phase_independent_early_stop_checkpoint_v1"
 )
 EXTRA_SOURCE_PATHS: tuple[Path, ...] = ()
+MINIMUM_TARGET_PHASE_REACHED = 0.90
 
 
 def source_paths() -> tuple[Path, ...]:
@@ -199,7 +200,7 @@ def predicates(report: dict[str, Any]) -> dict[str, bool]:
         "fixed_24_gate_course": metrics.get("env/gate_count24_episode") == 1.0,
         "target_phase_reached": metrics.get(
             f"env/ordered_gate{TARGET_PHASE - 1}_sampled", 0.0
-        ) >= 0.90,
+        ) >= MINIMUM_TARGET_PHASE_REACHED,
         "zero_hard_native_fault": not any(
             metrics.get(f"env/{name}", math.inf) != 0.0
             for name in required_zero
