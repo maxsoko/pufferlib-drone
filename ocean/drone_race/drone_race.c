@@ -1853,9 +1853,19 @@ static void reset_agent(DroneRace* env, DroneRaceAgent* agent) {
     }
 
     if (use_gate_local_start) {
+        int gate_min = env->gate_local_start_gate_min;
+        if (gate_min < 0) gate_min = 0;
+        if (gate_min >= env->num_gates) gate_min = env->num_gates - 1;
+        int gate_max_exclusive = env->gate_local_start_gate_max_exclusive;
+        if (gate_max_exclusive <= 0 || gate_max_exclusive > env->num_gates) {
+            gate_max_exclusive = env->num_gates;
+        }
+        if (gate_max_exclusive <= gate_min) gate_max_exclusive = gate_min + 1;
         int sampled_gate = (int)rndf(
-            0.0f, (float)env->num_gates, &env->rng);
-        if (sampled_gate >= env->num_gates) sampled_gate = env->num_gates - 1;
+            (float)gate_min, (float)gate_max_exclusive, &env->rng);
+        if (sampled_gate >= gate_max_exclusive) {
+            sampled_gate = gate_max_exclusive - 1;
+        }
         agent->current_gate = sampled_gate;
         agent->gate_local_start_sampled = 1;
     } else {

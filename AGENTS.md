@@ -11012,3 +11012,29 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   offsets `0/8/16/24`, 64 episodes each. Evaluator/runner/test/
   preregistration hashes are `cd5e7a88...`/`ee7b7e83...`/`e2fe240f...`/
   `cda2963c...`. No live authority exists.
+- VG051 completes from exact source commit `62d0ae13...`; the source-locked
+  completed resume passes and the local copy matches every remote hash. Across
+  256 episodes, VG033 reaches Gate 1--6 at `256/241/52/5/0/0`, with zero
+  finishes, `17` crashes, `22` misses, and `2.1640625` mean gates. Every hard
+  transport predicate passes. Report/state/runner-log hashes are
+  `43da7e9b...`/`0937a715...`/`9c55178d...`; the completed-resume output is
+  report-exact. Evidence SHA is recorded separately.
+- This establishes Gate 4 -> Gate 5 as the active six-gate bottleneck. Stop
+  checkpoint interpolation: VG042's direction is not robust even at a
+  `0.0025` fraction. Retain VG033 and next collect training-only late-gate
+  local-start states with SF016 oracle query labels while executing only the
+  Puffer actor. Preserve the 4,119-value legal runtime ABI and require a
+  multi-offset six-gate rollout improvement before any live authority.
+- VG052 is that source-locked collection. A default-off native extension adds
+  a gate-local sampling range `[min,max_exclusive)`; its nonpositive maximum
+  preserves the historical full-range RNG call exactly. Both native regression
+  suites pass. VG052 fixes six gates, 512 one-shot agents, 2,048 steps, active
+  gate indices `[3,5)`, and offsets `[2,5] m`. VG033 alone emits plant actions;
+  SF016 labels are stored only. Require at least 250,000 legal records and
+  50,000 each at public phases 3/4 with zero early-phase rows and every hard
+  parity/progress/envelope predicate.
+- Manifest/collector/runner/test/preregistration hashes are
+  `7e246d5e...`/`a3e12b9d...`/`9e84b4fd...`/`72021570...`/`7958566e...`.
+  The native C/header/binding hashes are `246997f5...`/`6c1093b1...`/
+  `65c1e297...`. VG052 is offline-only and may authorize only a separately
+  preregistered trust-region refit; no live authority exists.

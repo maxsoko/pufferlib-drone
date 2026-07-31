@@ -1,0 +1,50 @@
+{
+  "schema": "vq2_vg051_count6_multi_offset_baseline_evidence_v1",
+  "tag": "vq2_vg051_vg033_count6_multi_offset_baseline_001",
+  "completed": true,
+  "source_commit": "62d0ae13721ffffec3ace48e2e05182e71445818",
+  "checkpoint_sha256": "56a8e3b84770c1a54afbf11ac2503478221f7829c28723da0f7dfcfa2a7aac26",
+  "report": {
+    "path": "logs/drone_race_full_policy_six_gate_bootstrap/vq2_vg051_vg033_count6_multi_offset_baseline_001/report.json",
+    "sha256": "43da7e9baa1441f0501695bf3fd6a1f75ab5548998ac28de15c7b52d37253aad"
+  },
+  "state": {
+    "path": "logs/drone_race_full_policy_six_gate_bootstrap/vq2_vg051_vg033_count6_multi_offset_baseline_001/state.json",
+    "sha256": "0937a715a10ffadf277f5db4af6be4404c3564df611090d4ad38977a676ef526"
+  },
+  "offset_reports_sha256": {
+    "0": "5adc6794861e64d20510d4e2c619beba95392b7972da395cb6454dd8fde808c1",
+    "8": "5c8699b239560cf7e59fa9bea568ceeb512748dc2edb52a1783ce711f1fbbe9d",
+    "16": "c30eb3ce8264c7e6d4aa4d502394f64a1aad3ac325f419328d761588ab1bfca2",
+    "24": "6ba883df123cd028af6bff40d35cb10d88d234b1c9a3195abd761c95f0174592"
+  },
+  "runner_log_sha256": "9c55178d9c7bc2bd12a66421c45fd102a298d28f3a45025e0d4011d55a61f902",
+  "completed_resume_sha256": "43da7e9baa1441f0501695bf3fd6a1f75ab5548998ac28de15c7b52d37253aad",
+  "episodes": 256,
+  "episode_offsets": [0, 8, 16, 24],
+  "gate_reach": {
+    "1": 256,
+    "2": 241,
+    "3": 52,
+    "4": 5,
+    "5": 0,
+    "6": 0
+  },
+  "successes": 0,
+  "crashes": 17,
+  "misses": 22,
+  "mean_gates_passed": 2.1640625,
+  "all_hard_transport_pass": true,
+  "conclusion": {
+    "retained_parent": "VG033",
+    "active_bottleneck": "Gate-4-to-Gate-5 transition",
+    "next_authority": "separately_preregistered_training_only_late_gate_collection_and_rollout_aware_repair",
+    "live_authority": false
+  },
+  "safety": {
+    "teacher_plant_actions": 0,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "submission_authorized": false
+  }
+}

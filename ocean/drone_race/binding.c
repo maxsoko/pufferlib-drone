@@ -339,6 +339,10 @@ void my_init(Env* env, Dict* kwargs) {
         kwargs, "gate_local_start_offset_min", 2.0f);
     env->gate_local_start_offset_max = get_float(
         kwargs, "gate_local_start_offset_max", 4.0f);
+    env->gate_local_start_gate_min = get_int(
+        kwargs, "gate_local_start_gate_min", 0);
+    env->gate_local_start_gate_max_exclusive = get_int(
+        kwargs, "gate_local_start_gate_max_exclusive", 0);
     env->custom_start_pos[0] = get_float(kwargs, "start_x", 0.0f);
     env->custom_start_pos[1] = get_float(kwargs, "start_y", 0.0f);
     env->custom_start_pos[2] = get_float(kwargs, "start_z", 0.0f);

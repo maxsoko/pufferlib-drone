@@ -302,14 +302,22 @@ static int test_gate_local_curriculum_is_random_and_actor_legal(void) {
             == initial_gate_local_reset_count + 128.0f,
         "local reset diagnostic must count every sampled local reset");
 
+    env.gate_local_start_gate_min = 1;
+    env.gate_local_start_gate_max_exclusive = 2;
+    for (int episode = 0; episode < 32; episode++) {
+        reset_agent(&env, &env.agents[0]);
+        CHECK(env.agents[0].current_gate == 1,
+            "bounded local curriculum must sample only its requested gate");
+    }
+
     env.gate_local_start_probability = 0.0f;
     reset_agent(&env, &env.agents[0]);
     CHECK(env.agents[0].gate_local_start_sampled == 0
             && env.agents[0].current_gate == 0,
         "zero local-start probability must preserve the full-course reset");
-    CHECK(env.log.reset_count == initial_reset_count + 129.0f
+    CHECK(env.log.reset_count == initial_reset_count + 161.0f
             && env.log.gate_local_reset_count
-                == initial_gate_local_reset_count + 128.0f,
+                == initial_gate_local_reset_count + 160.0f,
         "reset diagnostics must distinguish full-course from local resets");
     free_visual_env(&env);
     return 0;

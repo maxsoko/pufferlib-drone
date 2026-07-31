@@ -585,6 +585,11 @@ typedef struct {
     float gate_local_start_probability;
     float gate_local_start_offset_min;
     float gate_local_start_offset_max;
+    // Training-only active-gate sampling range [min, max_exclusive). A
+    // nonpositive maximum preserves the historical full [0, num_gates)
+    // draw and its RNG stream exactly.
+    int gate_local_start_gate_min;
+    int gate_local_start_gate_max_exclusive;
     float custom_start_pos[3];
     float custom_start_pos_jitter[3];
     // Historical spawn noise is separate from the explicit segment-start

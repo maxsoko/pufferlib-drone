@@ -10949,3 +10949,24 @@ For each training/eval block, record:
   episodes each. Evaluator/runner/test/preregistration hashes are
   `cd5e7a88...`/`ee7b7e83...`/`e2fe240f...`/`cda2963c...`. No live
   authority is granted.
+- VG051 completes once from commit `62d0ae13...` and passes its source-locked
+  resume. Aggregate Gate-1--6 reach is `256/241/52/5/0/0`; finishes are zero,
+  crashes are `17`, misses are `22`, mean gates are `2.1640625`, and every
+  hard transport predicate passes. Report/state/runner-log hashes are
+  `43da7e9b...`/`0937a715...`/`9c55178d...`.
+- Gate 4 -> Gate 5 is therefore the active optimization target. Retain VG033,
+  end the non-robust VG042 interpolation branch, and use a separately
+  preregistered training-only late-gate local-start collection with Puffer-only
+  plant actions and SF016 query labels. Any resulting candidate must improve
+  the independent six-gate multi-offset rollout before replay, shadow, or live
+  consideration.
+- VG052 preregisters that collection: fixed six gates, 512 one-shot agents,
+  2,048 steps, active gate-local indices `[3,5)`, and `[2,5] m` offsets. A
+  default-off native range extension preserves the historical full-range RNG
+  call when unset. VG033 emits every plant action; SF016 is label-only.
+  Admission requires at least 250,000 records, at least 50,000 each for public
+  phases 3 and 4, no phase-0--2 rows, and exact action/progress/envelope
+  transport.
+- Manifest/collector/runner/test/preregistration hashes are
+  `7e246d5e...`/`a3e12b9d...`/`9e84b4fd...`/`72021570...`/`7958566e...`.
+  VG052 is offline-only and grants no live authority.
