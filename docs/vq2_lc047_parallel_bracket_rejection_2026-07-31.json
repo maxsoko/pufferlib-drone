@@ -1,0 +1,16 @@
+{
+  "schema": "vq2_lc047_parallel_bracket_rejection_v1",
+  "tag": "vq2_lc047_phase6_parallel_interpolation_bracket_001",
+  "rejected": true,
+  "unchanged_retry_forbidden": true,
+  "reason": "Eight independent CUDA contexts serialized tiny recurrent kernels and reduced each worker to about four effective CPU cores; none of eight 32-episode workers completed after more than 660 seconds.",
+  "observed_worker_processes": 8,
+  "observed_worker_cpu_percent_range": [390, 448],
+  "approximate_total_effective_cpu_cores": 35,
+  "minimum_observed_wall_time_seconds": 660,
+  "completed_child_reports": 0,
+  "partial_artifacts_retained": 0,
+  "flight_sim_packets_sent": 0,
+  "submission_authorized": false,
+  "next_authority": "Use one CUDA context; an isolated sequential bracket is permitted while a single-vector batched evaluator is developed."
+}
