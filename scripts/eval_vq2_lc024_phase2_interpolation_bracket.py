@@ -72,6 +72,23 @@ DEFAULT_OUTPUT = (
     ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
 )
 CURRENT_ALPHA = 0.0
+PARENT_REPORT_SCHEMA_EXPECTED = (
+    "vq2_lc021_cumulative_head_rollback_ladder_report_v1"
+)
+PARENT_SELECTION_FIELD = "restored_through_phase"
+PARENT_SELECTION_VALUE: float | int = 5
+PARENT_CHECKPOINT_SCHEMA_EXPECTED = (
+    "vq2_lc021_cumulative_head_rollback_checkpoint_v1"
+)
+DATASET_EXPECTED_RECORDS = 649_205
+FIT_REPORT_SCHEMA_EXPECTED = "vq2_lc023_index2_student_dagger_head_report_v1"
+FIT_CHECKPOINT_SCHEMA_EXPECTED = (
+    "vq2_lc023_index2_student_dagger_head_checkpoint_v1"
+)
+FIT_MINIMUM_IMPROVEMENT = 2.62
+HISTORICAL_MINIMUM_MEAN_GATES = 2.875
+HISTORICAL_MINIMUM_MAX_INDEX = 6
+EXTRA_SOURCE_PATHS: tuple[Path, ...] = ()
 
 
 def verify_inputs() -> None:
@@ -90,18 +107,21 @@ def verify_inputs() -> None:
     dataset = json.loads(LC022_REPORT.read_text())
     fit = json.loads(FIT_REPORT.read_text())
     if (
-        ladder.get("selected", {}).get("checkpoint_sha256")
+        ladder.get("schema") != PARENT_REPORT_SCHEMA_EXPECTED
+        or ladder.get("selected", {}).get("checkpoint_sha256")
         != PARENT_CHECKPOINT_SHA256
-        or ladder.get("selected", {}).get("restored_through_phase") != 5
+        or ladder.get("selected", {}).get(PARENT_SELECTION_FIELD)
+        != PARENT_SELECTION_VALUE
         or not dataset.get("training_dataset_admitted")
-        or dataset.get("feature_phase_records", [])[TARGET_PHASE] != 649_205
+        or dataset.get("feature_phase_records", [])[TARGET_PHASE]
+        != DATASET_EXPECTED_RECORDS
         or dataset.get("teacher_plant_actions_executed") != 0
-        or fit.get("schema") != "vq2_lc023_index2_student_dagger_head_report_v1"
+        or fit.get("schema") != FIT_REPORT_SCHEMA_EXPECTED
         or not fit.get("numerically_admitted")
         or fit.get("checkpoint_sha256") != FIT_CHECKPOINT_SHA256
         or fit.get("selected_validation", {}).get("phases", {}).get("2", {}).get(
             "improvement_factor", 0.0
-        ) < 2.62
+        ) < FIT_MINIMUM_IMPROVEMENT
         or fit.get("safety", {}).get("flight_sim_packets_sent") != 0
         or fit.get("safety", {}).get("submission_authorized")
     ):
@@ -115,11 +135,10 @@ def build_candidate(
     fitted = torch.load(FIT_CHECKPOINT, map_location="cpu", weights_only=False)
     contract = parent.get("model", {})
     if (
-        parent.get("schema")
-        != "vq2_lc021_cumulative_head_rollback_checkpoint_v1"
+        parent.get("schema") != PARENT_CHECKPOINT_SCHEMA_EXPECTED
         or not parent.get("numerically_admitted")
         or fitted.get("schema")
-        != "vq2_lc023_index2_student_dagger_head_checkpoint_v1"
+        != FIT_CHECKPOINT_SCHEMA_EXPECTED
         or not fitted.get("numerically_admitted")
         or contract.get("class") != "VQ2UnboundedProgressMLPResidualActor"
     ):
@@ -179,15 +198,15 @@ def configure(alpha: float) -> None:
     base.PREREGISTRATION = PREREGISTRATION
     base.RUNNER = RUNNER
     base.RESTORED_PHASES = (TARGET_PHASE,)
-    base.MIN_MEAN_GATES = 2.875
-    base.MIN_MAXIMUM_INDEX = 6
+    base.MIN_MEAN_GATES = HISTORICAL_MINIMUM_MEAN_GATES
+    base.MIN_MAXIMUM_INDEX = HISTORICAL_MINIMUM_MAX_INDEX
     base.MAX_CRASH_RATE = 0.50
     base.CONVERSION_OPERATION = (
         f"interpolate phase-2 head toward LC023 at alpha {alpha:.3f}"
     )
     base.EXTRA_EVIDENCE_PATHS = (
         Path(__file__).resolve(), LC021_REPORT, PARENT_CHECKPOINT, PARENT_REPORT,
-        LC022_REPORT, FIT_CHECKPOINT, FIT_REPORT,
+        LC022_REPORT, FIT_CHECKPOINT, FIT_REPORT, *EXTRA_SOURCE_PATHS,
     )
     base.verify_inputs = verify_inputs
     base.build_candidate = build_candidate
