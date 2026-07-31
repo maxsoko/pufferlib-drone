@@ -10909,3 +10909,12 @@ For each training/eval block, record:
   the same Gate-1/2/crash/downstream criteria. Component/comparator/runner/
   test/preregistration hashes are `85f7e2a5...`/`b5bd643d...`/
   `d9d092b7...`/`ca0649fb...`/`e5a14922...`. No live authority is granted.
+- VG046 independently rejects alpha `0.10`: Gate-1/2/3 reach improves
+  `64/58/7 -> 64/59/10`, but crashes regress `6 -> 7`. Aggregate/rejection
+  hashes are `7d95661c...`/`3049a97a...`.
+- VG047 screens smaller fractions
+  `0/0.025/0.04/0.05/0.06/0.075/0.085/0.10` on offset 8, requiring
+  Gate-1/2/crash preservation and strict downstream gain. Wrapper/runner/
+  test/preregistration hashes are `4630031e...`/`2449e2c8...`/
+  `fd2e5bf1...`/`78c24a71...`. Any selection requires a different-offset
+  confirmation and grants no live authority.

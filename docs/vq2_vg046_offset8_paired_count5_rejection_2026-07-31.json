@@ -1,0 +1,85 @@
+{
+  "schema": "vq2_vg046_offset8_paired_count5_rejection_v1",
+  "tag": "vq2_vg046_vg044_offset8_paired_count5_confirmation_001",
+  "date": "2026-07-31",
+  "source_commit": "f0e5c8e6c73834a44d916faa93d885a2567d1a2b",
+  "completed": true,
+  "qualified_for_count11_diagnostic": false,
+  "episode_offset": 8,
+  "parent": {
+    "actor": "VG033",
+    "gate_reach": {
+      "1": 64,
+      "2": 58,
+      "3": 7,
+      "4": 0,
+      "5": 0
+    },
+    "crashes": 6,
+    "misses": 4,
+    "successes": 0,
+    "mean_gates_passed": 2.015625,
+    "hard_transport_pass": true,
+    "behavior_projection_sha256": "faa021347a723c9353249cc72b145cddb27ffef7d9a443fbe5ae12606d4cc69c"
+  },
+  "candidate": {
+    "actor": "VG044-alpha-0.10",
+    "gate_reach": {
+      "1": 64,
+      "2": 59,
+      "3": 10,
+      "4": 0,
+      "5": 0
+    },
+    "crashes": 7,
+    "misses": 3,
+    "successes": 0,
+    "mean_gates_passed": 2.078125,
+    "hard_transport_pass": true,
+    "behavior_projection_sha256": "39122aadf367646c84f7525775ae9a82caeb8d18e450e9e2e229ff9927d5cae3"
+  },
+  "delta": {
+    "gate1_reach": 0,
+    "gate2_reach": 1,
+    "gate3_reach": 3,
+    "crashes": 1,
+    "misses": -1,
+    "successes": 0,
+    "mean_gates_passed": 0.0625
+  },
+  "criteria": {
+    "both_offset8": true,
+    "both_distinct_from_offset0": true,
+    "both_hard_transport_pass": true,
+    "gate1_not_regressed": true,
+    "gate2_not_regressed": true,
+    "crash_count_not_regressed": false,
+    "gate3_or_finish_strictly_improves": true
+  },
+  "artifact_sha256": {
+    "aggregate": "7d95661c365e43e84ad5f21627be1d1e1aad4c8425100499361d5dd595787a23",
+    "parent_count": "f70c45d084059937d26ab9c117fc9f4a714ffd63964535c279e89bc2a61cc529",
+    "candidate_count": "a02de551365208575595a7a1b72e608f43bc37f92648473dd803f9b17160e5a4",
+    "parent_state": "6ae60bba3b32e84e676ef8285083247309d92ca25e4471ae34c68a551df83c6b",
+    "candidate_state": "e1325330b291bb169883e2f16bc5e418a87c3026bf1a89a1373defd39ba73f00",
+    "runner_log": "75c3dd0a73538d3f304e698e8334690a802945a0408bb4c57b306a22b7d3b9ae",
+    "completed_resume_log": "7d95661c365e43e84ad5f21627be1d1e1aad4c8425100499361d5dd595787a23",
+    "completed_resume_exit": "53c234e5e8472b6ac51c1ae1cab3fe06fad053beb8ebfd8977b010655bfdd3c3"
+  },
+  "verification": {
+    "remote_completed_resume_exit_two": true,
+    "remote_completed_resume_reports_unchanged": true,
+    "remote_completed_resume_states_unchanged": true,
+    "remote_to_local_artifact_hashes_exact": true
+  },
+  "safety": {
+    "actor_input_privileged_values": 0,
+    "teacher_blend": 0.0,
+    "teacher_plant_actions": 0,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "submission_authorized": false
+  },
+  "next_authority": "Reject alpha 0.10 without unchanged retry and retain VG033. The update direction improves Gate-2/3 on both independent fixtures; source-lock a smaller alpha bracket on offset 8 and require a separate nonzero-offset confirmation."
+}

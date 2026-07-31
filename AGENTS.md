@@ -10969,3 +10969,13 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   from offset zero plus every VG045 rollout criterion. Component/comparator/
   runner/test/preregistration hashes are `85f7e2a5...`/`b5bd643d...`/
   `d9d092b7...`/`ca0649fb...`/`e5a14922...`. No live authority exists.
+- VG046 is independent and rejects alpha `0.10` on safety. VG033 versus the
+  candidate reaches Gate-1/2/3 `64/58/7 -> 64/59/10`, but crashes regress
+  `6 -> 7`; both offset and behavior-distinctness checks pass. Aggregate/
+  rejection hashes are `7d95661c...`/`3049a97a...`.
+- VG047 brackets smaller alphas
+  `0/0.025/0.04/0.05/0.06/0.075/0.085/0.10` on the same offset-8 fixture,
+  requiring no Gate-1/2/crash regression and strict Gate-3-or-finish gain.
+  Wrapper/runner/test/preregistration hashes are `4630031e...`/
+  `2449e2c8...`/`fd2e5bf1...`/`78c24a71...`. A selection remains
+  offline-only pending a different-offset confirmation.
