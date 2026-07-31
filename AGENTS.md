@@ -11063,3 +11063,18 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   `8966c11e...`. The default-preserving repair enables initial jumps only for
   the explicit VG052 dataset and suppresses that reset jump as a transition;
   all later phase changes remain ordered. Never retry the old source unchanged.
+- Repaired VG053 completes once from commit `d3438d82...` in `705.797076 s`
+  with `5,907` optimizer updates. Balanced validation improves
+  `0.037399526370 -> 0.032892203159`, and VG052 validation improves
+  `0.115770637716 -> 0.093695282967`. All ten source caps, exact source
+  weights, and `4.0x` transition exposure pass. Checkpoint/report/state/log
+  hashes are `f0a9812f...`/`ec8b81b3...`/`1a553be4...`/`89f36999...`;
+  completed resume is report-exact. Numerical admission SHA is `3838729e...`.
+- VG054 screens the full VG053 update on six gates at offsets `0/8/16/24`,
+  64 episodes each and 3,072 steps. Compare against frozen VG051; require no
+  Gate-1/2/crash regression plus strict finish/Gate-6/5/4/3/mean progress.
+  Full-update failure authorizes only a fraction bracket; success authorizes
+  only a larger independent offline screen.
+- VG054 manifest/evaluator/runner/generic-test/focused-test/preregistration
+  hashes are `001e385a...`/`c0fb4710...`/`8a68ff33...`/`c1cf8ffb...`/
+  `952754b8...`/`9835f2f2...`. No live authority exists.

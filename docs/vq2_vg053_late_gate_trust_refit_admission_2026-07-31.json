@@ -1,0 +1,32 @@
+{
+  "schema": "vq2_vg053_late_gate_trust_refit_admission_v1",
+  "tag": "vq2_vg053_late_gate_trust_refit_001",
+  "completed": true,
+  "numerically_admitted": true,
+  "source_commit": "d3438d82aac2b78a9b055393577727c0b161e7fc",
+  "artifact_sha256": {
+    "checkpoint": "f0a9812f55ce95d437af06a043c64d75a3ea757ac6965df9e3cdf64f30563ce5",
+    "report": "ec8b81b3d357fcbfb4105ceda1fd22b43ce921d08b238bea35224fc49485f8b6",
+    "state": "1a553be49f601439c0dca378b1a1126a8e65550bafec49adfc80b63d895c114d",
+    "runner_log": "89f3699970251a01eef7092575e5fbcfcc8234879d731bb10b7da175d99a8343",
+    "completed_resume": "ec8b81b3d357fcbfb4105ceda1fd22b43ce921d08b238bea35224fc49485f8b6"
+  },
+  "parent_checkpoint_sha256": "56a8e3b84770c1a54afbf11ac2503478221f7829c28723da0f7dfcfa2a7aac26",
+  "best_epoch": 1,
+  "optimizer_updates": 5907,
+  "baseline_source_balanced_weighted_mse": 0.03739952637015286,
+  "selected_source_balanced_weighted_mse": 0.032892203158791024,
+  "baseline_vg052_weighted_mse": 0.11577063771596574,
+  "selected_vg052_weighted_mse": 0.09369528296658736,
+  "minimum_transition_window_exposure": 4.0,
+  "equal_source_weight_audit": true,
+  "next_authority": "one_source_locked_four_offset_six_gate_rollout_screen",
+  "live_authority": false,
+  "safety": {
+    "actor_input_privileged_values": 0,
+    "teacher_blend": 0.0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "submission_authorized": false
+  }
+}

@@ -10989,3 +10989,14 @@ For each training/eval block, record:
   `01d407b2...`/`8966c11e...`. The repaired loader permits that initial jump
   only for VG052, does not treat it as a gate transition, and preserves strict
   ordering for every subsequent public progress change.
+- Repaired VG053 completes from commit `d3438d82...` after `5,907` updates.
+  Balanced/VG052 validation improves `0.037399526370 -> 0.032892203159` and
+  `0.115770637716 -> 0.093695282967`; all caps, weights, and transition audits
+  pass. Checkpoint/report/state/log hashes are `f0a9812f...`/`ec8b81b3...`/
+  `1a553be4...`/`89f36999...`; admission SHA is `3838729e...`.
+- VG054 evaluates VG053 on six gates over offsets `0/8/16/24`, 64 episodes
+  each. It requires hard transport, Gate-1/2/crash preservation, and strict
+  downstream progress against VG051. Manifest/evaluator/runner/generic-test/
+  focused-test hashes are `001e385a...`/`c0fb4710...`/`8a68ff33...`/
+  `c1cf8ffb...`/`952754b8...`; preregistration is `9835f2f2...`. No live
+  authority exists.
