@@ -1,0 +1,33 @@
+{
+  "schema": "vq2_vg059_phase4_indexed_residual_bracket_rejection_v1",
+  "tag": "vq2_vg059_phase4_indexed_residual_bracket_001",
+  "completed": true,
+  "numerically_admitted": false,
+  "source_commit": "f22afe939d379478c98e484bb707bc0ed4d2bc08",
+  "parent": {
+    "gate_reach": {"1": 255, "2": 232, "3": 56, "4": 6, "5": 0, "6": 0},
+    "crashes": 14,
+    "misses": 38,
+    "mean_gates_passed": 2.14453125
+  },
+  "scale_outcomes": {
+    "0.1_through_2.0": "all aggregate ordered-gate/crash/miss/mean metrics exactly equal the parent",
+    "3.0": {"gate_reach": [255, 232, 56, 6, 0, 0], "crashes": 15},
+    "4.0": {"gate_reach": [255, 232, 56, 6, 0, 0], "crashes": 15}
+  },
+  "artifact_sha256": {
+    "report": "4fcfb37c8f72642bd593a2b00b94a0d12c51b57db5db3bccbed338a15559a386",
+    "state": "e864aac15c14b38f8c0aadb0bcabe5d62cb12d1b460a8a7347c09f50129f0cf8",
+    "runner_log": "8dd3e0b0179de766693c49961228aff056cfdbead8d2469ebbd01219f2d748c1",
+    "completed_resume": "4fcfb37c8f72642bd593a2b00b94a0d12c51b57db5db3bccbed338a15559a386"
+  },
+  "unchanged_retry_forbidden": true,
+  "next_authority": "one_source_locked_direct_phase4_indexed_head_fit_on_VG039_warmed_phase4_rows",
+  "live_authority": false,
+  "safety": {
+    "teacher_plant_actions": 0,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "submission_authorized": false
+  }
+}

@@ -65,6 +65,9 @@ GOAL_SHA256 = "03f085d32a217889f56600ac2600bead24e087ee47322eb5aa2e208f231f2aa1"
 PREREGISTRATION = ROOT / "docs/vq2_vg057_warmed_phase_residual_preregistration_2026-07-31.md"
 RUNNER = ROOT / "scripts/run_vq2_vg057_vast.sh"
 DEFAULT_OUTPUT = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
+MODEL_CLASS_NAME = "VQ2PhaseResidualActor"
+TRAINABLE_PARAMETER_NAMES = ("phase_action_residual.weight",)
+TRAINABLE_PARAMETER_COUNT = 1024
 
 # Preserve early-course mass while making phase 4 (Gate 5 active) the target.
 PHASE_ROW_WEIGHTS = (0.0, 0.25, 0.5, 2.0, 32.0, 32.0, 32.0, 32.0,
@@ -187,6 +190,14 @@ def base_exact(model: VQ2PhaseResidualActor, parent: dict[str, Any]) -> bool:
     return all(torch.equal(state[name].cpu(), value.cpu()) for name, value in parent["model_state"].items())
 
 
+def trainable_parameters(model: Any) -> list[torch.nn.Parameter]:
+    return [model.phase_action_residual.weight]
+
+
+def trained_parameter_norm(model: Any) -> float:
+    return float(model.phase_action_residual.weight.detach().norm().item())
+
+
 def evaluate(
     model: VQ2PhaseResidualActor,
     dataset: VariableGateBCDataset,
@@ -291,7 +302,9 @@ def train(
     )
     train_agents, validation_agents = actor_agent_split(dataset.agents, config.validation_agents)
     model, parent = load_model(device)
-    trainable = [model.phase_action_residual.weight]
+    trainable = trainable_parameters(model)
+    if sum(parameter.numel() for parameter in trainable) != TRAINABLE_PARAMETER_COUNT:
+        raise RuntimeError("VG057 trainable parameter count changed")
     optimizer = torch.optim.AdamW(trainable, lr=config.learning_rate, weight_decay=config.weight_decay)
     rng = np.random.default_rng(config.seed)
     baseline = evaluate(model, dataset, validation_agents, config, device)
@@ -358,7 +371,7 @@ def train(
                 state = next_state.detach()
         validation = evaluate(model, dataset, validation_agents, config, device)
         score = float(validation["phase_weighted_mse"]["4"])
-        residual_norm = float(model.phase_action_residual.weight.detach().norm().item())
+        residual_norm = trained_parameter_norm(model)
         eligible = numerically_admitted(
             baseline, validation, base_parameters_exact=base_exact(model, parent),
             residual_norm=residual_norm,
@@ -380,15 +393,15 @@ def train(
 
     model.load_state_dict(best_state)
     selected = evaluate(model, dataset, validation_agents, config, device)
-    residual_norm = float(model.phase_action_residual.weight.detach().norm().item())
+    residual_norm = trained_parameter_norm(model)
     admitted = numerically_admitted(baseline, selected,
         base_parameters_exact=base_exact(model, parent), residual_norm=residual_norm)
     checkpoint = {**parent, "schema": CHECKPOINT_SCHEMA, "tag": TAG,
-        "model": {**parent["model"], "class": "VQ2PhaseResidualActor"},
+        "model": {**parent["model"], "class": MODEL_CLASS_NAME},
         "model_state": best_state, "parent_checkpoint_sha256": PARENT_CHECKPOINT_SHA256,
         "dataset_report_sha256": DATASET_REPORT_SHA256, "train_config": asdict(config),
-        "trainable_parameter_names": ["phase_action_residual.weight"],
-        "trainable_parameters": 1024, "best_epoch": best_epoch,
+        "trainable_parameter_names": list(TRAINABLE_PARAMETER_NAMES),
+        "trainable_parameters": TRAINABLE_PARAMETER_COUNT, "best_epoch": best_epoch,
         "optimizer_updates": updates, "numerically_admitted": admitted,
         "source_commit": commit, "source_sha256": hashes,
         "safety": {"actor_input_privileged_values": 0, "teacher_blend": 0.0,

@@ -11154,3 +11154,14 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   focused-test/actor-test/preregistration hashes are `f66116b6...`/
   `6ef13f27...`/`3ca3b058...`/`a2e9c547...`/`190b0919...`/`c11356fe...`.
   Require exactly equal Gate-1--4 reach and new Gate-5 reach; no live authority.
+- VG059 rejects every mapped scale. Scales through `2.0` reproduce the parent
+  aggregate exactly; scales `3/4` add one crash each. All ten scales keep
+  Gate-1--6 reach `255/232/56/6/0/0`, proving early exactness but no Gate-5
+  effect. Report/state/log/rejection hashes are `4fcfb37c...`/`e864aac1...`/
+  `8dd3e0b0...`/`a1810662...`; completed resume is report-exact.
+- VG060 fits the indexed head 4 directly on VG039's warmed phase-4 rows for
+  12 epochs, with zero loss at every other phase. Base parameters and all
+  non-target heads must remain exact, phases 0--3 validation must be bit-exact,
+  and phase-4 MSE must improve. Generalized-core/wrapper/runner/test/
+  preregistration hashes are `46052481...`/`576a07e4...`/`c1f97021...`/
+  `070b2e24...`/`ec89ea3c...`. A pass authorizes only offline scale screening.

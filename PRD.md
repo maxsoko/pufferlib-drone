@@ -11057,3 +11057,12 @@ For each training/eval block, record:
   focused-test/actor-test/preregistration hashes are `f66116b6...`/
   `6ef13f27...`/`3ca3b058...`/`a2e9c547...`/`190b0919...`/`c11356fe...`. No live
   authority exists.
+- VG059 rejects all mapped scales. Gate-1--6 reach remains
+  `255/232/56/6/0/0`; scales through `2` reproduce every aggregate metric and
+  scales `3/4` add one crash. Report/state/log/rejection hashes are
+  `4fcfb37c...`/`e864aac1...`/`8dd3e0b0...`/`a1810662...`.
+- VG060 directly fits indexed head 4 on warmed VG039 phase-4 rows for 12
+  epochs, leaving every base parameter and other head exact. Generalized-core/
+  wrapper/runner/test/preregistration hashes are `46052481...`/`576a07e4...`/
+  `c1f97021...`/`070b2e24...`/`ec89ea3c...`. Numerical admission grants only offline
+  scale screening and no live authority.
