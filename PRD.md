@@ -10554,3 +10554,31 @@ For each training/eval block, record:
   exact weights, and `4.0x` transition exposure. Trainer/runner/test/
   preregistration hashes are `ceeddef8...`/`3584a80c...`/`77ae61f0...`/
   `ce95bc2d...`. VG028 can authorize only a staged teacher-free offline screen.
+
+### VQ2 VG028 admission and VG029 paired diagnostic — 2026-07-31
+
+- VG028 completes its sole six-epoch seed-`429120` refit from source commit
+  `b3403a3e...` in `3,012.894098 s`, selecting epoch 6 after `34,449` updates.
+  Balanced validation improves `0.108328904468 -> 0.030373104180`
+  (`3.566606x`); VG027 improves `0.332380123454 -> 0.070030132050`
+  (`4.746244x`).
+- Selected clean/VG009/recovered-VG012/VG016/VG019/VG024 values are
+  `0.002798320/0.007910041/0.036716251/0.035400363/0.016201518/
+  0.012371892`. All caps, finite metrics, source weights, and `4.0x`
+  transition audits pass.
+- Checkpoint/report/state/log/exit hashes are `ec1206b5...`/`b51b7a9b...`/
+  `096c7939...`/`5c76eb7f...`/`9a271f2a...`. Remote completed resume is
+  immutable, every epoch state is locally preserved, and the checkpoint equals
+  the selected recurrent best state tensor-for-tensor. Admission SHA is
+  `3282c98f...`.
+- Bootstrap 001's missing executable mode was an immutable pre-output
+  infrastructure failure; mode-only commit `b3403a3e...` repaired it before
+  the sole training trajectory. Its log/exit hashes are `5c7c4924...`/
+  `703d2c10...`.
+- VG029 runs VG025 and VG028 concurrently on the same 32 fresh count-5
+  episodes, seed `429121`, four threads, and `2,560` maximum steps. Promote
+  only with strict Gate-3-or-finish improvement, no Gate-1/crash regression,
+  and zero hard policy/phase/action fault.
+- Component/comparator/runner/test/preregistration hashes are `f6ae14ae...`/
+  `42e9a4d7...`/`0bb86a7e...`/`7048db0c...`/`e308a618...`; manifest hashes are
+  `2a5d5dc1...`/`473bc93b...`. VG029 remains offline-only.

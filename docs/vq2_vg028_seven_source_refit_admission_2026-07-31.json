@@ -1,0 +1,192 @@
+{
+  "schema": "vq2_vg028_seven_source_refit_admission_v1",
+  "tag": "vq2_vg028_variable_gate_seven_source_refit_001",
+  "date": "2026-07-31",
+  "source_commit": "b3403a3edf7e3a7098f5fff77659c1e7f543e132",
+  "completed": true,
+  "numerically_admitted": true,
+  "exit_code": 0,
+  "best_epoch": 6,
+  "epochs_completed": 6,
+  "optimizer_updates": 34449,
+  "wall_time_seconds": 3012.8940982460044,
+  "baseline_validation_weighted_mse": {
+    "clean": 0.0014724487330268381,
+    "vg009": 0.006805755992290477,
+    "recovered_vg012": 0.042591179859553276,
+    "vg016": 0.03221419182043183,
+    "vg019": 0.016596490825003023,
+    "vg024": 0.010012726881823013,
+    "vg027": 0.33238012345402634,
+    "source_balanced": 0.10832890446808319
+  },
+  "selected_validation_weighted_mse": {
+    "clean": 0.0027983199446796857,
+    "vg009": 0.00791004143842305,
+    "recovered_vg012": 0.036716251228626574,
+    "vg016": 0.035400362766750834,
+    "vg019": 0.016201517998779395,
+    "vg024": 0.012371892299164005,
+    "vg027": 0.0700301320497603,
+    "source_balanced": 0.030373104179831474
+  },
+  "admission_audit": {
+    "source_balanced_improvement_factor": 3.5666062917604706,
+    "vg027_improvement_factor": 4.746244419728522,
+    "clean_cap": 0.02,
+    "vg009_cap": 0.02,
+    "recovered_vg012_cap": 0.06,
+    "vg016_cap": 0.05,
+    "vg019_cap": 0.04,
+    "vg024_cap": 0.04,
+    "vg027_cap": 0.1,
+    "all_caps_pass": true,
+    "all_epoch_source_weight_audits_pass": true,
+    "minimum_transition_window_exposure": 4.0,
+    "recurrent_bptt_steps": 256,
+    "genuine_episode_boundaries": true,
+    "seven_independently_normalized_sources_per_update": true,
+    "raw_record_count_sets_source_weight": false,
+    "all_report_values_finite": true
+  },
+  "source_weights_per_optimizer_update": {
+    "clean": 0.25,
+    "vg009": 0.04,
+    "recovered_vg012": 0.04,
+    "vg016": 0.08,
+    "vg019": 0.12,
+    "vg024": 0.17,
+    "vg027": 0.3
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "optimizer_updates": 5679,
+      "source_balanced_validation_weighted_mse": 0.036786065377736744,
+      "vg027_validation_weighted_mse": 0.09057314253114851,
+      "minimum_transition_window_exposure": 4.0,
+      "source_weight_audit": true
+    },
+    {
+      "epoch": 2,
+      "optimizer_updates": 11493,
+      "source_balanced_validation_weighted_mse": 0.0375366612497119,
+      "vg027_validation_weighted_mse": 0.08962590595264097,
+      "minimum_transition_window_exposure": 4.0,
+      "source_weight_audit": true
+    },
+    {
+      "epoch": 3,
+      "optimizer_updates": 17254,
+      "source_balanced_validation_weighted_mse": 0.0347493395124408,
+      "vg027_validation_weighted_mse": 0.08268538318395553,
+      "minimum_transition_window_exposure": 4.0,
+      "source_weight_audit": true
+    },
+    {
+      "epoch": 4,
+      "optimizer_updates": 22957,
+      "source_balanced_validation_weighted_mse": 0.0315044549844534,
+      "vg027_validation_weighted_mse": 0.0728839474401156,
+      "minimum_transition_window_exposure": 4.0,
+      "source_weight_audit": true
+    },
+    {
+      "epoch": 5,
+      "optimizer_updates": 28753,
+      "source_balanced_validation_weighted_mse": 0.030969724040336277,
+      "vg027_validation_weighted_mse": 0.07166248188474,
+      "minimum_transition_window_exposure": 4.0,
+      "source_weight_audit": true
+    },
+    {
+      "epoch": 6,
+      "optimizer_updates": 34449,
+      "source_balanced_validation_weighted_mse": 0.030373104179831474,
+      "vg027_validation_weighted_mse": 0.0700301320497603,
+      "minimum_transition_window_exposure": 4.0,
+      "source_weight_audit": true
+    }
+  ],
+  "dataset_phase_audit": {
+    "clean_increments": 1920,
+    "vg009_increments": 515,
+    "recovered_vg012_increments": 373,
+    "vg016_increments": 510,
+    "vg019_increments": 521,
+    "vg024_increments": 519,
+    "vg027_increments": 711,
+    "maximum_phase_encoding_error": 0.0
+  },
+  "artifact_sha256": {
+    "checkpoint": "ec1206b5dbccb2ee679fa049534956b189b419da2b927f5e3a61eeaf5a359e65",
+    "report": "b51b7a9b25bc9f213a8b93a3d60fca6a2226d2511f9475c0a6da7e12cd21909e",
+    "completed_state": "096c79395c18b3075fd4079e1e6c0871da3d9eaad839db26a7e71b20b15d232a",
+    "runner_log": "5c76eb7ffd658b9f2469b3c84e76ad28bdb0743f5735885edc07ab1ec9afc3cd",
+    "runner_exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "remote_completed_resume_log": "b51b7a9b25bc9f213a8b93a3d60fca6a2226d2511f9475c0a6da7e12cd21909e",
+    "remote_completed_resume_exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  "preflight_recovery": {
+    "bootstrap_001_exit_code": 126,
+    "bootstrap_001_log_sha256": "5c7c49246ced245abbd5fad4d4ec48e3685db8f37acfff2dc006dc36142f41ec",
+    "bootstrap_001_exit_sha256": "703d2c10fa601276a4dd96193faed68902a642a44eb5b01b40d6fc8499e12822",
+    "cause": "the new runner and trainer were initially committed without executable modes",
+    "optimizer_state_created": false,
+    "repair_commit": "b3403a3edf7e3a7098f5fff77659c1e7f543e132",
+    "unchanged_experiment_retry": false
+  },
+  "epoch_state_sha256": {
+    "epoch_1": "a2ac5016626e4c113143cbc4092763799dac194917c44e3d42781e5943ee3ae2",
+    "epoch_2": "85072dfaf6f188815b314396533a8ba463fc8a1309d7759611f3d2eb9e657e75",
+    "epoch_3": "6445f4826ac46cd769033fc45508871b9944763a6d74ff90a950bd9f16f5b66d",
+    "epoch_4": "bdf18bdb05ae4a7568a3d22d242286930efd8c1816d6b3d91798bb8fe0966233",
+    "epoch_5": "a4c9186fbffbb5a651da4e5f29046b4cc8ec5a89b5e0399ccd6189628469fd54",
+    "epoch_6_completed": "096c79395c18b3075fd4079e1e6c0871da3d9eaad839db26a7e71b20b15d232a"
+  },
+  "input_sha256": {
+    "goal_prompt": "03f085d32a217889f56600ac2600bead24e087ee47322eb5aa2e208f231f2aa1",
+    "preregistration": "ce95bc2dbccf66a862af0be998f74e67f433230e6d1b6c711c63b703f3806eab",
+    "parent_checkpoint": "85671c31a7c7a25cf49414cd51259357a2efd64b5d2b441fea27c51b93bf77aa",
+    "parent_report": "b9d22d2867b8518a0f8b1b8a0fbbad9d0977f3a57e189b83d1362be98f38dcb6",
+    "vg027_report": "08c78d66a90860cd8fdd7790e211b381969d9652943e74060c2692e3bf7eec8c",
+    "vg027_metadata": "cf1e9ba23f9cb9e6da68226682c74b5cd51a57de3f478b9e09ea266eae9c6fb5",
+    "vg027_admission": "de2437f3e44cecbb73c1d6b948f0218818d77f01570acd517c1f52fd3a755301",
+    "trainer": "ceeddef89c14698831659ae137a623ccf76beeaa479e55a754a06d5d6657717d",
+    "runner": "3584a80cc651797086d4b9cc36297ada73ad1c51886ae4ca10670bf088d45532",
+    "test": "77ae61f044506cdc9f13afa0ebd915406f64bc3ddb7e6f47982f0e9009f0dc52"
+  },
+  "verification": {
+    "remote_completed_output_verifier": true,
+    "remote_completed_resume_state_unchanged": true,
+    "remote_to_local_artifact_hashes_exact": true,
+    "independent_checkpoint_equals_selected_best_state": true,
+    "history_is_exact_epochs_1_through_6": true,
+    "all_report_values_finite": true,
+    "all_source_hashes_embedded": true
+  },
+  "runtime": {
+    "python": "3.12.3",
+    "torch": "2.10.0a0+a36e1d39eb.nv26.01.42222806",
+    "torch_cuda": "13.1",
+    "numpy": "2.1.0",
+    "machine": "x86_64"
+  },
+  "safety": {
+    "actor_input_privileged_values": 0,
+    "teacher_blend": 0.0,
+    "teacher_plant_actions": 0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "shadow_authorized": false,
+    "training_authorized": false,
+    "submission_authorized": false
+  },
+  "compute": {
+    "training_instance_id": 46280503,
+    "gpu": "NVIDIA GeForce RTX 4090",
+    "effective_cpu_count": 36.57142857142857,
+    "instance_retained_running_for_staged_diagnostic": true
+  },
+  "next_authority": "One separately preregistered paired fresh count-5 teacher-free diagnostic only; no full screen, shadow, VQ2 Training, or Submission action is authorized."
+}

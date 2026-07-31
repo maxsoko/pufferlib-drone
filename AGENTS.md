@@ -10552,3 +10552,36 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   preregistration hashes are `ceeddef8...`/`3584a80c...`/`77ae61f0...`/
   `ce95bc2d...`. VG028 authorizes only a separately preregistered staged
   teacher-free screen; shadow, Training, and Submission authority remain zero.
+
+### VQ2 VG028 admission / VG029 paired diagnostic — 2026-07-31
+
+- VG028 completed its sole seed-`429120` six-epoch refit from source commit
+  `b3403a3e...` in `3,012.894098 s` and `34,449` optimizer updates. Epoch 6 is
+  selected at fixed seven-source validation MSE `0.030373104180`, improving
+  the `0.108328904468` parent baseline by `3.566606x`.
+- Newly visited VG027 validation improves from `0.332380123454` to
+  `0.070030132050` (`4.746244x`). Selected clean/VG009/recovered-VG012/VG016/
+  VG019/VG024 values are `0.002798320/0.007910041/0.036716251/0.035400363/
+  0.016201518/0.012371892`; every frozen cap passes. All six epochs prove exact
+  source weights and `4.0x` transition exposure.
+- Checkpoint/report/completed-state/runner-log/exit SHA-256 values are
+  `ec1206b5...`/`b51b7a9b...`/`096c7939...`/`5c76eb7f...`/`9a271f2a...`.
+  Remote completed resume returns zero and leaves all three artifacts
+  unchanged; the checkpoint is tensor-exact to the saved selected-best state,
+  all report values are finite, and every epoch boundary is preserved locally.
+  Admission evidence SHA-256 is `3282c98f...`.
+- Bootstrap 001 failed before tests, output creation, or optimizer work because
+  the new entrypoints lacked executable Git modes. Repair commit `b3403a3e...`
+  changes modes only; bootstrap 002 is the sole training trajectory. Failure
+  log/exit hashes are `5c7c4924...`/`703d2c10...`.
+- VG029 preregisters a same-seed paired count-5 diagnostic: 32 episodes each
+  for VG025 and VG028, seed `429121`, four threads, `2,560` maximum steps,
+  concurrent execution, deterministic complete recurrent outputs, and zero
+  teacher action. Candidate promotion requires hard transport parity, no
+  Gate-1 or crash regression, at least one Gate-3-or-finish signal, and strict
+  downstream improvement over VG025.
+- Component/comparator/runner/test/preregistration hashes are `f6ae14ae...`/
+  `42e9a4d7...`/`0bb86a7e...`/`7048db0c...`/`e308a618...`; parent/candidate
+  manifest hashes are `2a5d5dc1...`/`473bc93b...`. VG029 can authorize only a
+  separately preregistered full offline screen. Shadow, VQ2 Training, and
+  Submission remain unauthorized.
