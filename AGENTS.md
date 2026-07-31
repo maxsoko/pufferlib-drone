@@ -10724,3 +10724,24 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   hashes are `de4dcb1f...`/`479cdc9c...`/`c9a17edf...`/`d4e22f00...`/
   `c7182d10...`. VG035 may authorize only a fresh full offline screen; live
   authority remains zero.
+
+### VQ2 VG035 admission / VG036 full screen — 2026-07-31
+
+- VG035 completed once from source commit `dca257f1...` on 32 identical fresh
+  count-11 courses per actor, seed `429134`, four threads, and 2,560 steps.
+  VG033 versus VG028 Gate-1/Gate-2/Gate-3 reach is `32/29/5` versus
+  `32/25/4`; mean ordered gates improves `1.90625 -> 2.0625`, and crashes
+  improve `2 -> 0`.
+- Both actors pass every deterministic action, history, public-phase,
+  ordering, envelope, and transport predicate. Aggregate/parent/candidate/
+  parent-state/candidate-state hashes are `6554d6dd...`/`196e39b3...`/
+  `ad09077f...`/`e5ac67ae...`/`370b728a...`; completed resume is
+  byte-identical. Admission evidence SHA is `7c7676b7...`.
+- Preregister exactly one VG036 full screen of VG033: 64 terminal episodes
+  each at counts 5/8/11/12, fresh seeds `429135/429138/429141/429142`, four
+  native threads, and the existing terminal horizon. Require at least
+  `231/256` ordered finishes and zero crash or hard policy/phase/action fault.
+  Stop after a completed count if admission is mathematically impossible.
+- Wrapper/runner/test/preregistration hashes are `0cddd9b1...`/
+  `eb9217be...`/`4c8209cc...`/`2e3e49fe...`. VG036 is offline-only and
+  grants no shadow, VQ2 Training, or Submission authority.

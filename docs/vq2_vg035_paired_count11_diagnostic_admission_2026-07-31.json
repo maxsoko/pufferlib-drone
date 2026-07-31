@@ -1,0 +1,117 @@
+{
+  "schema": "vq2_vg035_paired_count11_diagnostic_admission_v1",
+  "tag": "vq2_vg035_vg033_paired_count11_diagnostic_001",
+  "date": "2026-07-31",
+  "source_commit": "dca257f1642ef0b1097f4f1dfa48617ee7611319",
+  "completed": true,
+  "qualified_for_full_screen": true,
+  "seed": 429134,
+  "num_gates": 11,
+  "episodes_per_actor": 32,
+  "num_threads_per_actor": 4,
+  "max_steps": 2560,
+  "parent": {
+    "actor": "VG028",
+    "checkpoint_sha256": "ec1206b5dbccb2ee679fa049534956b189b419da2b927f5e3a61eeaf5a359e65",
+    "successes": 0,
+    "crashes": 2,
+    "misses": 6,
+    "timeouts": 24,
+    "mean_gates_passed": 1.90625,
+    "gate_reach": {
+      "1": 32,
+      "2": 25,
+      "3": 4,
+      "4": 0,
+      "5": 0,
+      "6": 0,
+      "7": 0,
+      "8": 0,
+      "9": 0,
+      "10": 0,
+      "11": 0
+    },
+    "hard_transport_pass": true
+  },
+  "candidate": {
+    "actor": "VG033",
+    "checkpoint_sha256": "56a8e3b84770c1a54afbf11ac2503478221f7829c28723da0f7dfcfa2a7aac26",
+    "successes": 0,
+    "crashes": 0,
+    "misses": 1,
+    "timeouts": 31,
+    "mean_gates_passed": 2.0625,
+    "gate_reach": {
+      "1": 32,
+      "2": 29,
+      "3": 5,
+      "4": 0,
+      "5": 0,
+      "6": 0,
+      "7": 0,
+      "8": 0,
+      "9": 0,
+      "10": 0,
+      "11": 0
+    },
+    "hard_transport_pass": true
+  },
+  "delta_candidate_minus_parent": {
+    "successes": 0,
+    "crashes": -2,
+    "mean_gates_passed": 0.15625,
+    "gate1_reach": 0,
+    "gate2_reach": 4,
+    "gate3_reach": 1,
+    "gate4_reach": 0
+  },
+  "criteria": {
+    "same_seed_and_episode_count": true,
+    "both_hard_transport_pass": true,
+    "gate1_not_regressed": true,
+    "crash_count_not_regressed": true,
+    "ordered_gate3_or_finish_signal": true,
+    "downstream_improves_parent": true
+  },
+  "artifact_sha256": {
+    "aggregate": "6554d6dd307b606822ccac92f4e5543cc162690f4e7978dca472383efd8e185f",
+    "parent_count_report": "196e39b39cefcb3cb9ebb32d08fce795d084c87a884063d9ea25ea7150378543",
+    "candidate_count_report": "ad09077fe31206161b7ea9c56e210761d3edb30792d864188ba5a95d877fdfd7",
+    "parent_state": "e5ac67aebfe6c1aee27811a38943bd8778f29a76f4e2ee1a46b9bfc06c6b867d",
+    "candidate_state": "370b728aeacc57dbe4a3c0a81b52538f596a5678ea2b091fd536f133d123954c",
+    "parent_component_log": "983d1bfb0819b7a6c6384a48e4bb03b8607c32c2322d0056b051aa27030d7c20",
+    "candidate_component_log": "e22dd6271c1767f42220071c3f6e0df92c49006e25d12cc1fe55c634772ec088",
+    "parent_component_exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "candidate_component_exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "completed_resume_output": "6554d6dd307b606822ccac92f4e5543cc162690f4e7978dca472383efd8e185f"
+  },
+  "input_sha256": {
+    "parent_manifest": "de4dcb1f25c39e338d2ea8bfe455ab93991fb761e8c57119a2e726dfb76e922c",
+    "candidate_manifest": "479cdc9c8b9af13ec07802e21a105b4b559841ae56f2364e187571ba73eebc68",
+    "preregistration": "c7182d105cb544d416735fdd70631d5fd489c0a4785c405f2a09a637332c99c8",
+    "runner": "c9a17edf1b3edcda43ead19b1db9a003c4c2b1e434073c6e9145efb243f77f24",
+    "component": "925ee589351318ffa8d93449c9fc5a5f2f184f16503fc59c71b38158a7bd3de8",
+    "comparator": "53d30a1e6a93f9432c075a075b54180a00edf22df6473e26d63a6699d706113a",
+    "shared_test": "b337cbea8dceb02961550bc55866caeb7810296abf60015ffdf2e87bb39dd0e1",
+    "dedicated_test": "d4e22f003622d68420bb778646250d6fbdf37eb51797c08be82ab64d738d9ec3",
+    "vg034_admission": "858adb9eb25b04ccf1554bb40cd9dd9d467d602941fec7893f97f7bae21ddede"
+  },
+  "verification": {
+    "remote_completed_resume_exit_zero": true,
+    "remote_completed_resume_output_equals_aggregate": true,
+    "remote_to_local_artifact_hashes_exact": true,
+    "both_component_reports_complete": true,
+    "both_action_histories_exact": true,
+    "both_public_phase_contracts_exact": true
+  },
+  "safety": {
+    "teacher_plant_actions": 0,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "shadow_authorized": false,
+    "training_authorized": false,
+    "submission_authorized": false
+  },
+  "next_authority": "One separately preregistered fresh counts-5/8/11/12 teacher-free full screen; no live activity is authorized."
+}

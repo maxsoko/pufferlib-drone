@@ -10702,3 +10702,20 @@ For each training/eval block, record:
 - Parent/candidate manifest, runner, dedicated test, and preregistration
   hashes are `de4dcb1f...`/`479cdc9c...`/`c9a17edf...`/`d4e22f00...`/
   `c7182d10...`. No live authority is granted.
+
+### VQ2 VG035 admission and VG036 full screen — 2026-07-31
+
+- VG035 passes once from source commit `dca257f1...` on 32 fresh paired
+  count-11 episodes, seed `429134`. VG033 versus VG028 Gate-1/Gate-2/Gate-3
+  reach is `32/29/5` versus `32/25/4`; crashes improve `2 -> 0` and mean
+  gates improve `1.90625 -> 2.0625`.
+- Both actors pass all action, phase, ordering, envelope, and transport
+  checks. Aggregate/parent/candidate/state hashes are `6554d6dd...`/
+  `196e39b3...`/`ad09077f...`/`e5ac67ae...`,`370b728a...`; completed
+  resume is exact. Admission evidence SHA is `7c7676b7...`.
+- VG036 is one fresh teacher-free screen of VG033: 64 terminal episodes at
+  each of counts 5/8/11/12, seeds `429135/429138/429141/429142`, four
+  threads, and the existing horizon. Admission requires `231/256` full
+  finishes and zero crash or hard action/phase/ordering/transport fault.
+- Wrapper/runner/test/preregistration hashes are `0cddd9b1...`/
+  `eb9217be...`/`4c8209cc...`/`2e3e49fe...`. No live authority is granted.
