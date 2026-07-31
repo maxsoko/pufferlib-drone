@@ -9,6 +9,7 @@ from pufferlib.vq2_recurrent_phase import (
     VQ2PhaseRecurrentActor,
 )
 from pufferlib.vq2_recurrent_phase_residual import (
+    VQ2IndexedPhaseMLPResidualActor,
     VQ2IndexedPhaseResidualActor,
     VQ2PhaseResidualActor,
 )
@@ -68,3 +69,33 @@ def test_indexed_residual_changes_only_selected_phase() -> None:
         indexed_output, _ = indexed.forward_sequence(observation)
     assert torch.equal(base_output.mean[:, 0], indexed_output.mean[:, 0])
     assert not torch.equal(base_output.mean[:, 1], indexed_output.mean[:, 1])
+
+
+def test_indexed_phase_mlp_zero_output_is_base_exact() -> None:
+    torch.manual_seed(31)
+    base = VQ2PhaseRecurrentActor(hidden_size=32)
+    actor = VQ2IndexedPhaseMLPResidualActor(hidden_size=32, residual_size=8)
+    actor.load_base_state(base.state_dict())
+    observation = torch.randn(4, PHASE_LEGAL_OBS_SIZE)
+    observation[:, -1] = torch.tensor([0.0, 1.0 / 16.0, 4.0 / 16.0, 11.0 / 16.0])
+    state = base.initial_state(4, device="cpu")
+    expected, expected_state = base.forward_step(observation, state)
+    actual, actual_state = actor.forward_step(observation, state)
+    torch.testing.assert_close(actual.mean, expected.mean, rtol=0, atol=0)
+    torch.testing.assert_close(actual.pre_tanh_mean, expected.pre_tanh_mean, rtol=0, atol=0)
+    torch.testing.assert_close(actual_state, expected_state, rtol=0, atol=0)
+
+
+def test_indexed_phase_mlp_changes_only_selected_head() -> None:
+    torch.manual_seed(37)
+    actor = VQ2IndexedPhaseMLPResidualActor(hidden_size=32, residual_size=8)
+    observation = torch.randn(2, PHASE_LEGAL_OBS_SIZE)
+    observation[:, -1] = torch.tensor([2.0 / 16.0, 3.0 / 16.0])
+    state = actor.initial_state(2, device="cpu")
+    baseline, _ = actor.forward_step(observation, state)
+    with torch.no_grad():
+        actor.indexed_phase_residual_output[2].fill_(0.2)
+        actor.indexed_phase_residual_output_bias[2].fill_(0.1)
+    changed, _ = actor.forward_step(observation, state)
+    assert not torch.equal(changed.mean[0], baseline.mean[0])
+    torch.testing.assert_close(changed.mean[1], baseline.mean[1], rtol=0, atol=0)
