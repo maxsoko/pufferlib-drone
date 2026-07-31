@@ -10998,3 +10998,10 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   Gate-1/2 and crash preservation. Wrapper/runner/test/preregistration hashes
   are `5064814b...`/`8ca229f3...`/`74f45ad1...`/`711f7cfa...`. No live
   authority exists.
+- VG049 selects alpha `0.0025`: Gate-1/2/3 reach changes
+  `64/56/10 -> 64/57/11`, crashes remain `8`, and misses improve `7 -> 5`.
+  Checkpoint/report/state hashes are `35b18c0d...`/`8af8ef20...`/
+  `ca057d04...`; admission SHA is `f6f81e89...`.
+- VG050 confirms on offset 24 with 64 paired episodes. Comparator/runner/test/
+  preregistration hashes are `d393bd4f...`/`cec1c76c...`/`7db6a0ee...`/
+  `b6c1d414...`. No live authority exists.

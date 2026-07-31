@@ -10935,3 +10935,10 @@ For each training/eval block, record:
   Gate-4 reach as downstream gain while retaining Gate-1/2/crash gates.
   Wrapper/runner/test/preregistration hashes are `5064814b...`/
   `8ca229f3...`/`74f45ad1...`/`711f7cfa...`. No live authority is granted.
+- VG049 selects alpha `0.0025`, improving Gate-1/2/3 reach
+  `64/56/10 -> 64/57/11`, holding crashes at `8`, and reducing misses
+  `7 -> 5`. Checkpoint/report/state/admission hashes are `35b18c0d...`/
+  `8af8ef20...`/`ca057d04...`/`f6f81e89...`.
+- VG050 is a 64-episode paired offset-24 confirmation. Comparator/runner/test/
+  preregistration hashes are `d393bd4f...`/`cec1c76c...`/`7db6a0ee...`/
+  `b6c1d414...`. No live authority is granted.

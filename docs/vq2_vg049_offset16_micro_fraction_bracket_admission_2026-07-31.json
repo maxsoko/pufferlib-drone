@@ -1,0 +1,43 @@
+{
+  "schema": "vq2_vg049_offset16_micro_fraction_bracket_admission_v1",
+  "tag": "vq2_vg049_vg033_to_vg042_offset16_micro_fraction_bracket_001",
+  "date": "2026-07-31",
+  "source_commit": "153656fa986ca4124b13b3757d07c9ebcbd2c856",
+  "completed": true,
+  "numerically_admitted": true,
+  "selected_alpha": 0.0025,
+  "optimizer_updates": 0,
+  "minimum_transition_window_exposure": 4.0,
+  "equal_source_weight_audit": true,
+  "episode_offset": 16,
+  "parent_summary": {
+    "gate_reach": {"1": 64, "2": 56, "3": 10, "4": 0, "5": 0},
+    "crashes": 8,
+    "misses": 7,
+    "mean_gates_passed": 2.03125,
+    "behavior_projection_sha256": "eff69b3fc3af2458e57f64e2b3570ae565087a5f5cae3cfc771b916b584efff2"
+  },
+  "selected_summary": {
+    "gate_reach": {"1": 64, "2": 57, "3": 11, "4": 0, "5": 0},
+    "crashes": 8,
+    "misses": 5,
+    "mean_gates_passed": 2.0625,
+    "behavior_projection_sha256": "7f99e6bc1e38633f1b4a0dcdb3fd54fcf72e1a60b247984c6bbdc49aa2c4d643"
+  },
+  "artifact_sha256": {
+    "checkpoint": "35b18c0dbdc038b0e7fb9f63895ffe834723ac1d347f1d08fb6eb0325f450d32",
+    "report": "8af8ef20d3000e83f2e523ce34c2572a072a324921464a1e6bf907b57de30b64",
+    "completed_state": "ca057d04559a4ef356b54ca5f6fe1d4b9f079f064dd3fc27fbd68785176b87ad",
+    "runner_log": "e24a95a55e4223ef133f5c4868ac8d96a4d33af24185de598f32fa193b4f707b",
+    "completed_resume_log": "8af8ef20d3000e83f2e523ce34c2572a072a324921464a1e6bf907b57de30b64"
+  },
+  "safety": {
+    "actor_input_privileged_values": 0,
+    "teacher_blend": 0.0,
+    "teacher_plant_actions": 0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "submission_authorized": false
+  },
+  "next_authority": "One paired count-5 confirmation against VG033 on episode offset 24; no live authority."
+}
