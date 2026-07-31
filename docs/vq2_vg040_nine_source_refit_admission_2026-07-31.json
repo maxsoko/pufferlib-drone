@@ -1,0 +1,157 @@
+{
+  "schema": "vq2_vg040_nine_source_refit_admission_v1",
+  "tag": "vq2_vg040_variable_gate_nine_source_refit_001",
+  "date": "2026-07-31",
+  "source_commit": "faa7e1b2efc84a1be89b2c3256bc621d4560acdc",
+  "completed": true,
+  "numerically_admitted": true,
+  "exit_code": 0,
+  "best_epoch": 3,
+  "epochs_completed": 6,
+  "optimizer_updates": 35061,
+  "wall_time_seconds": 3698.8517346929293,
+  "baseline_validation_weighted_mse": {
+    "clean": 0.004864186264932019,
+    "vg009": 0.0079575051889728,
+    "recovered_vg012": 0.030903255542298624,
+    "vg016": 0.03821087557405593,
+    "vg019": 0.01796436623785345,
+    "vg024": 0.014296199961201909,
+    "vg027": 0.06005099204496157,
+    "vg032": 0.04282079115070019,
+    "vg039": 0.09389296697738353,
+    "source_balanced": 0.05248856061766913
+  },
+  "selected_validation_weighted_mse": {
+    "clean": 0.008152193578007812,
+    "vg009": 0.007593477478549101,
+    "recovered_vg012": 0.03136942000608754,
+    "vg016": 0.03574541818450959,
+    "vg019": 0.0179185720925692,
+    "vg024": 0.013928953274481681,
+    "vg027": 0.05901298112644071,
+    "vg032": 0.03663516649291249,
+    "vg039": 0.03338915371485389,
+    "source_balanced": 0.02806785348779369
+  },
+  "admission_audit": {
+    "source_balanced_improvement_factor": 1.8700596623997505,
+    "vg039_improvement_factor": 2.812079868129045,
+    "all_nine_preservation_caps_pass": true,
+    "all_epoch_source_weight_audits_pass": true,
+    "minimum_transition_window_exposure": 4.0,
+    "recurrent_bptt_steps": 256,
+    "genuine_episode_boundaries": true,
+    "nine_independently_normalized_sources_per_update": true,
+    "raw_record_count_sets_source_weight": false,
+    "all_report_values_finite": true
+  },
+  "source_weights_per_optimizer_update": {
+    "clean": 0.22,
+    "vg009": 0.02,
+    "recovered_vg012": 0.02,
+    "vg016": 0.04,
+    "vg019": 0.05,
+    "vg024": 0.05,
+    "vg027": 0.08,
+    "vg032": 0.12,
+    "vg039": 0.4
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "optimizer_updates": 5865,
+      "source_balanced_validation_weighted_mse": 0.03242390552734244,
+      "vg039_validation_weighted_mse": 0.04164661372640618,
+      "minimum_transition_window_exposure": 4.0,
+      "source_weight_audit": true
+    },
+    {
+      "epoch": 2,
+      "optimizer_updates": 11669,
+      "source_balanced_validation_weighted_mse": 0.03249357878704914,
+      "vg039_validation_weighted_mse": 0.03937548199017768,
+      "minimum_transition_window_exposure": 4.0,
+      "source_weight_audit": true
+    },
+    {
+      "epoch": 3,
+      "optimizer_updates": 17667,
+      "source_balanced_validation_weighted_mse": 0.02806785348779369,
+      "vg039_validation_weighted_mse": 0.03338915371485389,
+      "minimum_transition_window_exposure": 4.0,
+      "source_weight_audit": true
+    },
+    {
+      "epoch": 4,
+      "optimizer_updates": 23550,
+      "source_balanced_validation_weighted_mse": 0.028875547243803316,
+      "vg039_validation_weighted_mse": 0.03334188274218004,
+      "minimum_transition_window_exposure": 4.0,
+      "source_weight_audit": true
+    },
+    {
+      "epoch": 5,
+      "optimizer_updates": 29202,
+      "source_balanced_validation_weighted_mse": 0.02854284259361879,
+      "vg039_validation_weighted_mse": 0.032590967314283084,
+      "minimum_transition_window_exposure": 4.0,
+      "source_weight_audit": true
+    },
+    {
+      "epoch": 6,
+      "optimizer_updates": 35061,
+      "source_balanced_validation_weighted_mse": 0.029354545327373822,
+      "vg039_validation_weighted_mse": 0.03620225389311432,
+      "minimum_transition_window_exposure": 4.0,
+      "source_weight_audit": true
+    }
+  ],
+  "artifact_sha256": {
+    "checkpoint": "c2a015f320f0a2cf13f325dd0a67f3e87725c1f135b8da30763c9c666bbd6e31",
+    "report": "0f38031949b6cfc879358999f31022c1b1bfcecf4b0860c5b7643cdc1ae8a4c8",
+    "completed_state": "22387d91a303ccd4729e6ee4bb62f8c9d4c764accea7d2ca819d3907c4bf0e83",
+    "runner_log": "26d73809fdfdd207545a8bf2ab14bcd47e88d34a2235f7eb8018e720c0f4445b",
+    "completed_resume_log": "0f38031949b6cfc879358999f31022c1b1bfcecf4b0860c5b7643cdc1ae8a4c8",
+    "completed_resume_exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  "input_sha256": {
+    "goal_prompt": "03f085d32a217889f56600ac2600bead24e087ee47322eb5aa2e208f231f2aa1",
+    "preregistration": "f7993252ee690e3a26e70140092a9f20c4ffb57e0c47d263d32e9fa4cf9aa394",
+    "parent_checkpoint": "56a8e3b84770c1a54afbf11ac2503478221f7829c28723da0f7dfcfa2a7aac26",
+    "parent_report": "033a7f1f5d1bfbe82c1cdd7b3d63407d99c220a899eb4420b259379728563f60",
+    "parent_admission": "dbf0fbb41ebcca80f5284377db0c8b15d9be18a8880aa29a7a78513558617d44",
+    "vg039_report": "a0bdcd0d60f66f7de55323a08b3c4695a0333b5bf88a93454d56d75e61eb21e1",
+    "vg039_metadata": "89134752057b0dd7759031aaf524a93f0a85096bd1b8973ed6daebb5715c74ac",
+    "vg039_admission": "e01eb2e28c65f827cfb39916c28d56320c57a4c23513ee61553447bd236b11cc",
+    "trainer": "22682e75ea3274f603af04d1cbb9db436c3df1076a66f91af4a4ee7f0bacc134",
+    "runner": "386e660bc09f7782cdf82ddc59a4d0255235d71f13dbcaac2d36f299f15d8434",
+    "trainer_test": "15470bc9c06cc5952ccd35c45356bd4510f1d8a29c23622f6b0b936fa6f6f747"
+  },
+  "verification": {
+    "remote_completed_resume_exit_zero": true,
+    "remote_completed_resume_state_unchanged": true,
+    "remote_completed_resume_output_equals_report": true,
+    "remote_to_local_artifact_hashes_exact": true,
+    "independent_checkpoint_equals_selected_best_state": true,
+    "history_is_exact_epochs_1_through_6": true,
+    "all_report_values_finite": true,
+    "all_source_hashes_embedded": true
+  },
+  "runtime": {
+    "python": "3.12.3",
+    "torch": "2.10.0a0+a36e1d39eb.nv26.01.42222806",
+    "torch_cuda": "13.1",
+    "numpy": "2.1.0",
+    "machine": "x86_64"
+  },
+  "safety": {
+    "actor_input_privileged_values": 0,
+    "teacher_blend": 0.0,
+    "teacher_plant_actions": 0,
+    "flight_sim_packets_sent": 0,
+    "sealed_test_accesses": 0,
+    "submission_authorized": false
+  },
+  "next_authority": "One separately preregistered same-seed paired count-5 teacher-free diagnostic against VG033; no shadow or live activity is authorized."
+}

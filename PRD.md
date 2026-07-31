@@ -10785,3 +10785,22 @@ For each training/eval block, record:
   `0.02/0.02/0.06/0.05/0.04/0.04/0.10/0.12/0.12`. Trainer/runner/test/
   preregistration hashes are `22682e75...`/`386e660b...`/`15470bc9...`/
   `f7993252...`. No live authority is granted.
+
+### VQ2 VG040 admission and VG041 paired count-5 diagnostic — 2026-07-31
+
+- VG040 completes its sole six-epoch seed-`429153` refit from source commit
+  `faa7e1b2...` in `3,698.851735 s`, selecting epoch 3 after `35,061`
+  updates. Balanced validation improves `0.052488560618 -> 0.028067853488`
+  (`1.870060x`), and VG039 validation improves
+  `0.093892966977 -> 0.033389153715` (`2.812080x`).
+- All nine preservation caps, source-weight audits, and `4.0x` transition
+  exposure checks pass. Checkpoint/report/state/log hashes are
+  `c2a015f3...`/`0f380319...`/`22387d91...`/`26d73809...`; completed resume
+  is report-exact and state-immutable. Admission SHA is `53110ead...`.
+- VG041 compares VG033 and VG040 concurrently on 32 identical fresh count-5
+  episodes, seed `429154`, four threads, and 2,560 steps. It requires strict
+  Gate-3-or-finish improvement, no Gate-1/crash regression, and zero hard
+  action/phase/ordering/transport fault.
+- Parent/candidate manifest, runner, dedicated test, and preregistration
+  hashes are `51364059...`/`b2169bc6...`/`190ae655...`/`832ad024...`/
+  `4ce5e294...`. This remains offline-only.

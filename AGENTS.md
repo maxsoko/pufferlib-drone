@@ -10826,3 +10826,25 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   `0.02/0.02/0.06/0.05/0.04/0.04/0.10/0.12/0.12`. Trainer/runner/test/
   preregistration hashes are `22682e75...`/`386e660b...`/`15470bc9...`/
   `f7993252...`. VG040 remains offline-only.
+
+### VQ2 VG040 admission / VG041 paired count-5 diagnostic — 2026-07-31
+
+- VG040 completed its sole six-epoch seed-`429153` refit from source commit
+  `faa7e1b2...` in `3,698.851735 s` and `35,061` optimizer updates. Epoch 3
+  is selected at balanced validation MSE `0.028067853488`, improving the
+  nine-source VG033 baseline `0.052488560618` by `1.870060x`.
+- VG039 actor-visited validation improves
+  `0.093892966977 -> 0.033389153715` (`2.812080x`). Every nine-source cap,
+  source-weight audit, and `4.0x` transition-exposure predicate passes.
+  Checkpoint/report/state/runner-log hashes are `c2a015f3...`/`0f380319...`/
+  `22387d91...`/`26d73809...`; completed resume is byte-identical to the
+  report and leaves state unchanged. Admission SHA-256 is `53110ead...`.
+- Preregister exactly one VG041 concurrent paired count-5 diagnostic of
+  VG033 versus VG040: 32 episodes per actor, fresh seed `429154`, four
+  threads, and 2,560 steps. Qualify only with zero hard fault, no Gate-1 or
+  crash regression, nonzero Gate-3-or-finish signal, and strict downstream
+  improvement.
+- Parent/candidate manifest, runner, dedicated test, and preregistration
+  hashes are `51364059...`/`b2169bc6...`/`190ae655...`/`832ad024...`/
+  `4ce5e294...`. VG041 is offline-only; no shadow, Training, or Submission
+  authority exists.
