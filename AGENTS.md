@@ -10786,3 +10786,22 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   `c8b3b9ee...`/`ab184a7d...`/`8015f08e...`/`8cb8d18b...`. VG038 may
   authorize only a separately preregistered all-anchor recurrent refit.
   FlightSim, shadow, Training, and Submission remain unauthorized.
+
+### VQ2 VG038 floor rejection / VG039 calibrated collection — 2026-07-31
+
+- VG038 is terminally rejected and its arrays are quarantined; never resume,
+  retry, or fit them unchanged. It completed 512 fresh uniform count-5--12
+  episodes in `81.327282 s` and produced `1,922,029` legal labels. Every
+  layout, phase, action-history, query, ordering, envelope, and transport
+  predicate passed.
+- Phase-2/3/4/5 record counts are
+  `1,061,932/139,254/28,334/272`. Only the preregistered Gate-3/Gate-4 reach
+  floors failed: observed `26.5625%/10.546875%` versus `40%/20%`. Rejection/
+  state/log hashes are `7f91cb84...`/`876fea58...`/`22ed7d79...`.
+- Preregister VG039 on fresh seed `429152` with no VG038 array reuse. Retain
+  512 uniform one-shot episodes, 4,096 steps, one million labels, and nonzero
+  phase-2--5 records; calibrate Gate-1/2/3/4 floors to
+  `95%/90%/20%/5%`, all below the source-locked VG038 observations.
+- Manifest/collector/runner/test/preregistration hashes are `900db1bd...`/
+  `4eb20af4...`/`eadb9181...`/`d2c12dbf...`/`868ac0ac...`. VG039 is
+  offline-only and may authorize only a separately preregistered refit.

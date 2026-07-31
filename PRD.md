@@ -10752,3 +10752,20 @@ For each training/eval block, record:
 - Manifest/collector/runner/test/preregistration hashes are `63012cd2...`/
   `c8b3b9ee...`/`ab184a7d...`/`8015f08e...`/`8cb8d18b...`. No live authority
   is granted.
+
+### VQ2 VG038 rejection and VG039 calibrated collection — 2026-07-31
+
+- VG038 finishes all 512 fresh collection episodes in `81.327282 s` with
+  `1,922,029` legal records. Every hard layout, phase, action, query,
+  ordering, envelope, and transport predicate passes.
+- It is nevertheless terminally rejected and quarantined because Gate-3/4
+  reach is `26.5625%/10.546875%`, below the preregistered `40%/20%`.
+  Phase-2/3/4/5 records are `1,061,932/139,254/28,334/272`; rejection/state/
+  log hashes are `7f91cb84...`/`876fea58...`/`22ed7d79...`.
+- VG039 uses fresh seed `429152`, reads no VG038 array, and retains the exact
+  512-episode/4,096-step/one-million-label contract with nonzero phase-2--5
+  records. Evidence-calibrated Gate-1/2/3/4 floors are
+  `95%/90%/20%/5%`.
+- Manifest/collector/runner/test/preregistration hashes are `900db1bd...`/
+  `4eb20af4...`/`eadb9181...`/`d2c12dbf...`/`868ac0ac...`. No live authority
+  is granted.
