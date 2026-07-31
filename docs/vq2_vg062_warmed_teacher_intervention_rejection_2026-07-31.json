@@ -1,0 +1,40 @@
+{
+  "schema": "vq2_vg062_warmed_teacher_intervention_rejection_v1",
+  "tag": "vq2_vg062_warmed_teacher_intervention_features_001",
+  "completed": true,
+  "training_dataset_admitted": false,
+  "source_commit": "a17a29beec6d4ed501478899a8691394911decb3",
+  "failed_admission_predicates": [
+    "minimum_success_rate",
+    "all_later_public_heads_observed"
+  ],
+  "outcome": {
+    "episodes": 512,
+    "successes": 1,
+    "success_rate": 0.001953125,
+    "crashes": 0,
+    "timeouts": 511,
+    "ordered_gate_reach": [512, 512, 512, 353, 7, 0, 0, 0, 0, 0, 0, 0],
+    "feature_phase_records": [0, 572432, 630368, 599904, 168024, 1008, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "feature_records": 1971736,
+    "feature_sha256": "14bac1f4a83a53f99c5ce59a60e70c1df90ec975d60898936baf283c26abe723",
+    "executed_action_max_error": 0.0,
+    "wall_time_seconds": 41.4027199849952
+  },
+  "diagnosis": "The admitted 2 m/s SF016 alignment teacher remains collision-free and centers the early gates, but the preregistered 64 s horizon is too short for the 5--12-gate course distribution. The existing admitted variable-course oracle contract uses a 360 s horizon.",
+  "artifact_sha256": {
+    "report": "be274aa963a5b3e7f3bbe643d228d77ed0f78a9a4b9912d561f399f4fe1c38b0",
+    "state": "a0dc47ddf2b7571e67bdb2df93ff4320b118739ee0128c4788cdd2cdc3066cf5",
+    "completed_resume": "be274aa963a5b3e7f3bbe643d228d77ed0f78a9a4b9912d561f399f4fe1c38b0"
+  },
+  "unchanged_retry_forbidden": true,
+  "next_authority": "one_source_locked_360_second_horizon_corrected_intervention_collection_with_a_fresh_seed",
+  "live_authority": false,
+  "safety": {
+    "training_only_teacher_plant_actions": 1971736,
+    "runtime_teacher_authorized": false,
+    "student_updates": 0,
+    "flight_sim_packets_sent": 0,
+    "submission_authorized": false
+  }
+}

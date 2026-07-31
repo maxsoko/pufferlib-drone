@@ -93,6 +93,7 @@ GOAL_SHA256 = (
 PREREGISTRATION = ROOT / "docs/vq2_vg062_warmed_teacher_intervention_preregistration_2026-07-31.md"
 RUNNER = ROOT / "scripts/run_vq2_vg062_vast.sh"
 DEFAULT_OUTPUT = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
+EXTRA_SOURCE_PATHS: tuple[Path, ...] = ()
 
 
 FEATURE_DTYPE = np.dtype([
@@ -117,6 +118,7 @@ def source_paths() -> tuple[Path, ...]:
         ROOT / "scripts/eval_vq2_variable_gate_oracle.py",
         ROOT / "scripts/eval_vq2_variable_gate_recurrent_policy.py",
         ROOT / "tests/test_collect_vq2_vg062_warmed_teacher_intervention_features.py",
+        *EXTRA_SOURCE_PATHS,
     )
 
 
