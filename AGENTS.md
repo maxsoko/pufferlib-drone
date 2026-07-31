@@ -11118,6 +11118,11 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   and trains only the zero-initialized 1,024-weight phase-gated joint action
   residual on VG039's full-start, actor-visited warmed sequences. Six epochs
   use phase weights `0/0.25/0.5/2/32/32...`; phase 4 directly targets Gate 5.
-  Trainer/runner/test/preregistration hashes are `6ae24e73...`/`729a7040...`/
-  `040b7703...`/`f92648c1...`. Numerical admission authorizes only a teacher-free
-  residual-scale bracket; no live authority exists.
+  The first source completed all six epochs/`5,330` updates, then local
+  variable shadowing stopped checkpoint packaging; checkpoint/report were
+  never written. State/log/failure-record hashes are `e9e90792...`/
+  `4ef9ff5b...`/`627bca44...`. The repaired source reruns deterministically,
+  fixes packaging, and selects the best epoch satisfying the stability caps.
+- Repaired VG057 trainer/runner/test/preregistration hashes are `4da484f7...`/
+  `f5d7014b...`/`040b7703...`/`a5365f3e...`. Numerical admission authorizes only a
+  teacher-free residual-scale bracket; no live authority exists.

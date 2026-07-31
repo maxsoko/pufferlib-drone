@@ -17,6 +17,13 @@ validation rows, strict phase-4 improvement, at most two-percent phase-2/3
 regression, and residual L2 at most `8`. Admission authorizes only a separately
 preregistered teacher-free six-gate residual-scale bracket.
 
+The first source completed all six epochs and 5,330 updates, then stopped
+before checkpoint/report creation because an actor-output local shadowed the
+output path. The repaired source preserves that failure as evidence, renames
+the local, and selects the best numerically eligible epoch rather than the
+lowest phase-4 error irrespective of phase-3 stability. It reruns from scratch
+with the same deterministic training contract; the failed state is not reused.
+
 Runtime observations remain the unchanged legal ABI, and the new learned head
 emits the complete four-action correction inside one recurrent Puffer policy.
 Teacher plant actions, FlightSim, shadow, Training, and Submission are
@@ -25,4 +32,5 @@ forbidden. Submission requires explicit user authorization.
 Source lock before the run:
 
 - VG033 checkpoint/VG039 report/VG056 rejection: `56a8e3b8...`/`a0bdcd0d...`/`c97082e4...`
-- trainer/runner/test: `6ae24e73...`/`729a7040...`/`040b7703...`
+- failed state/log evidence: `e9e90792...`/`4ef9ff5b...`; failure record: `627bca44...`
+- repaired trainer/runner/test: `4da484f7...`/`f5d7014b...`/`040b7703...`

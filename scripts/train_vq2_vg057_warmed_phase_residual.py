@@ -58,6 +58,8 @@ DATASET_ADMISSION = ROOT / "docs/vq2_vg039_variable_gate_dagger_round9_admission
 DATASET_ADMISSION_SHA256 = "e01eb2e28c65f827cfb39916c28d56320c57a4c23513ee61553447bd236b11cc"
 REJECTION = ROOT / "docs/vq2_vg056_count6_paired_confirmation_rejection_2026-07-31.json"
 REJECTION_SHA256 = "c97082e4f6b0d40c74ee841e9b0c42786194b3d004dc4bf2e49337282e6a87b1"
+PACKAGING_FAILURE = ROOT / "docs/vq2_vg057_post_training_packaging_failure_2026-07-31.json"
+PACKAGING_FAILURE_SHA256 = "627bca441ff024c27212f8d5c2d60d9f71a63eb10d22a84e53329aa446813b51"
 GOAL = ROOT / "docs/vq2_48h_competitive_lap_goal_prompt_2026-07-31.md"
 GOAL_SHA256 = "03f085d32a217889f56600ac2600bead24e087ee47322eb5aa2e208f231f2aa1"
 PREREGISTRATION = ROOT / "docs/vq2_vg057_warmed_phase_residual_preregistration_2026-07-31.md"
@@ -90,7 +92,8 @@ def source_paths() -> tuple[Path, ...]:
         Path(__file__).resolve(), PREREGISTRATION, RUNNER, GOAL,
         PARENT_CHECKPOINT, PARENT_REPORT, PARENT_ADMISSION,
         DATASET / "report.json", DATASET / "metadata.json", DATASET_ADMISSION,
-        REJECTION, ROOT / "pufferlib/vq2_recurrent_phase_residual.py",
+        REJECTION, PACKAGING_FAILURE,
+        ROOT / "pufferlib/vq2_recurrent_phase_residual.py",
         ROOT / "pufferlib/vq2_recurrent_phase.py",
         ROOT / "pufferlib/vq2_recurrent.py", ROOT / "pufferlib/vq2_informed.py",
         ROOT / "scripts/train_vq2_variable_gate_recurrent_bc.py",
@@ -117,6 +120,7 @@ def verify_inputs() -> None:
         DATASET / "metadata.json": DATASET_METADATA_SHA256,
         DATASET_ADMISSION: DATASET_ADMISSION_SHA256,
         REJECTION: REJECTION_SHA256,
+        PACKAGING_FAILURE: PACKAGING_FAILURE_SHA256,
         GOAL: GOAL_SHA256,
     }
     for path, digest in expected.items():
@@ -125,6 +129,7 @@ def verify_inputs() -> None:
     if not PREREGISTRATION.is_file() or not RUNNER.is_file():
         raise RuntimeError("VG057 source lock is incomplete")
     rejection = json.loads(REJECTION.read_text())
+    packaging_failure = json.loads(PACKAGING_FAILURE.read_text())
     dataset = json.loads((DATASET / "report.json").read_text())
     if (
         rejection.get("schema") != "vq2_vg056_count6_paired_confirmation_rejection_v1"
@@ -134,6 +139,15 @@ def verify_inputs() -> None:
         or rejection.get("live_authority")
     ):
         raise RuntimeError("VG056 rejection does not authorize VG057")
+    if (
+        packaging_failure.get("schema")
+        != "vq2_vg057_post_training_packaging_failure_v1"
+        or packaging_failure.get("checkpoint_written")
+        or packaging_failure.get("report_written")
+        or packaging_failure.get("optimizer_updates") != 5330
+        or packaging_failure.get("live_authority")
+    ):
+        raise RuntimeError("VG057 packaging repair evidence changed")
     if (
         dataset.get("schema") != "vq2_vg039_variable_gate_dagger_collection_report_v1"
         or not dataset.get("admitted")
@@ -282,6 +296,7 @@ def train(
     rng = np.random.default_rng(config.seed)
     baseline = evaluate(model, dataset, validation_agents, config, device)
     best_score = float(baseline["phase_weighted_mse"]["4"])
+    best_admitted = False
     best_epoch = 0
     best_state = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
     history: list[dict[str, Any]] = []
@@ -302,6 +317,7 @@ def train(
         optimizer.load_state_dict(saved["optimizer_state"])
         rng.bit_generator.state = saved["numpy_rng_state"]
         baseline = saved["baseline_validation"]; best_score = saved["best_score"]
+        best_admitted = bool(saved["best_admitted"])
         best_epoch = saved["best_epoch"]; best_state = saved["best_state"]
         history = saved["history"]; completed_epoch = saved["completed_epoch"]
         updates = saved["optimizer_updates"]
@@ -311,7 +327,8 @@ def train(
         atomic_torch_save(state_path, {**identity, "status": "training",
             "model_state": model.state_dict(), "optimizer_state": optimizer.state_dict(),
             "numpy_rng_state": rng.bit_generator.state, "baseline_validation": baseline,
-            "best_score": best_score, "best_epoch": best_epoch, "best_state": best_state,
+            "best_score": best_score, "best_admitted": best_admitted,
+            "best_epoch": best_epoch, "best_state": best_state,
             "history": history, "completed_epoch": 0, "optimizer_updates": 0})
 
     action_weights = torch.tensor(config.action_weights, device=device)
@@ -327,11 +344,11 @@ def train(
                 end = min(start + config.sequence_chunk, maximum)
                 observation, target, valid, _ = dataset.chunk(batch_agents, start, end, device=device)
                 optimizer.zero_grad(set_to_none=True)
-                output, next_state = model.forward_sequence(observation, state)
+                actor_output, next_state = model.forward_sequence(observation, state)
                 phase = torch.round(observation[..., -1] * 16.0).long().clamp_(0, 16)
                 row_weight = row_lookup[phase] * valid
                 if row_weight.sum() > 0:
-                    error = ((output.mean - target).square() * action_weights).sum(-1) / divisor
+                    error = ((actor_output.mean - target).square() * action_weights).sum(-1) / divisor
                     loss = (error * row_weight).sum() / row_weight.sum()
                     loss.backward()
                     torch.nn.utils.clip_grad_norm_(trainable, config.gradient_clip)
@@ -342,17 +359,23 @@ def train(
         validation = evaluate(model, dataset, validation_agents, config, device)
         score = float(validation["phase_weighted_mse"]["4"])
         residual_norm = float(model.phase_action_residual.weight.detach().norm().item())
+        eligible = numerically_admitted(
+            baseline, validation, base_parameters_exact=base_exact(model, parent),
+            residual_norm=residual_norm,
+        )
         item = {"epoch": epoch, "train_loss": loss_sum / max(weight_sum, 1.0),
                 "validation": validation, "phase4_score": score,
-                "residual_l2": residual_norm, "optimizer_updates": updates}
+                "residual_l2": residual_norm, "numerically_admitted": eligible,
+                "optimizer_updates": updates}
         history.append(item); print(json.dumps(item, sort_keys=True), flush=True)
-        if np.isfinite(score) and score < best_score:
-            best_score = score; best_epoch = epoch
+        if np.isfinite(score) and (eligible, -score) > (best_admitted, -best_score):
+            best_score = score; best_admitted = eligible; best_epoch = epoch
             best_state = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
         atomic_torch_save(state_path, {**identity, "status": "training",
             "model_state": model.state_dict(), "optimizer_state": optimizer.state_dict(),
             "numpy_rng_state": rng.bit_generator.state, "baseline_validation": baseline,
-            "best_score": best_score, "best_epoch": best_epoch, "best_state": best_state,
+            "best_score": best_score, "best_admitted": best_admitted,
+            "best_epoch": best_epoch, "best_state": best_state,
             "history": history, "completed_epoch": epoch, "optimizer_updates": updates})
 
     model.load_state_dict(best_state)
@@ -386,7 +409,8 @@ def train(
     atomic_torch_save(state_path, {**identity, "status": "completed",
         "model_state": model.state_dict(), "optimizer_state": optimizer.state_dict(),
         "numpy_rng_state": rng.bit_generator.state, "baseline_validation": baseline,
-        "best_score": best_score, "best_epoch": best_epoch, "best_state": best_state,
+        "best_score": best_score, "best_admitted": best_admitted,
+        "best_epoch": best_epoch, "best_state": best_state,
         "history": history, "completed_epoch": config.epochs, "optimizer_updates": updates,
         "checkpoint_sha256": report["checkpoint_sha256"], "report_sha256": sha256_path(report_path)})
     return report

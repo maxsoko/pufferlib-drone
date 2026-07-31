@@ -11030,7 +11030,9 @@ For each training/eval block, record:
   `c97082e4...`. Close the interpolation line.
 - VG057 fits only the 1,024-weight phase-gated learned action residual on
   VG039's full-start, VG033-visited warmed histories while holding every base
-  parameter exact. Six epochs heavily weight phase 4. Trainer/runner/test/
-  preregistration hashes are `6ae24e73...`/`729a7040...`/`040b7703...`/
-  `f92648c1...`. A numerical pass grants only a residual-scale rollout bracket and
-  no live authority.
+  parameter exact. Six epochs heavily weight phase 4. The first source
+  completed `5,330` updates but stopped before checkpoint/report packaging due
+  local-variable shadowing; state/log/failure hashes are `e9e90792...`/
+  `4ef9ff5b...`/`627bca44...`. Repaired trainer/runner/test/preregistration
+  hashes are `4da484f7...`/`f5d7014b...`/`040b7703...`/`a5365f3e...`. A numerical
+  pass grants only a residual-scale rollout bracket and no live authority.

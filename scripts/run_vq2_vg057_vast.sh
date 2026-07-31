@@ -10,6 +10,7 @@ VQ2_DATASET="$VQ2_WORKSPACE_PATH/logs/drone_race_full_policy_six_gate_bootstrap/
 VQ2_PARENT_ADMISSION="$VQ2_WORKSPACE_PATH/docs/vq2_vg033_eight_source_refit_admission_2026-07-31.json"
 VQ2_DATASET_ADMISSION="$VQ2_WORKSPACE_PATH/docs/vq2_vg039_variable_gate_dagger_round9_admission_2026-07-31.json"
 VQ2_REJECTION="$VQ2_WORKSPACE_PATH/docs/vq2_vg056_count6_paired_confirmation_rejection_2026-07-31.json"
+VQ2_PACKAGING_FAILURE="$VQ2_WORKSPACE_PATH/docs/vq2_vg057_post_training_packaging_failure_2026-07-31.json"
 VQ2_GOAL="$VQ2_WORKSPACE_PATH/docs/vq2_48h_competitive_lap_goal_prompt_2026-07-31.md"
 
 run_training() {
@@ -46,6 +47,8 @@ test "$(sha256sum "$VQ2_DATASET_ADMISSION" | cut -d" " -f1)" = \
     e01eb2e28c65f827cfb39916c28d56320c57a4c23513ee61553447bd236b11cc
 test "$(sha256sum "$VQ2_REJECTION" | cut -d" " -f1)" = \
     c97082e4f6b0d40c74ee841e9b0c42786194b3d004dc4bf2e49337282e6a87b1
+test "$(sha256sum "$VQ2_PACKAGING_FAILURE" | cut -d" " -f1)" = \
+    627bca441ff024c27212f8d5c2d60d9f71a63eb10d22a84e53329aa446813b51
 test "$(sha256sum "$VQ2_GOAL" | cut -d" " -f1)" = \
     03f085d32a217889f56600ac2600bead24e087ee47322eb5aa2e208f231f2aa1
 for name in mask.npy tail.npy action.npy terminal.npy valid.npy; do

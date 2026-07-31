@@ -1,0 +1,34 @@
+{
+  "schema": "vq2_vg057_post_training_packaging_failure_v1",
+  "tag": "vq2_vg057_warmed_phase_residual_001",
+  "source_commit": "fd66b6fdbde18d7daf850cc2b26adf02a6743762",
+  "preflight_passed": true,
+  "optimizer_updates": 5330,
+  "completed_epochs": 6,
+  "checkpoint_written": false,
+  "report_written": false,
+  "failure_stage": "post_training_checkpoint_packaging",
+  "failure": "the local RecurrentActorOutput variable shadowed the output Path",
+  "eligible_epoch": {
+    "epoch": 4,
+    "phase2_weighted_mse": 0.09056358399030166,
+    "phase3_weighted_mse": 0.04491962893035174,
+    "phase4_weighted_mse": 0.08082148819922365,
+    "residual_l2": 2.8079893589019775
+  },
+  "baseline": {
+    "phase2_weighted_mse": 0.14712922834314476,
+    "phase3_weighted_mse": 0.04881394247032824,
+    "phase4_weighted_mse": 0.12432894509758437
+  },
+  "artifact_sha256": {
+    "training_state": "e9e90792546d2a06a00b4f058410f2c41b82f96bb38d35a45e9887299e15debb",
+    "runner_log": "4ef9ff5bcce0f7eb008becdb379a5255f101ada79361316923c55ed7c01d54bc"
+  },
+  "repair": "preserve failed state and log; rename the actor output local; select the best numerically eligible epoch before packaging; deterministic fresh run under a new source commit",
+  "live_authority": false,
+  "safety": {
+    "flight_sim_packets_sent": 0,
+    "submission_authorized": false
+  }
+}
