@@ -47,6 +47,8 @@ THREADS = 32
 SEED = 432_050
 NUM_GATES = 24
 MAX_STEPS = 12_000
+ENV_SEED_GROUP_SIZE = GROUP_SIZE
+ENV_SEED_INDEX_OFFSET = 0
 PHASE_MIN = 8
 PHASE_MAX_EXCLUSIVE = 10
 TARGET_RAW_INDEX = 10
@@ -195,7 +197,9 @@ def collect(
         pufferl, num_gates=NUM_GATES, agents=TOTAL_AGENTS,
         episodes=TOTAL_AGENTS, seed=SEED, threads=THREADS,
     )
-    config["vec"]["env_seed_group_size"] = GROUP_SIZE
+    config["vec"]["env_seed_group_size"] = ENV_SEED_GROUP_SIZE
+    if ENV_SEED_INDEX_OFFSET:
+        config["vec"]["env_seed_index_offset"] = ENV_SEED_INDEX_OFFSET
     config["env"].update({
         "evaluation_episode_limit": 1,
         "max_steps": MAX_STEPS,
@@ -489,6 +493,8 @@ def collect(
         "parent_checkpoint_sha256": PARENT_CHECKPOINT_SHA256,
         "groups": GROUPS, "group_size": GROUP_SIZE,
         "total_agents": TOTAL_AGENTS, "threads": THREADS,
+        "environment_seed_group_size": ENV_SEED_GROUP_SIZE,
+        "environment_seed_index_offset": ENV_SEED_INDEX_OFFSET,
         "seed": SEED, "num_proxy_gates": NUM_GATES,
         "target_raw_index": TARGET_RAW_INDEX,
         "teacher_phase_min": PHASE_MIN,
