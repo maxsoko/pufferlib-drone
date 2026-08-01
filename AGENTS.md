@@ -11491,3 +11491,48 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   known 0--127 seed group and branch stochastic whole-Puffer actions at phases
   8--9, rather than collecting broader seeds or fitting rejected teacher data.
   Live VQ2 Training stays frozen and Submission remains forbidden.
+
+### VQ2 late-phase source trajectory and DAgger cycle — LC130--LC159, 2026-08-01
+
+- The official course remains approximately 20 gates or more by direct
+  simulator inspection. The offline proxy has 24 gates. Raw index 13 is only
+  source-trajectory progress; only official `race_finish_time_ns >= 0` proves
+  an official lap. The delivery deadline is 2026-08-02, so optimize useful
+  late-phase trajectory density and avoid sparse broad screens before a source
+  candidate exists.
+- LC130--LC138 reject sparse PPO and one-shot phase-8 rescue fits. LC139--LC144
+  establish a source-matched repeated-seed path: LC141 adds phase 9 and LC143
+  adds phase 10. LC144 confirms one teacher-free raw-11 completion. Retain
+  LC143 checkpoint SHA `c4fe8fc5e069...` as that intermediate source parent.
+- LC145--LC146 exhaust constant phase-11 bias search with zero raw-12 passes.
+  LC147's training-only alignment oracle rescues phase 11 `256/256`, but LC148
+  one-shot fitting and LC149--LC151 screens remain `0/128`; teacher-trajectory
+  action MSE alone does not close the loop.
+- LC152 adds true DAgger labels on both the Puffer failure distribution and the
+  oracle-rescue distribution: `318,464` phase-11 records in `108.146 s`, with
+  `0/256` control versus `256/256` intervention. LC153 improves held action MSE
+  `306.012x` but LC154 remains `0/128`. LC155 collects the shifted second
+  failure distribution (`175,360` records in `111.289 s`); LC156 fits it in
+  `5.946 s` with `187.842x` held improvement.
+- LC157 is the first teacher-free raw-12 source proof: LC156 passes `128/128`
+  at step `12,985`, versus parent `0/128`, with 128 paired gains, zero losses,
+  and exact transport. LC156 checkpoint SHA is `525747adc670...`; LC157 report
+  SHA is `c2dc6af09ae2...`. This proves two on-policy DAgger iterations can solve
+  a late phase inside a roughly four-minute collect/fit/screen cycle.
+- LC158 searches phase 12 with 512 useful seed-15 trajectories and finds one
+  raw-13 pass in generation 1 after `131.355 s`. Its checkpoint SHA is
+  `fe8dd2ec4d88...`. LC159 then confirms raw 13 `128/128` at step `16,587`,
+  versus LC156 `0/128`, with 128 paired gains, zero losses, and exact transport;
+  report SHA is `c39cb4c2fbba...`.
+- Puffer/Vast speed is proven, not assumed: dense LC095 collection reached
+  about `57k` native plant steps/s; repeated-source late-phase batches make
+  `512/512` trajectories useful instead of roughly `1/128`; LC155+LC156 take
+  about `117.24 s` combined; the actual 34.97-core cgroup allocation remains
+  saturated with one CUDA context and 32 native threads. Keep this layout.
+- LC105 SHA `005e5e792925...` remains the safe broad offline frontier. LC158 is
+  only the source-trajectory frontier and is not deployable. Continue at phase
+  13 using repeated-seed CEM first, then the proven two-iteration DAgger rescue
+  when constant bias fails. Do not spend on broad independent robustness until
+  the source trajectory approaches the 24-gate proxy finish. No LC130--LC159
+  job sends FlightSim packets. Live VQ2 Training remains frozen and Submission
+  is forbidden.
