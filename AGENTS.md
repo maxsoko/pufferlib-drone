@@ -11432,3 +11432,62 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   of simulated candidate steps instead of adding workers or larger actor
   batches. No LC088--LC114 job sends a FlightSim packet. Live VQ2 Training
   remains frozen and Submission is forbidden.
+
+### VQ2 raw-index-10 rescue and reduced-cycle frontier — LC115--LC129, 2026-08-01
+
+- The official course remains approximately 20 gates or more by direct user
+  inspection. The offline proxy remains fixed at 24 gates; raw index 10 is only
+  a training milestone, and only nonnegative official finish status proves a
+  lap. No LC115--LC129 job sends a FlightSim packet.
+- LC115 and LC116 show that the alignment oracle cannot rescue LC105 when it
+  begins at held phase 9 or phases 8--9. LC117's descending horizon ladder
+  finds the first causal boundary at phase 6: phase 7 remains `0/128`, while
+  phase-6 intervention creates `4/128` raw-10 completions with zero paired
+  loss. LC117 report SHA-256 is `e2897fc5f795...`.
+- LC118 captures the rescue twice but is rejected because a delayed public
+  phase update adds 60 unpreregistered post-target rows. LC119 instruments the
+  exact LC117 loop and admits `60,082` phase-6--9 records from 19 trajectories:
+  four successes and fifteen failures. Feature/report SHA-256 values are
+  `54615e1fbbdf...`/`73a5d96e11fd...`.
+- LC120's outcome-balanced full-residual fit takes `10.626 s`. Phase 6 improves
+  held teacher error `3.392x` and phase 8 `1.408x`; phases 7/9 remain exactly at
+  step zero. LC121 screens phase-6 scales and LC122 composes phase 6 with every
+  admitted phase-8 scale. Both remain `0/128` at raw 10, so reject the LC120
+  endpoint family. LC122's reduced callback correction is source-locked in
+  commit `3553467`; its clean screen takes `125.240 s`, report SHA
+  `2ccf30be7ccb...`.
+- LC123 reverses the regression target: imitate the oracle only on the four
+  rescued trajectories and anchor the fifteen failures to LC105. Its numerical
+  fit takes `3.227 s`, selects step 96/scale `.5`, improves held rescue error
+  `1.214x`, and holds failure drift to `0.0001998`. LC124's reduced two-actor
+  screen rejects it in `68.545 s`: the tail changes from raw 8/9 `1/1` to
+  `3/0`, with no raw-10 pass. Checkpoint/report SHA values are
+  `0d0d9f6ba796...`/`92f29cdd0f3c...`; LC123 is training-only and nondeployable.
+- LC125 combines diagnosis and feature capture on LC123's new distribution in
+  `49.914 s`. Oracle control at phases 8--9 creates one paired raw-10 rescue,
+  proving that distribution is recoverable, and captures `6,150` exact rows.
+  Only three trajectories enter (`1` success, `2` failures), so the corpus is
+  rejected as unsplittable. Feature/report SHA values are
+  `d505e3977e79...`/`0021aa7d0a91...`; do not fit LC125 alone.
+- LC126 runs eight phase-6 closed-loop coordinate perturbations in one 256-row
+  actor/vector in `50.817 s`. LC105 retains a raw-9 trajectory and every
+  nonzero constant bias destroys it; positive thrust only reroutes one case to
+  raw 8. Reject the constant-bias family. LC127 then runs four genuinely
+  on-policy stochastic phase-6 rollouts plus three PPO updates in `183.671 s`,
+  processing `273,444` legal records with zero teacher use. Its selected mean
+  raises stochastic progress only `3.3672 -> 3.3750`; LC128 deterministic
+  screening rejects it because raw 8/9 collapses from `1/1` to `0/0`.
+- LC129 expands the LC125 rescue diagnostic to 256 distinct seeds per group
+  while preserving two independent 256-row Puffer actor executions. It takes
+  `99.590 s` and reproduces the original single rescue, but seeds 128--255
+  contribute zero phase-8/9 records. The only three recoverable frontier states
+  are concentrated in seeds 0--127. Reject LC129; report SHA is
+  `cced099979bc...`.
+- Retain LC105 checkpoint SHA `005e5e792925...` as the safe offline frontier.
+  The measured production cycle is now `~50 s` for one 256-row diagnostic,
+  `~68 s` for a source-locked two-actor parent/candidate screen, and `~100 s`
+  for a 512-environment expanded cohort. Fits remain `3--11 s`; native physics
+  remains the bottleneck. The next efficient branch should repeat only the
+  known 0--127 seed group and branch stochastic whole-Puffer actions at phases
+  8--9, rather than collecting broader seeds or fitting rejected teacher data.
+  Live VQ2 Training stays frozen and Submission remains forbidden.
