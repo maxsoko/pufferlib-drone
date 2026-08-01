@@ -39,6 +39,8 @@ ALPHAS = (0.0, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.075,
           0.10, 0.15, 0.20, 0.30, 0.50, 1.0)
 MINIMUM_FAILURE_IMPROVEMENT = 1.01
 MAXIMUM_SUCCESS_ACTION_DRIFT_MSE = 0.00025
+EXPECTED_QUERY_AGENTS = 35
+EXPECTED_SUCCESS_AGENTS = 2
 PARENT_DIR = (
     ROOT / "logs/drone_race_full_policy_six_gate_bootstrap"
     / "vq2_lc073_phase2_constrained_endpoint_full_course_001"
@@ -59,6 +61,7 @@ PREREGISTRATION = ROOT / "docs/vq2_lc080_phase6_success_anchored_endpoint_prereg
 RUNNER = ROOT / "scripts/run_vq2_lc080_vast.sh"
 TEST = ROOT / "tests/test_fit_vq2_lc080_phase6_success_anchored_endpoint.py"
 DEFAULT_OUTPUT = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
+EXTRA_SOURCE_PATHS: tuple[Path, ...] = ()
 
 
 def stratified_agent_split(
@@ -129,6 +132,7 @@ def source_identity() -> dict[str, Any]:
         ROOT / "scripts/collect_vq2_vg062_warmed_teacher_intervention_features.py",
         ROOT / "scripts/train_vq2_lc069_phase2_failure_teacher_endpoint.py",
         ROOT / "pufferlib/vq2_recurrent_phase_residual.py",
+        *EXTRA_SOURCE_PATHS,
     )
     return {
         "source_commit": subprocess.run(
@@ -169,7 +173,10 @@ def fit(
     steps = np.asarray(records["step"], dtype=np.int64)
     terminals = np.asarray(records["terminal"], dtype=np.uint8)
     present, outcome = regression.terminal_outcome_by_agent(agents, steps, terminals)
-    if present.size != 35 or int((outcome[present] == 1).sum()) != 2:
+    if (
+        present.size != EXPECTED_QUERY_AGENTS
+        or int((outcome[present] == 1).sum()) != EXPECTED_SUCCESS_AGENTS
+    ):
         raise RuntimeError("LC080 source-locked uncensored outcome counts changed")
     train_agents, validation_agents = stratified_agent_split(present, outcome)
     train_weights_np = regression.trajectory_class_weights(agents, outcome, train_agents)
