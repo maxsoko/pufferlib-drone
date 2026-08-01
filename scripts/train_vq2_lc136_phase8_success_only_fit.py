@@ -37,6 +37,9 @@ SCHEMA = "vq2_lc136_phase8_success_only_fit_report_v1"
 CHECKPOINT_SCHEMA = "vq2_lc136_phase8_success_only_fit_checkpoint_v1"
 SEED = 432_360
 TARGET_PHASE = 8
+SUCCESS_AGENTS = (143, 148, 175)
+CONTROL_AGENTS = (15, 20, 47)
+TRAINING_SUCCESS_COUNT = 2
 OPTIMIZER_STEPS = 512
 BATCH_SIZE = 4_096
 EVALUATION_INTERVAL = 16
@@ -48,6 +51,8 @@ SCALES = (0.10, 0.30, 0.50, 1.0)
 MINIMUM_SUCCESS_IMPROVEMENT = 2.0
 MAXIMUM_CONTROL_PARENT_DRIFT_MSE = 0.02
 MAXIMUM_PHASE_DELTA_L2 = 64.0
+FROZEN_STATE_FIELD = "frozen_non_phase8_state_exact"
+FIT_METADATA_FIELD = "success_only_phase8_fit"
 PARENT_DIR = (
     ROOT / "logs/drone_race_full_policy_six_gate_bootstrap"
     / "vq2_lc123_phase6_success_rescue_anchor_001"
@@ -167,13 +172,15 @@ def fit(
 
     records = np.memmap(FEATURES, dtype=FEATURE_DTYPE, mode="r")
     phase = np.asarray(records["phase_index"], dtype=np.int64) == TARGET_PHASE
-    success_agents = np.asarray([143, 148, 175], dtype=np.int64)
-    control_agents = np.asarray([15, 20, 47], dtype=np.int64)
+    success_agents = np.asarray(SUCCESS_AGENTS, dtype=np.int64)
+    control_agents = np.asarray(CONTROL_AGENTS, dtype=np.int64)
     rng = np.random.default_rng(SEED)
     shuffled = success_agents.copy()
     rng.shuffle(shuffled)
-    training_agents = np.sort(shuffled[:2])
-    validation_agents = np.sort(shuffled[2:])
+    training_agents = np.sort(shuffled[:TRAINING_SUCCESS_COUNT])
+    validation_agents = np.sort(shuffled[TRAINING_SUCCESS_COUNT:])
+    if not len(training_agents) or not len(validation_agents):
+        raise RuntimeError("success split requires nonempty training and validation sets")
     success_rows = np.flatnonzero(phase & np.isin(records["agent_index"], success_agents))
     control_rows = np.flatnonzero(phase & np.isin(records["agent_index"], control_agents))
     success = records[success_rows]
@@ -310,7 +317,7 @@ def fit(
         "numerically_admitted": admitted, "deployment_candidate": False,
         "parent_checkpoint_sha256": PARENT_CHECKPOINT_SHA256,
         "dataset_feature_sha256": FEATURES_SHA256,
-        "success_only_phase8_fit": {"selected": best, "target_phase": TARGET_PHASE},
+        FIT_METADATA_FIELD: {"selected": best, "target_phase": TARGET_PHASE},
     }
     checkpoint_path = output / "policy_selected.pt"
     atomic_torch_save(checkpoint_path, checkpoint)
@@ -330,7 +337,7 @@ def fit(
         "learning_rate": LEARNING_RATE, "anchor_coefficient": ANCHOR_COEFFICIENT,
         "minimum_success_improvement": MINIMUM_SUCCESS_IMPROVEMENT,
         "maximum_control_parent_drift_mse": MAXIMUM_CONTROL_PARENT_DRIFT_MSE,
-        "frozen_non_phase8_state_exact": frozen_exact,
+        FROZEN_STATE_FIELD: frozen_exact,
         "wall_time_seconds": time.perf_counter() - started,
         "source_identity": identity,
         "safety": {

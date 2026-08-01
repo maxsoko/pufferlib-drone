@@ -17,6 +17,9 @@ def test_lc136_source_lock_and_trajectory_weights() -> None:
 
 def test_lc136_success_only_contract() -> None:
     assert lc136.TARGET_PHASE == 8
+    assert lc136.SUCCESS_AGENTS == (143, 148, 175)
+    assert lc136.CONTROL_AGENTS == (15, 20, 47)
+    assert lc136.TRAINING_SUCCESS_COUNT == 2
     assert lc136.MINIMUM_SUCCESS_IMPROVEMENT == 2.0
     assert lc136.MAXIMUM_CONTROL_PARENT_DRIFT_MSE == 0.02
     assert lc136.SCALES == (0.10, 0.30, 0.50, 1.0)
