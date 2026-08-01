@@ -41,6 +41,8 @@ MAX_GRADIENT_NORM = 1.0
 MINIMUM_VALIDATION_IMPROVEMENT = 5.0
 MAXIMUM_VALIDATION_MSE = math.inf
 TRAINABLE_ADAPTER_PREFIXES = ("phase_adapter_cell.", "phase_adapter_output.")
+FIT_METADATA_FIELD = "phase15_recurrent_adapter"
+FROZEN_STATE_FIELD = "frozen_base_state_exact"
 NEXT_AUTHORITY_ADMITTED = (
     "Run one teacher-free LC169-versus-LC176 raw-16 screen; no FlightSim authority."
 )
@@ -64,6 +66,20 @@ PREREGISTRATION = ROOT / "docs/vq2_lc176_phase15_recurrent_adapter_preregistrati
 RUNNER = ROOT / "scripts/run_vq2_lc176_vast.sh"
 TEST = ROOT / "tests/test_train_vq2_lc176_phase15_recurrent_adapter.py"
 DEFAULT_OUTPUT = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
+
+
+def adapter_modules(actor: VQ2PhaseLocalAdapterActor) -> tuple[nn.GRUCell, nn.Linear]:
+    return actor.phase_adapter_cell, actor.phase_adapter_output
+
+
+def fitted_model_contract(
+    actor: VQ2PhaseLocalAdapterActor, contract: dict[str, Any]
+) -> dict[str, Any]:
+    return {
+        **contract,
+        "adapter_size": ADAPTER_SIZE,
+        "adapter_target_phase": TARGET_PHASE,
+    }
 
 
 def verify_inputs() -> dict[str, Any]:
@@ -277,13 +293,14 @@ def fit(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda", resume: boo
     device = torch.device(device_name)
     gru = nn.GRU(int(contract["hidden_size"]), ADAPTER_SIZE, batch_first=True).to(device)
     head = nn.Linear(ADAPTER_SIZE, 4).to(device)
+    actor_cell, actor_head = adapter_modules(actor)
     with torch.no_grad():
-        gru.weight_ih_l0.copy_(actor.phase_adapter_cell.weight_ih)
-        gru.weight_hh_l0.copy_(actor.phase_adapter_cell.weight_hh)
-        gru.bias_ih_l0.copy_(actor.phase_adapter_cell.bias_ih)
-        gru.bias_hh_l0.copy_(actor.phase_adapter_cell.bias_hh)
-        head.weight.copy_(actor.phase_adapter_output.weight)
-        head.bias.copy_(actor.phase_adapter_output.bias)
+        gru.weight_ih_l0.copy_(actor_cell.weight_ih)
+        gru.weight_hh_l0.copy_(actor_cell.weight_hh)
+        gru.bias_ih_l0.copy_(actor_cell.bias_ih)
+        gru.bias_hh_l0.copy_(actor_cell.bias_hh)
+        head.weight.copy_(actor_head.weight)
+        head.bias.copy_(actor_head.bias)
     initial_trainable = [value.detach().cpu().clone() for value in (*gru.parameters(), *head.parameters())]
     optimizer = torch.optim.Adam((*gru.parameters(), *head.parameters()), lr=LEARNING_RATE)
     generator = np.random.default_rng(432_260)
@@ -339,12 +356,12 @@ def fit(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda", resume: boo
     gru.load_state_dict({name[4:]: value for name, value in best_state.items() if name.startswith("gru.")})
     head.load_state_dict({name[5:]: value for name, value in best_state.items() if name.startswith("head.")})
     with torch.no_grad():
-        actor.phase_adapter_cell.weight_ih.copy_(gru.weight_ih_l0.cpu())
-        actor.phase_adapter_cell.weight_hh.copy_(gru.weight_hh_l0.cpu())
-        actor.phase_adapter_cell.bias_ih.copy_(gru.bias_ih_l0.cpu())
-        actor.phase_adapter_cell.bias_hh.copy_(gru.bias_hh_l0.cpu())
-        actor.phase_adapter_output.weight.copy_(head.weight.cpu())
-        actor.phase_adapter_output.bias.copy_(head.bias.cpu())
+        actor_cell.weight_ih.copy_(gru.weight_ih_l0.cpu())
+        actor_cell.weight_hh.copy_(gru.weight_hh_l0.cpu())
+        actor_cell.bias_ih.copy_(gru.bias_ih_l0.cpu())
+        actor_cell.bias_hh.copy_(gru.bias_hh_l0.cpu())
+        actor_head.weight.copy_(head.weight.cpu())
+        actor_head.bias.copy_(head.bias.cpu())
     model_state = {name: value.detach().cpu().clone() for name, value in actor.state_dict().items()}
     frozen_base_exact = all(
         torch.equal(model_state[name], value)
@@ -365,12 +382,12 @@ def fit(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda", resume: boo
         **parent,
         "schema": CHECKPOINT_SCHEMA,
         "tag": TAG,
-        "model": {**contract, "adapter_size": ADAPTER_SIZE, "adapter_target_phase": TARGET_PHASE},
+        "model": fitted_model_contract(actor, contract),
         "model_state": model_state,
         "parent_checkpoint_sha256": PARENT_CHECKPOINT_SHA256,
         "numerically_admitted": admitted,
         "deployment_candidate": False,
-        "phase15_recurrent_adapter": {
+        FIT_METADATA_FIELD: {
             "best_epoch": best_epoch,
             "validation_teacher_action_mse": best_validation,
             "validation_improvement_factor": improvement,
@@ -386,7 +403,7 @@ def fit(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda", resume: boo
         "candidate_state_sha256": state_sha256(model_state),
         "parent_checkpoint_sha256": PARENT_CHECKPOINT_SHA256,
         "parent_state_sha256": base_state_hash,
-        "frozen_base_state_exact": frozen_base_exact,
+        FROZEN_STATE_FIELD: frozen_base_exact,
         "sequence_contract": sequence_contract(records),
         "training_agents": training_agents.tolist(),
         "validation_agents": validation_agents.tolist(),

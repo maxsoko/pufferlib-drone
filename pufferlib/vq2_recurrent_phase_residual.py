@@ -494,3 +494,189 @@ class VQ2PhaseLocalAdapterActor(VQ2UnboundedProgressMLPResidualActor):
             ),
             next_state,
         )
+
+
+class VQ2StackedPhaseRangeAdapterActor(VQ2PhaseLocalAdapterActor):
+    """A frozen phase-local actor plus one later phase-range adapter.
+
+    This preserves the first adapter's weights, output, and recurrent state
+    exactly. The continuation adapter consumes the same public-observation
+    base recurrent output, updates only inside ``[phase_min, phase_max)``, and
+    emits the complete four-action residual only in that range.
+    """
+
+    def __init__(
+        self,
+        *,
+        target_phase: int,
+        continuation_phase_min: int,
+        continuation_phase_max_exclusive: int,
+        hidden_size: int = 256,
+        residual_size: int = 64,
+        adapter_size: int = 64,
+        continuation_adapter_size: int = 64,
+        initial_std: float = 0.15,
+    ) -> None:
+        super().__init__(
+            target_phase=target_phase,
+            hidden_size=hidden_size,
+            residual_size=residual_size,
+            adapter_size=adapter_size,
+            initial_std=initial_std,
+        )
+        if not 0 <= continuation_phase_min < continuation_phase_max_exclusive:
+            raise ValueError("continuation phase range is invalid")
+        if continuation_phase_max_exclusive > LONG_COURSE_GATE_CAP + 1:
+            raise ValueError("continuation phase range exceeds tracked course")
+        if continuation_adapter_size <= 0:
+            raise ValueError("continuation adapter size must be positive")
+        self.continuation_phase_min = int(continuation_phase_min)
+        self.continuation_phase_max_exclusive = int(
+            continuation_phase_max_exclusive
+        )
+        self.continuation_adapter_size = int(continuation_adapter_size)
+        self.continuation_adapter_cell = nn.GRUCell(
+            hidden_size, continuation_adapter_size
+        )
+        self.continuation_adapter_output = nn.Linear(
+            continuation_adapter_size, ACTION_SIZE
+        )
+        nn.init.zeros_(self.continuation_adapter_output.weight)
+        nn.init.zeros_(self.continuation_adapter_output.bias)
+
+    def load_phase_local_state(
+        self, phase_local_state: dict[str, torch.Tensor]
+    ) -> None:
+        incompatible = self.load_state_dict(phase_local_state, strict=False)
+        expected = {
+            "continuation_adapter_cell.weight_ih",
+            "continuation_adapter_cell.weight_hh",
+            "continuation_adapter_cell.bias_ih",
+            "continuation_adapter_cell.bias_hh",
+            "continuation_adapter_output.weight",
+            "continuation_adapter_output.bias",
+        }
+        if incompatible.unexpected_keys or set(incompatible.missing_keys) != expected:
+            raise RuntimeError("stacked adapter parent differs outside continuation state")
+        nn.init.zeros_(self.continuation_adapter_output.weight)
+        nn.init.zeros_(self.continuation_adapter_output.bias)
+
+    def initial_state(
+        self,
+        batch_size: int,
+        *,
+        device: torch.device | str,
+        dtype: torch.dtype = torch.float32,
+    ) -> torch.Tensor:
+        if batch_size <= 0:
+            raise ValueError("batch size must be positive")
+        return torch.zeros(
+            1,
+            batch_size,
+            self.hidden_size + self.adapter_size + self.continuation_adapter_size,
+            device=device,
+            dtype=dtype,
+        )
+
+    def forward_step(
+        self,
+        observation: torch.Tensor,
+        state: torch.Tensor | None = None,
+    ) -> tuple[RecurrentActorOutput, torch.Tensor]:
+        if observation.ndim != 2 or observation.shape[-1] != PHASE_LEGAL_OBS_SIZE:
+            raise ValueError("stacked phase adapter step accepts [batch,4119] only")
+        batch = observation.shape[0]
+        if state is None:
+            state = self.initial_state(
+                batch, device=observation.device, dtype=observation.dtype
+            )
+        expected = (
+            1,
+            batch,
+            self.hidden_size + self.adapter_size + self.continuation_adapter_size,
+        )
+        if tuple(state.shape) != expected:
+            raise ValueError("stacked phase adapter recurrent state shape changed")
+        phase15_end = self.hidden_size + self.adapter_size
+        base_state = state[..., : self.hidden_size].contiguous()
+        phase_adapter_state = state[0, :, self.hidden_size : phase15_end].contiguous()
+        continuation_state = state[0, :, phase15_end:].contiguous()
+        base_output, next_base_state = (
+            VQ2UnboundedProgressMLPResidualActor.forward_sequence(
+                self, observation.unsqueeze(1), base_state
+            )
+        )
+        progress = observation[:, LEGAL_OBS_SIZE]
+        raw_index = torch.round(progress * OFFICIAL_PROGRESS_SCALE).to(torch.long)
+
+        phase_active = raw_index == self.target_phase
+        candidate_phase_state = self.phase_adapter_cell(
+            next_base_state[0], phase_adapter_state
+        )
+        next_phase_state = torch.where(
+            phase_active[:, None], candidate_phase_state, phase_adapter_state
+        )
+        phase_residual = self.phase_adapter_output(next_phase_state)
+        phase_residual = phase_residual * phase_active[:, None]
+
+        continuation_active = (raw_index >= self.continuation_phase_min) & (
+            raw_index < self.continuation_phase_max_exclusive
+        )
+        candidate_continuation_state = self.continuation_adapter_cell(
+            next_base_state[0], continuation_state
+        )
+        next_continuation_state = torch.where(
+            continuation_active[:, None],
+            candidate_continuation_state,
+            continuation_state,
+        )
+        continuation_residual = self.continuation_adapter_output(
+            next_continuation_state
+        )
+        continuation_residual = continuation_residual * continuation_active[:, None]
+
+        pre_tanh_mean = (
+            base_output.pre_tanh_mean[:, 0]
+            + phase_residual
+            + continuation_residual
+        )
+        mean = torch.tanh(pre_tanh_mean)
+        next_state = torch.cat(
+            (
+                next_base_state,
+                next_phase_state[None],
+                next_continuation_state[None],
+            ),
+            dim=-1,
+        )
+        return RecurrentActorOutput(mean, pre_tanh_mean, base_output.log_std[:, 0]), next_state
+
+    def forward_sequence(
+        self,
+        observation: torch.Tensor,
+        state: torch.Tensor | None = None,
+    ) -> tuple[RecurrentActorOutput, torch.Tensor]:
+        if observation.ndim != 3 or observation.shape[-1] != PHASE_LEGAL_OBS_SIZE:
+            raise ValueError("stacked phase adapter accepts [batch,time,4119] only")
+        batch, steps, _ = observation.shape
+        if state is None:
+            state = self.initial_state(
+                batch, device=observation.device, dtype=observation.dtype
+            )
+        means: list[torch.Tensor] = []
+        pre_tanh_means: list[torch.Tensor] = []
+        log_stds: list[torch.Tensor] = []
+        next_state = state
+        for step in range(steps):
+            output, next_state = self.forward_step(observation[:, step], next_state)
+            means.append(output.mean)
+            pre_tanh_means.append(output.pre_tanh_mean)
+            log_stds.append(output.log_std)
+        return (
+            RecurrentActorOutput(
+                torch.stack(means, dim=1),
+                torch.stack(pre_tanh_means, dim=1),
+                torch.stack(log_stds, dim=1),
+            ),
+            next_state,
+        )

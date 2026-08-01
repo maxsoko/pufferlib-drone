@@ -17,6 +17,7 @@ if str(ROOT) not in sys.path:
 
 from pufferlib.vq2_recurrent_phase_residual import (
     VQ2PhaseLocalAdapterActor,
+    VQ2StackedPhaseRangeAdapterActor,
     VQ2UnboundedProgressMLPResidualActor,
 )
 from scripts.eval_vq2_variable_gate_oracle import sha256_path
@@ -90,7 +91,27 @@ def candidate_metadata_for_index(candidate_index: int) -> dict[str, Any]:
 def load_actor(payload: dict[str, Any], device: torch.device) -> Any:
     contract = payload["model"]
     state = payload["model_state"]
-    if "phase_adapter_cell.weight_ih" in state:
+    if "continuation_adapter_cell.weight_ih" in state:
+        actor = VQ2StackedPhaseRangeAdapterActor(
+            target_phase=int(contract.get("adapter_target_phase", TARGET_PHASE)),
+            continuation_phase_min=int(contract["continuation_phase_min"]),
+            continuation_phase_max_exclusive=int(
+                contract["continuation_phase_max_exclusive"]
+            ),
+            hidden_size=int(contract["hidden_size"]),
+            residual_size=int(contract["residual_size"]),
+            adapter_size=int(
+                contract.get("adapter_size", state["phase_adapter_cell.weight_hh"].shape[1])
+            ),
+            continuation_adapter_size=int(
+                contract.get(
+                    "continuation_adapter_size",
+                    state["continuation_adapter_cell.weight_hh"].shape[1],
+                )
+            ),
+            initial_std=float(contract["initial_std"]),
+        ).to(device)
+    elif "phase_adapter_cell.weight_ih" in state:
         actor = VQ2PhaseLocalAdapterActor(
             target_phase=int(contract.get("adapter_target_phase", TARGET_PHASE)),
             hidden_size=int(contract["hidden_size"]),
