@@ -39,6 +39,11 @@ BATCH_AGENTS = 64
 LEARNING_RATE = 1e-3
 MAX_GRADIENT_NORM = 1.0
 MINIMUM_VALIDATION_IMPROVEMENT = 5.0
+TRAINABLE_ADAPTER_PREFIXES = ("phase_adapter_cell.", "phase_adapter_output.")
+NEXT_AUTHORITY_ADMITTED = (
+    "Run one teacher-free LC169-versus-LC176 raw-16 screen; no FlightSim authority."
+)
+NEXT_AUTHORITY_REJECTED = "Reject LC176; do not screen or run FlightSim."
 PARENT_DIR = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap/vq2_lc169_phase15_failure_state_dagger2_fit_001"
 PARENT_CHECKPOINT = PARENT_DIR / "policy_selected.pt"
 PARENT_CHECKPOINT_SHA256 = "8ae1a6d9aebd01d584344f006724f5a81699a011a759356283ada1f271ece1b7"
@@ -219,6 +224,19 @@ def parent_error(arrays: tuple[np.ndarray, ...], agents: np.ndarray) -> float:
     return float((row_error * weights).sum() / len(agents))
 
 
+def build_actor(parent: dict[str, Any]) -> VQ2PhaseLocalAdapterActor:
+    contract = parent["model"]
+    actor = VQ2PhaseLocalAdapterActor(
+        target_phase=TARGET_PHASE,
+        hidden_size=int(contract["hidden_size"]),
+        residual_size=int(contract["residual_size"]),
+        adapter_size=ADAPTER_SIZE,
+        initial_std=float(contract["initial_std"]),
+    )
+    actor.load_base_state(parent["model_state"])
+    return actor
+
+
 def fit(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda", resume: bool = False) -> dict[str, Any]:
     parent = verify_inputs()
     if device_name == "cuda" and not torch.cuda.is_available():
@@ -240,14 +258,7 @@ def fit(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda", resume: boo
         raise RuntimeError("LC176 agent split changed")
 
     contract = parent["model"]
-    actor = VQ2PhaseLocalAdapterActor(
-        target_phase=TARGET_PHASE,
-        hidden_size=int(contract["hidden_size"]),
-        residual_size=int(contract["residual_size"]),
-        adapter_size=ADAPTER_SIZE,
-        initial_std=float(contract["initial_std"]),
-    )
-    actor.load_base_state(parent["model_state"])
+    actor = build_actor(parent)
     base_state_hash = state_sha256(parent["model_state"])
     device = torch.device(device_name)
     gru = nn.GRU(int(contract["hidden_size"]), ADAPTER_SIZE, batch_first=True).to(device)
@@ -262,7 +273,9 @@ def fit(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda", resume: boo
     initial_trainable = [value.detach().cpu().clone() for value in (*gru.parameters(), *head.parameters())]
     optimizer = torch.optim.Adam((*gru.parameters(), *head.parameters()), lr=LEARNING_RATE)
     generator = np.random.default_rng(432_260)
-    parent_validation_mse = parent_error(arrays, validation_agents)
+    parent_validation_mse = evaluate(
+        gru, head, arrays, validation_agents, device=device
+    )
     history: list[dict[str, Any]] = []
     best_validation = math.inf
     best_epoch = 0
@@ -319,7 +332,11 @@ def fit(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda", resume: boo
         actor.phase_adapter_output.weight.copy_(head.weight.cpu())
         actor.phase_adapter_output.bias.copy_(head.bias.cpu())
     model_state = {name: value.detach().cpu().clone() for name, value in actor.state_dict().items()}
-    frozen_base_exact = all(torch.equal(model_state[name], value) for name, value in parent["model_state"].items())
+    frozen_base_exact = all(
+        torch.equal(model_state[name], value)
+        for name, value in parent["model_state"].items()
+        if not name.startswith(TRAINABLE_ADAPTER_PREFIXES)
+    )
     final_trainable = [value.detach().cpu() for value in (*gru.parameters(), *head.parameters())]
     parameter_delta_l2 = math.sqrt(sum(float((a - b).square().sum()) for a, b in zip(final_trainable, initial_trainable)))
     improvement = parent_validation_mse / best_validation
@@ -376,8 +393,7 @@ def fit(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda", resume: boo
             "submission_authorized": False,
         },
         "next_authority": (
-            "Run one teacher-free LC169-versus-LC176 raw-16 screen; no FlightSim authority."
-            if admitted else "Reject LC176; do not screen or run FlightSim."
+            NEXT_AUTHORITY_ADMITTED if admitted else NEXT_AUTHORITY_REJECTED
         ),
     }
     write_json_once(report_path, report)

@@ -40,3 +40,10 @@ def test_lc176_fit_does_not_shadow_output_path() -> None:
         if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store)
     }
     assert "output" not in stores
+
+
+def test_lc176_build_actor_is_zero_adapter_parent() -> None:
+    parent = lc176.verify_inputs()
+    actor = lc176.build_actor(parent)
+    for name, value in parent["model_state"].items():
+        assert np.array_equal(actor.state_dict()[name].numpy(), value.numpy())
