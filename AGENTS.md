@@ -11536,3 +11536,48 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   the source trajectory approaches the 24-gate proxy finish. No LC130--LC159
   job sends FlightSim packets. Live VQ2 Training remains frozen and Submission
   is forbidden.
+
+### VQ2 raw-index-16 phase-15 recurrent-adapter frontier — LC160--LC185, 2026-08-01
+
+- The official course is still approximately 20 gates or more from direct
+  simulator inspection; the exact count is runtime-authoritative. The native
+  proxy is fixed at 24 gates. Raw index 16 is not an official lap, and only a
+  nonnegative official `race_finish_time_ns` proves completion. The deadline
+  remains 2026-08-02. No LC160--LC185 job sends a FlightSim packet.
+- LC160--LC163 extend the repeated source through phases 13 and 14. LC160 finds
+  the raw-14 candidate and LC161 confirms `128/128`; LC162 finds a sparse
+  raw-15 candidate (`2/512`) and LC163 confirms it `128/128`. LC162 checkpoint
+  SHA is `4a45d1814e2f...`. LC164 phase-15 CEM is `0/512` and exhausted.
+- LC165--LC174 run three phase-15 whole-Puffer DAgger collections/fits plus an
+  interpolation bracket. LC172 is the strongest corpus: `375,552` exact
+  phase-15 records with `0/256` control and `256/256` alignment-oracle rescue;
+  feature/report SHA values are `ddb15553a498...`/`6e0f176d7e0f...`. LC173
+  improves labels `331.586x`, but LC174 remains `0/128`. Reject all three fits.
+- LC175's alignment-return PPO obtains only sampled raw-16 passes (`6/512` in
+  its selected rollout); LC177 proves its deterministic mean is `0/128`.
+  Sampled success is not a deployable policy result.
+- LC176 introduces a legal 64-state phase-local GRU adapter. It consumes only
+  the frozen Puffer's legal 256-state recurrent output, emits the complete
+  four-action residual only at public phase 15, and carries a 320-value saved
+  recurrent state. LC178 rejects the initial adapter `0/128`. LC179--LC181
+  drive old-sequence MSE to `2.759212e-5`, but LC182 still rejects the
+  converged mean `0/128`; action transport and phase integrity are exact.
+  LC181 checkpoint/report SHA values are `e69049c6f890...`/`96ffb3675a7f...`;
+  LC182 report SHA is `71af2e473f82...`.
+- LC183 pivots to adapter-owned DAgger as preregistered. Two independent LC181
+  actors produce `409,600` phase-15 records: LC181 control is `0/256`, the
+  training-only oracle branch is `256/256`, and transport is exact. Saved
+  features exclude the adapter's private 64-state memory and output, retaining
+  only the frozen 256-state base, base-only logits, teacher target, and public
+  metadata. Feature/report SHA values are `1ec713f3f32f...`/`a6b1447c3b22...`.
+- LC184 continues only the adapter for 120 epochs in `77.672 s`, improves
+  validation MSE `268.947x` to `6.88444e-5`, and preserves every base weight
+  exactly. Checkpoint SHA is `b63346551f3d...`. LC185 nevertheless rejects it
+  `0/128`; all rows terminate at raw 15 with exact transport. Report SHA is
+  `1059f3cba335...`. This is continued covariate drift, not an infrastructure
+  failure or permission for live probing.
+- Continue adapter-owned DAgger from LC184's shifted failure distribution.
+  Keep the base Puffer immutable, teacher/oracle use training-only, and require
+  a strict teacher-free `128/128` raw-16 screen before treating any checkpoint
+  as the next offline source. Live VQ2 Training stays frozen and Submission is
+  forbidden.
