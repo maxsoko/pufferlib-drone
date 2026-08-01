@@ -431,18 +431,36 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
             and raw_encoding_max_error[group] <= 1e-6
         )
         pass_steps = resolve_step[selected][passed[selected]]
+        target_passes = int(passed[selected].sum())
+        target_pass_rate = float(passed[selected].mean())
+        paired_gains = int((candidate_passed & ~baseline_passed).sum())
+        paired_losses = int((~candidate_passed & baseline_passed).sum())
+        paired_net = int(candidate_passed.sum() - baseline_passed.sum())
+        pre_target_terminals = int(prepass_terminal[selected].sum())
+        resolve_step_mean = float(pass_steps.mean()) if pass_steps.size else None
+        resolve_step_max = int(pass_steps.max()) if pass_steps.size else None
         items.append({
             "candidate_index": group, "name": name, **candidate_metadata,
             "candidate_state_sha256": state_sha256(candidate),
-            "gate3_passes": int(passed[selected].sum()),
-            "gate3_pass_rate": float(passed[selected].mean()),
-            "paired_gate3_gains_vs_baseline": int((candidate_passed & ~baseline_passed).sum()),
-            "paired_gate3_losses_vs_baseline": int((~candidate_passed & baseline_passed).sum()),
-            "paired_gate3_net_vs_baseline": int(candidate_passed.sum() - baseline_passed.sum()),
-            "pre_gate3_terminals": int(prepass_terminal[selected].sum()),
+            "target_raw_index": TARGET_RAW_INDEX,
+            "target_passes": target_passes,
+            "target_pass_rate": target_pass_rate,
+            "paired_target_gains_vs_baseline": paired_gains,
+            "paired_target_losses_vs_baseline": paired_losses,
+            "paired_target_net_vs_baseline": paired_net,
+            "pre_target_terminals": pre_target_terminals,
+            "target_resolve_step_mean": resolve_step_mean,
+            "target_resolve_step_max": resolve_step_max,
+            # Retain legacy names for the already-source-locked Gate-3 users.
+            "gate3_passes": target_passes,
+            "gate3_pass_rate": target_pass_rate,
+            "paired_gate3_gains_vs_baseline": paired_gains,
+            "paired_gate3_losses_vs_baseline": paired_losses,
+            "paired_gate3_net_vs_baseline": paired_net,
+            "pre_gate3_terminals": pre_target_terminals,
             "unresolved": int((~resolved[selected]).sum()),
-            "gate3_resolve_step_mean": float(pass_steps.mean()) if pass_steps.size else None,
-            "gate3_resolve_step_max": int(pass_steps.max()) if pass_steps.size else None,
+            "gate3_resolve_step_mean": resolve_step_mean,
+            "gate3_resolve_step_max": resolve_step_max,
             "maximum_raw_index_distribution": distribution,
             "transport_pass": transport,
             "action_envelope_violations": int(action_envelope_violations[group]),
