@@ -57,3 +57,4 @@ def test_lc176_default_sequence_weights_are_per_agent_normalized() -> None:
     )
     assert torch.allclose(weights.sum(dim=1), torch.ones(2))
     assert weights[0, 2] == 0.0
+    assert np.isinf(lc176.MAXIMUM_VALIDATION_MSE)

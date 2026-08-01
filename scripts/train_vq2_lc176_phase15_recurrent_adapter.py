@@ -39,6 +39,7 @@ BATCH_AGENTS = 64
 LEARNING_RATE = 1e-3
 MAX_GRADIENT_NORM = 1.0
 MINIMUM_VALIDATION_IMPROVEMENT = 5.0
+MAXIMUM_VALIDATION_MSE = math.inf
 TRAINABLE_ADAPTER_PREFIXES = ("phase_adapter_cell.", "phase_adapter_output.")
 NEXT_AUTHORITY_ADMITTED = (
     "Run one teacher-free LC169-versus-LC176 raw-16 screen; no FlightSim authority."
@@ -354,7 +355,12 @@ def fit(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda", resume: boo
     parameter_delta_l2 = math.sqrt(sum(float((a - b).square().sum()) for a, b in zip(final_trainable, initial_trainable)))
     improvement = parent_validation_mse / best_validation
     finite = bool(math.isfinite(best_validation) and math.isfinite(parameter_delta_l2))
-    admitted = bool(finite and frozen_base_exact and improvement >= MINIMUM_VALIDATION_IMPROVEMENT)
+    admitted = bool(
+        finite
+        and frozen_base_exact
+        and improvement >= MINIMUM_VALIDATION_IMPROVEMENT
+        and best_validation <= MAXIMUM_VALIDATION_MSE
+    )
     checkpoint = {
         **parent,
         "schema": CHECKPOINT_SCHEMA,
@@ -396,6 +402,7 @@ def fit(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda", resume: boo
             "learning_rate": LEARNING_RATE,
             "maximum_gradient_norm": MAX_GRADIENT_NORM,
             "minimum_validation_improvement": MINIMUM_VALIDATION_IMPROVEMENT,
+            "maximum_validation_mse": MAXIMUM_VALIDATION_MSE,
             "temporal_weight_segments": [list(item) for item in TEMPORAL_WEIGHT_SEGMENTS],
         },
         "wall_time_seconds": time.perf_counter() - started,
