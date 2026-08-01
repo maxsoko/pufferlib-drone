@@ -21,6 +21,12 @@ import scripts.eval_vq2_lc058_phase2_bias_milestone as milestone
 import scripts.eval_vq2_lc121_phase6_partial_endpoint_scale_screen as base
 
 
+# LC122 temporarily installs its callbacks into LC121's module namespace. Keep
+# stable references so our wrappers cannot recurse after that installation.
+BASE_VERIFY_INPUTS = base.verify_inputs
+BASE_CONFIGURE = base.configure
+
+
 TAG = "vq2_lc122_phase6_8_composite_scale_screen_001"
 SCHEMA = "vq2_lc122_phase6_8_composite_scale_screen_report_v1"
 PHASE6_SCALE = 0.30
@@ -75,7 +81,7 @@ def candidate_metadata_for_index(candidate_index: int) -> dict[str, Any]:
 
 
 def verify_inputs() -> dict[str, Any]:
-    parent = base.verify_inputs()
+    parent = BASE_VERIFY_INPUTS()
     if sha256_path(LC121_REPORT) != LC121_REPORT_SHA256:
         raise RuntimeError("LC122 bound LC121 report changed")
     rejected = json.loads(LC121_REPORT.read_text())
@@ -106,7 +112,7 @@ def configure() -> None:
     base.TARGET_PHASE = 8
     base.PREREGISTRATION, base.RUNNER, base.TEST = PREREGISTRATION, RUNNER, TEST
     base.DEFAULT_OUTPUT = DEFAULT_OUTPUT
-    base.configure()
+    BASE_CONFIGURE()
     milestone.EXTRA_SOURCE_PATHS = (
         Path(__file__).resolve(), LC121_REPORT,
         base.FIT_CHECKPOINT, base.FIT_REPORT,
@@ -130,14 +136,10 @@ def run(
         base.verify_inputs, base.configure,
         base.candidate_state_for_index, base.candidate_metadata_for_index,
     )
-    original_configure = base.configure
     base.verify_inputs = verify_inputs
     base.candidate_state_for_index = candidate_state_for_index
     base.candidate_metadata_for_index = candidate_metadata_for_index
-    base.configure = configure
     try:
-        # configure() calls the saved LC121 configuration through this temporary restore.
-        base.configure = original_configure
         configure()
         base.configure = lambda: None
         return base.run(output=output, device_name=device_name, resume=resume)
