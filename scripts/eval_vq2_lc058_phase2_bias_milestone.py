@@ -134,6 +134,34 @@ def apply_candidate_actions(
     return apply_phase2_bias(actor_output.pre_tanh_mean, held_progress, context)
 
 
+def initialize_actor_execution(
+    payload: dict[str, Any], *, device: torch.device
+) -> dict[str, Any]:
+    actor = load_actor(payload, device)
+    return {
+        "actor": actor,
+        "recurrent": actor.initial_state(TOTAL_AGENTS, device=device),
+    }
+
+
+def execute_actor_actions(
+    execution: dict[str, Any],
+    actor_input: torch.Tensor,
+    active: torch.Tensor,
+    held_progress: torch.Tensor,
+    candidate_context: Any,
+) -> torch.Tensor:
+    actor_output, next_recurrent = execution["actor"].forward_step(
+        actor_input, execution["recurrent"]
+    )
+    execution["recurrent"] = preserve_frozen_state(
+        execution["recurrent"], next_recurrent, active
+    )
+    return apply_candidate_actions(
+        actor_output, next_recurrent, held_progress, candidate_context
+    )
+
+
 def candidate_state_for_index(
     parent_state: dict[str, torch.Tensor], candidate_index: int
 ) -> dict[str, torch.Tensor]:
@@ -270,7 +298,7 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
 
     identity = source_identity()
     device = torch.device(device_name)
-    actor = load_actor(payload, device)
+    actor_execution = initialize_actor_execution(payload, device=device)
     config, overrides = load_config(
         pufferl, num_gates=NUM_GATES, agents=TOTAL_AGENTS,
         episodes=EPISODES, seed=SEED, threads=THREADS,
@@ -295,7 +323,6 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
     observations = _cpu_tensor(vector.obs_ptr, (TOTAL_AGENTS, ENV_OBS_SIZE), torch.float32)
     terminals = _cpu_tensor(vector.terminals_ptr, (TOTAL_AGENTS,), torch.float32)
     actions_cpu = torch.zeros((TOTAL_AGENTS, ACTION_SIZE), dtype=torch.float32)
-    recurrent = actor.initial_state(TOTAL_AGENTS, device=device)
     candidate_context = build_candidate_context(payload, device=device)
     done = torch.zeros(TOTAL_AGENTS, dtype=torch.bool)
     resolved = np.zeros(TOTAL_AGENTS, dtype=bool)
@@ -362,10 +389,8 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
                 actor_input = torch.cat((legal, progress), dim=1)
                 active = active_cpu.to(device)
                 inference_started = time.perf_counter()
-                actor_output, next_recurrent = actor.forward_step(actor_input, recurrent)
-                recurrent = preserve_frozen_state(recurrent, next_recurrent, active)
-                action = apply_candidate_actions(
-                    actor_output, next_recurrent, progress, candidate_context
+                action = execute_actor_actions(
+                    actor_execution, actor_input, active, progress, candidate_context
                 )
                 action = torch.where(active[:, None], action, torch.zeros_like(action))
                 inference_seconds += time.perf_counter() - inference_started
