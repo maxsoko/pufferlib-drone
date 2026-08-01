@@ -11353,3 +11353,82 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   require a new causal screen, confirmation, and full-course promotion before
   replay/shadow or any bounded Training request. No LC058--LC087 job sends a
   FlightSim packet. Live Training remains frozen and Submission is forbidden.
+
+### VQ2 full-batch and dense-head Puffer frontier — LC088--LC114, 2026-08-01
+
+- The official course remains approximately 20 gates or more by direct user
+  inspection. The exact count and finish are runtime-authoritative; only
+  `race_finish_time_ns >= 0` proves an official lap. All results below use the
+  fixed 24-gate offline proxy and cannot be called an official finish.
+- LC088's phase-7 parity direction repeats a `1 -> 2` milestone gain, but
+  LC089 misses its preregistered two-pass confirmation margin. LC090--LC092
+  expose a numerical execution-context issue: saved Puffer actions can differ
+  by about `6e-8` when the CUDA actor batch changes, which is enough to
+  bifurcate rare long-horizon trajectories. LC093's separate 128-row actors
+  therefore reject the saved LC087 checkpoint, while LC094 restores the
+  established full 256-row actor batch and promotes serialization-exact LC087.
+  LC094 mean progress is `3.421875`, maximum raw index 9, crash `0.1015625`;
+  checkpoint/report SHA-256 values are `14a5f90e8a7a...`/`639edd98ec0d...`.
+  Treat actor batch size as part of the numerical evaluation contract.
+- LC095 proves the fast dense Puffer data path. A 512-agent teacher-plant
+  gate-local job collects `975,450` legal Puffer hidden-state records across
+  phases 6--23 in `17.109 s`, about `57k` native plant steps/s, with zero crash
+  or transport fault. Feature/report SHA-256 values are `8120b32a09c3...`/
+  `fee19dfe6357...`. LC096 fits all 18 output rows in `17.544 s`; 16 pass the
+  held-out `1.25x` gate, but phases 8/9 reach only `1.211x/1.157x`, so the
+  all-row endpoint is rejected. Report SHA is `75b65b85340e...`.
+- LC097/LC098 locally bracket the 16 admissible LC096 rows. LC098 selects
+  alpha `.15`, improving gate-local mean advance `0.354167 -> 0.427083`,
+  one-gate passes `26 -> 32`, and crashes `1 -> 0` in 96. LC099's exact
+  full-start screen rejects that broad update: mean regresses
+  `3.421875 -> 3.390625` and maximum raw index `9 -> 7`, despite crash improving
+  `0.1015625 -> 0.09375`. LC099 report SHA is `385fc1ae3ef6...`; retain LC094.
+- LC100 source-locks LC094's true phase-7 frontier in the 256-row context and
+  admits `11,632` uncensored records from eight duplicated query trajectories:
+  two successes and six failures, in `47.847 s`. Feature/report SHA values are
+  `82afac13a8c9...`/`8376900f79a1...`. LC101 fits the success-anchored phase-7
+  output endpoint in `0.647 s`, improving held failure error `1.100639x` with
+  success drift `7.48e-5`; endpoint/report SHA values are `fd9feb93c2ce...`/
+  `0bd35fcae29a...`.
+- LC102's 448-row actor context erases the rare frontier (`0/64` at raw index
+  8) and is rejected as a batch diagnostic. LC103 corrects to independent
+  baseline-plus-candidate 256-row actor pairs and selects exact LC101:
+  `1/128 -> 2/128` raw-index-8 passes, one paired gain, zero losses. LC104
+  confirms the exact same result on its separately tagged cohort. Report SHA
+  values are `3a85e0aefcf0...`/`3f53e5421462...`.
+- LC105 promotes the serialization-exact phase-7 endpoint. Full-course mean
+  improves `3.421875 -> 3.4296875`, raw-index-8 reach `1 -> 2`, maximum raw
+  index remains 9, miss remains `0.3203125`, and crash improves
+  `0.1015625 -> 0.09375`. The candidate distribution is raw 7/8/9 at `2/1/1`.
+  Promoted checkpoint SHA-256 is
+  `005e5e7929258fd282ab390fd230fda817700afaee790e78144200e67b3e10a4`;
+  report SHA is `c614e6929282...`. LC105 supersedes LC094 and LC087 as the
+  offline whole-Puffer frontier.
+- LC106 admits the LC105-owned phase-8 frontier: `4,736` uncensored records,
+  four duplicated entrants, two successes/two failures, in `51.468 s`.
+  Feature/report SHA values are `e13fc384a159...`/`2bfa88c9caa5...`. LC107's
+  output-only success-anchored fit takes `0.768 s` and improves held failure
+  error `1.254x`, but LC108 is flat through scale 1, LC109 loses the sole
+  raw-index-9 success at scales 2/3, and LC110's measured-success biases also
+  lose it. Reject the LC107/bias families; LC108--LC110 report SHA values are
+  `8d316600adf0...`/`53ca3940eb65...`/`0310afe43e4c...`.
+- LC111 opens the complete two-layer residual MLP at phases 8 and 9 while
+  freezing the encoder, recurrent base, ABI, base action head, and every other
+  phase. It trains 512 Adam steps per phase on LC095 in only `5.396 s` and
+  improves held teacher-action MSE `10.791x/9.029x`, with parameter deltas
+  `9.164/7.022`. Endpoint/report SHA values are `64fa2e09b7f9...`/
+  `ebaddc1c4b6b...`. This proves that high-capacity Puffer fitting is no longer
+  the cycle bottleneck; exact native screening remains dominant.
+- LC112 shows joint phase-8/9 scales `.01/.03/.10` all turn the sole raw-index-9
+  path into a raw-index-8 stop. LC113 isolates phase 9 and preserves raw-index-9
+  reach through `.10`, but creates no raw-index-10 pass. LC114's final
+  `.30/.50/1.0` isolated bracket also remains `0/128` at raw index 10, so reject
+  the LC111 endpoint family without another scale retry. Report SHA values are
+  `e84a5604cf25...`/`fda1c5194aa7...`/`09d730b6dd16...`.
+- Retain LC105. The Vast instance is efficiently saturating the real
+  `34.97142`-core cgroup allocation; dense collection takes `17--51 s`, fits
+  `0.65--5.40 s`, and exact four-candidate pairwise-256 screens about
+  `125--129 s`. Keep one CUDA process and 32 native threads. Reduce the number
+  of simulated candidate steps instead of adding workers or larger actor
+  batches. No LC088--LC114 job sends a FlightSim packet. Live VQ2 Training
+  remains frozen and Submission is forbidden.
