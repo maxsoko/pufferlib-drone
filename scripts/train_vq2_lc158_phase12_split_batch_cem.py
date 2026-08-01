@@ -192,7 +192,7 @@ def train(
         return json.loads((output / "report.json").read_text())
     finally:
         prior.base.GENERATIONS = generation_original
-        prior.restore(originals)
+        restore(originals)
 
 
 def main() -> int:
