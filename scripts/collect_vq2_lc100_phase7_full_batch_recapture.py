@@ -23,6 +23,10 @@ STATE_SCHEMA = "vq2_lc100_phase7_full_batch_recapture_state_v1"
 AGENTS = EPISODES = 256
 SEED = 431_990
 SEED_GROUP_SIZE = 128
+TARGET_PHASE = 7
+CHECKPOINT_SCHEMA_EXPECTED = (
+    "vq2_lc094_full_batch_serialized_checkpoint_checkpoint_v1"
+)
 MINIMUM_RECORDS = 10_000
 EXPECTED_QUERY_AGENTS = 8
 EXPECTED_SUCCESS_AGENTS = 2
@@ -91,6 +95,7 @@ def configure() -> None:
     recapture.TAG, recapture.SCHEMA, recapture.STATE_SCHEMA = TAG, SCHEMA, STATE_SCHEMA
     recapture.AGENTS = recapture.EPISODES = AGENTS
     recapture.SEED = SEED
+    recapture.TARGET_PHASE = TARGET_PHASE
     recapture.MINIMUM_RECORDS = MINIMUM_RECORDS
     recapture.EXPECTED_QUERY_AGENTS = EXPECTED_QUERY_AGENTS
     recapture.EXPECTED_SUCCESS_AGENTS = EXPECTED_SUCCESS_AGENTS
@@ -108,9 +113,7 @@ def configure() -> None:
     recapture.DEFAULT_OUTPUT = DEFAULT_OUTPUT
     recapture.verify_inputs = verify_inputs
     recapture.configure()
-    recapture.base.CHECKPOINT_SCHEMA_EXPECTED = (
-        "vq2_lc094_full_batch_serialized_checkpoint_checkpoint_v1"
-    )
+    recapture.base.CHECKPOINT_SCHEMA_EXPECTED = CHECKPOINT_SCHEMA_EXPECTED
     recapture.base.EXTRA_SOURCE_PATHS = (
         Path(__file__).resolve(), TEST, Path(recapture.__file__).resolve(),
         PARENT_REPORT, LC099_REPORT,
