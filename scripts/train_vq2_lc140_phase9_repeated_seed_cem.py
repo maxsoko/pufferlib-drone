@@ -417,7 +417,9 @@ def train(
             selected = {
                 "generation": generation, "agent": int(best),
                 "delta": deltas[best].tolist(), "score": float(score[best]),
-                "phase_return": float(score[best] - 1_010_000.0),
+                "phase_return": float(
+                    score[best] - 1_000_000.0 - 1_000.0 * TARGET_RAW_INDEX
+                ),
             }
             break
         elite = deltas[order[:ELITES]]

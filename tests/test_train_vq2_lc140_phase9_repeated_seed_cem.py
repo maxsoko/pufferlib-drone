@@ -51,3 +51,8 @@ def test_native_seed_offset_hook_is_default_preserving() -> None:
     source = (lc140.ROOT / "src/vecenv.h").read_text()
     assert 'dict_get_unsafe(\n        vec_kwargs, "env_seed_index_offset")' in source
     assert "env_seed_index += env_seed_index_offset;" in source
+
+
+def test_selected_phase_return_offset_tracks_target_index() -> None:
+    source = (lc140.ROOT / "scripts/train_vq2_lc140_phase9_repeated_seed_cem.py").read_text()
+    assert "1_000.0 * TARGET_RAW_INDEX" in source
