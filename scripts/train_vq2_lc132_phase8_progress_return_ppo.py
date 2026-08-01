@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Teacher-free phase-8 PPO with training-only native dense returns."""
+"""Phase-8 PPO with a telescoping training-only native progress return."""
 
 from __future__ import annotations
 
@@ -20,40 +20,49 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.eval_vq2_variable_gate_oracle import sha256_path
-import scripts.train_vq2_lc127_phase6_onpolicy_ppo as base
+import scripts.train_vq2_lc131_phase8_dense_return_ppo as dense
 
 
-BASE_LOAD_CONFIG = base.load_config
-BASE_WRITE_JSON_ONCE = base.write_json_once
+BASE_WRITE_JSON_ONCE = dense.BASE_WRITE_JSON_ONCE
 
-TAG = "vq2_lc131_phase8_dense_return_ppo_001"
-SCHEMA = "vq2_lc131_phase8_dense_return_ppo_report_v1"
-CHECKPOINT_SCHEMA = "vq2_lc131_phase8_dense_return_ppo_checkpoint_v1"
-TOTAL_AGENTS = 256
-SEED_GROUP_SIZE = 128
-ROLLOUTS = 4
-PPO_EPOCHS = base.PPO_EPOCHS
-LEARNING_RATE = base.LEARNING_RATE
-TARGET_PHASE = 8
-TARGET_RAW_INDEX = 9
-PHASE_RETURN_ADVANTAGE_WEIGHT = 1.0
-PHASE_RETURN_ENV_OVERRIDES: dict[str, int | float] = {}
-PARENT_DIR = (
+TAG = "vq2_lc132_phase8_progress_return_ppo_001"
+SCHEMA = "vq2_lc132_phase8_progress_return_ppo_report_v1"
+CHECKPOINT_SCHEMA = "vq2_lc132_phase8_progress_return_ppo_checkpoint_v1"
+ROLLOUTS = 6
+PPO_EPOCHS = 2
+LEARNING_RATE = 1e-5
+REWARD_OVERRIDES: dict[str, int | float] = {
+    "w_progress": 5.0,
+    "w_gate": 0.0,
+    "w_ordered_gate": 30.0,
+    "w_finish": 0.0,
+    "w_time": 0.0,
+    "w_ctrl": 0.0,
+    "w_body_rate": 0.0,
+    "w_cross_track": 0.0,
+    "w_gate_camera_alignment": 0.0,
+    "w_gate_crossing_error": 0.0,
+    "w_gate_exit_lateral_velocity": 0.0,
+    "w_gate_exit_velocity": 0.0,
+    "w_forward_speed_excess": 0.0,
+    "w_altitude_floor": 0.0,
+    "w_descent_floor": 0.0,
+    "w_action_teacher": 0.0,
+    "invalid_penalty": 0.0,
+    "late_invalid_penalty": 0.0,
+}
+PARENT_CHECKPOINT = dense.PARENT_CHECKPOINT
+PARENT_CHECKPOINT_SHA256 = dense.PARENT_CHECKPOINT_SHA256
+PARENT_REPORT = dense.PARENT_REPORT
+PARENT_REPORT_SHA256 = dense.PARENT_REPORT_SHA256
+LC131_REPORT = (
     ROOT / "logs/drone_race_full_policy_six_gate_bootstrap"
-    / "vq2_lc123_phase6_success_rescue_anchor_001"
+    / "vq2_lc131_phase8_dense_return_ppo_001/report.json"
 )
-PARENT_CHECKPOINT = PARENT_DIR / "policy_selected.pt"
-PARENT_CHECKPOINT_SHA256 = "0d0d9f6ba796dbf1803521214a0c030a79673f24cff538ae05338183ded4f558"
-PARENT_REPORT = PARENT_DIR / "report.json"
-PARENT_REPORT_SHA256 = "92f29cdd0f3c76b2c031be3acdcf5bc23fecc9c7e499cafe3cf6edc5758c0bf9"
-LC130_REPORT = (
-    ROOT / "logs/drone_race_full_policy_six_gate_bootstrap"
-    / "vq2_lc130_phase8_repeated_frontier_ppo_001/report.json"
-)
-LC130_REPORT_SHA256 = "da1a9b3c4d26a1dcd9d06b15e442f876028895504677736dba24ab296722c8d9"
-PREREGISTRATION = ROOT / "docs/vq2_lc131_phase8_dense_return_ppo_preregistration_2026-08-01.md"
-RUNNER = ROOT / "scripts/run_vq2_lc131_vast.sh"
-TEST = ROOT / "tests/test_train_vq2_lc131_phase8_dense_return_ppo.py"
+LC131_REPORT_SHA256 = "fe676fcb2e05bf6b439163f3830877600b92ce8889ca1af384d756c27984d421"
+PREREGISTRATION = ROOT / "docs/vq2_lc132_phase8_progress_return_ppo_preregistration_2026-08-01.md"
+RUNNER = ROOT / "scripts/run_vq2_lc132_vast.sh"
+TEST = ROOT / "tests/test_train_vq2_lc132_phase8_progress_return_ppo.py"
 DEFAULT_OUTPUT = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
 
 
@@ -61,13 +70,14 @@ def verify_inputs() -> dict[str, Any]:
     for path, digest in {
         PARENT_CHECKPOINT: PARENT_CHECKPOINT_SHA256,
         PARENT_REPORT: PARENT_REPORT_SHA256,
-        LC130_REPORT: LC130_REPORT_SHA256,
+        LC131_REPORT: LC131_REPORT_SHA256,
     }.items():
         if sha256_path(path) != digest:
-            raise RuntimeError(f"LC131 bound input changed: {path}")
+            raise RuntimeError(f"LC132 bound input changed: {path}")
     parent = torch.load(PARENT_CHECKPOINT, map_location="cpu", weights_only=False)
     parent_report = json.loads(PARENT_REPORT.read_text())
-    rejected = json.loads(LC130_REPORT.read_text())
+    rejected = json.loads(LC131_REPORT.read_text())
+    rollouts = rejected.get("rollouts", [])
     updates = rejected.get("updates", [])
     if (
         parent.get("schema")
@@ -76,18 +86,19 @@ def verify_inputs() -> dict[str, Any]:
         or not parent_report.get("numerically_admitted")
         or parent_report.get("checkpoint_sha256") != PARENT_CHECKPOINT_SHA256
         or rejected.get("schema")
-        != "vq2_lc130_phase8_repeated_frontier_ppo_report_v1"
-        or not rejected.get("training_admitted")
+        != "vq2_lc131_phase8_dense_return_ppo_report_v1"
         or rejected.get("candidate_selected_for_screen") is not None
-        or len(rejected.get("rollouts", [])) != 3
-        or any(item.get("raw9_or_later") != 0 for item in rejected["rollouts"])
-        or len(updates) != 2
-        or any(item.get("parameter_delta_l2") != 0.0 for item in updates)
-        or any(item.get("queried_score_std") != 0.0 for item in updates)
+        or not rejected.get("nonzero_updates")
+        or not rejected.get("nonzero_phase_return_variance")
+        or len(rollouts) != 4
+        or any(item.get("raw9_or_later") != 0 for item in rollouts)
+        or rollouts[3].get("records", 0) >= rollouts[0].get("records", 0)
+        or len(updates) != 3
+        or any(item.get("parameter_delta_l2", 0.0) <= 0.0 for item in updates)
         or rejected.get("safety", {}).get("flight_sim_packets_sent") != 0
         or rejected.get("safety", {}).get("submission_authorized")
     ):
-        raise RuntimeError("LC123/LC130 do not authorize LC131")
+        raise RuntimeError("LC123/LC131 do not authorize LC132")
     return parent
 
 
@@ -96,8 +107,9 @@ def source_identity() -> dict[str, Any]:
 
     paths = (
         Path(__file__).resolve(), PREREGISTRATION, RUNNER, TEST,
-        PARENT_CHECKPOINT, PARENT_REPORT, LC130_REPORT,
+        PARENT_CHECKPOINT, PARENT_REPORT, LC131_REPORT,
         ROOT / "scripts/train_vq2_lc127_phase6_onpolicy_ppo.py",
+        ROOT / "scripts/train_vq2_lc131_phase8_dense_return_ppo.py",
         ROOT / "pufferlib/vq2_informed.py",
         ROOT / "pufferlib/vq2_public_phase.py",
         ROOT / "pufferlib/vq2_recurrent_phase_residual.py",
@@ -125,13 +137,6 @@ def source_identity() -> dict[str, Any]:
     }
 
 
-def repeated_load_config(*args: Any, **kwargs: Any) -> tuple[dict[str, Any], list[str]]:
-    config, overrides = BASE_LOAD_CONFIG(*args, **kwargs)
-    config["vec"]["env_seed_group_size"] = SEED_GROUP_SIZE
-    config.setdefault("env", {}).update(PHASE_RETURN_ENV_OVERRIDES)
-    return config, [*overrides, "--vec.env-seed-group-size", str(SEED_GROUP_SIZE)]
-
-
 def corrected_writer(path: Path, payload: dict[str, Any]) -> None:
     corrected = dict(payload)
     if path.name == "report.json" and corrected.get("schema") == SCHEMA:
@@ -140,7 +145,8 @@ def corrected_writer(path: Path, payload: dict[str, Any]) -> None:
         corrected["actor_execution"] = (
             "one complete 256-row Puffer actor over two repeated 128-seed groups"
         )
-        corrected["native_seed_group_size"] = SEED_GROUP_SIZE
+        corrected["native_seed_group_size"] = dense.SEED_GROUP_SIZE
+        corrected["training_reward_overrides"] = REWARD_OVERRIDES
         updates = corrected.get("updates", [])
         nonzero_updates = bool(
             updates and all(item.get("parameter_delta_l2", 0.0) > 0.0 for item in updates)
@@ -157,54 +163,39 @@ def corrected_writer(path: Path, payload: dict[str, Any]) -> None:
             "Run one reduced deterministic LC123-versus-selected-candidate raw-9 screen; no FlightSim authority."
             if corrected["training_admitted"]
             and corrected.get("candidate_selected_for_screen") is not None
-            else "Reject LC131 and retain LC105 as the safe frontier; do not run FlightSim."
+            else "Reject LC132 and retain LC105 as the safe frontier; do not run FlightSim."
         )
     BASE_WRITE_JSON_ONCE(path, corrected)
 
 
 def configure() -> tuple[Any, ...]:
     originals = (
-        base.TAG, base.SCHEMA, base.CHECKPOINT_SCHEMA,
-        base.TOTAL_AGENTS, base.ROLLOUTS, base.PPO_EPOCHS, base.LEARNING_RATE,
-        base.TARGET_PHASE, base.TARGET_RAW_INDEX,
-        base.PHASE_RETURN_ADVANTAGE_WEIGHT,
-        base.PARENT_CHECKPOINT, base.PARENT_CHECKPOINT_SHA256,
-        base.PARENT_REPORT, base.PARENT_REPORT_SHA256,
-        base.PREREGISTRATION, base.RUNNER, base.TEST, base.DEFAULT_OUTPUT,
-        base.verify_inputs, base.source_identity, base.load_config,
-        base.write_json_once,
+        dense.TAG, dense.SCHEMA, dense.CHECKPOINT_SCHEMA,
+        dense.ROLLOUTS, dense.PPO_EPOCHS, dense.LEARNING_RATE,
+        dense.PHASE_RETURN_ENV_OVERRIDES,
+        dense.PREREGISTRATION, dense.RUNNER, dense.TEST, dense.DEFAULT_OUTPUT,
+        dense.verify_inputs, dense.source_identity, dense.corrected_writer,
     )
-    base.TAG, base.SCHEMA, base.CHECKPOINT_SCHEMA = TAG, SCHEMA, CHECKPOINT_SCHEMA
-    base.TOTAL_AGENTS, base.ROLLOUTS = TOTAL_AGENTS, ROLLOUTS
-    base.PPO_EPOCHS, base.LEARNING_RATE = PPO_EPOCHS, LEARNING_RATE
-    base.TARGET_PHASE, base.TARGET_RAW_INDEX = TARGET_PHASE, TARGET_RAW_INDEX
-    base.PHASE_RETURN_ADVANTAGE_WEIGHT = PHASE_RETURN_ADVANTAGE_WEIGHT
-    base.PARENT_CHECKPOINT, base.PARENT_CHECKPOINT_SHA256 = (
-        PARENT_CHECKPOINT, PARENT_CHECKPOINT_SHA256,
+    dense.TAG, dense.SCHEMA, dense.CHECKPOINT_SCHEMA = TAG, SCHEMA, CHECKPOINT_SCHEMA
+    dense.ROLLOUTS, dense.PPO_EPOCHS, dense.LEARNING_RATE = (
+        ROLLOUTS, PPO_EPOCHS, LEARNING_RATE,
     )
-    base.PARENT_REPORT, base.PARENT_REPORT_SHA256 = (
-        PARENT_REPORT, PARENT_REPORT_SHA256,
-    )
-    base.PREREGISTRATION, base.RUNNER, base.TEST = PREREGISTRATION, RUNNER, TEST
-    base.DEFAULT_OUTPUT = DEFAULT_OUTPUT
-    base.verify_inputs = verify_inputs
-    base.source_identity = source_identity
-    base.load_config = repeated_load_config
-    base.write_json_once = corrected_writer
+    dense.PHASE_RETURN_ENV_OVERRIDES = dict(REWARD_OVERRIDES)
+    dense.PREREGISTRATION, dense.RUNNER, dense.TEST = PREREGISTRATION, RUNNER, TEST
+    dense.DEFAULT_OUTPUT = DEFAULT_OUTPUT
+    dense.verify_inputs = verify_inputs
+    dense.source_identity = source_identity
+    dense.corrected_writer = corrected_writer
     return originals
 
 
 def restore(originals: tuple[Any, ...]) -> None:
     (
-        base.TAG, base.SCHEMA, base.CHECKPOINT_SCHEMA,
-        base.TOTAL_AGENTS, base.ROLLOUTS, base.PPO_EPOCHS, base.LEARNING_RATE,
-        base.TARGET_PHASE, base.TARGET_RAW_INDEX,
-        base.PHASE_RETURN_ADVANTAGE_WEIGHT,
-        base.PARENT_CHECKPOINT, base.PARENT_CHECKPOINT_SHA256,
-        base.PARENT_REPORT, base.PARENT_REPORT_SHA256,
-        base.PREREGISTRATION, base.RUNNER, base.TEST, base.DEFAULT_OUTPUT,
-        base.verify_inputs, base.source_identity, base.load_config,
-        base.write_json_once,
+        dense.TAG, dense.SCHEMA, dense.CHECKPOINT_SCHEMA,
+        dense.ROLLOUTS, dense.PPO_EPOCHS, dense.LEARNING_RATE,
+        dense.PHASE_RETURN_ENV_OVERRIDES,
+        dense.PREREGISTRATION, dense.RUNNER, dense.TEST, dense.DEFAULT_OUTPUT,
+        dense.verify_inputs, dense.source_identity, dense.corrected_writer,
     ) = originals
 
 
@@ -214,8 +205,7 @@ def train(
     verify_inputs()
     originals = configure()
     try:
-        base.train(output=output, device_name=device_name, resume=resume)
-        return json.loads((output / "report.json").read_text())
+        return dense.train(output=output, device_name=device_name, resume=resume)
     finally:
         restore(originals)
 
