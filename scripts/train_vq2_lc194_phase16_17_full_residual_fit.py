@@ -72,7 +72,8 @@ def verify_inputs() -> dict[str, Any]:
         or not parent.get("frozen_non_phase16_state_exact")
         or parent_report.get("schema") != "vq2_lc189_phase16_adapter_split_batch_cem_report_v1"
         or not parent_report.get("training_admitted")
-        or parent_report.get("checkpoint_sha256") != PARENT_CHECKPOINT_SHA256
+        or parent_report.get("candidate_selected_for_screen", {}).get("sha256")
+        != PARENT_CHECKPOINT_SHA256
         or dataset.get("schema") != "vq2_lc193_phase16_17_rescue_dagger_report_v1"
         or not dataset.get("training_dataset_admitted")
         or dataset.get("feature_sha256") != FEATURES_SHA256
