@@ -11301,3 +11301,55 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   high-mass Gate-3/phase-2 bottleneck with a causally new whole-Puffer training
   objective, then use the reduced cycle above. No LC045--LC057 job sends a
   FlightSim packet; live Training and Submission remain unauthorized.
+
+### VQ2 reduced-cycle Puffer frontier — LC058--LC087, 2026-08-01
+
+- The official VQ2 course remains approximately 20 gates or more by direct
+  operator inspection. The exact count is simulator-authoritative and only
+  `race_finish_time_ns >= 0` proves completion. The offline proxy is fixed at
+  24 gates. Never relabel raw-index-7/9 progress as an official lap.
+- LC058--LC073 repair the earliest high-mass phase-2 failure while preserving
+  the downstream policy. LC070 constrains a success-anchored failure-teacher
+  endpoint to alpha `0.075`; LC071/LC072 screen and confirm it. LC073 promotes
+  with paired mean gates `3.140625 -> 3.390625`, Gate-3 reach `34 -> 35`, crash
+  `13/64 -> 10/64`, miss `23/64 -> 17/64`, and raw-index-6 reach `4 -> 9`.
+  Checkpoint/report SHA-256 values are `5614a95cd2f9...`/`ae68af50524b...`.
+- The retained Vast layout is one CUDA context, 32 native threads, and normally
+  256 total environments. A 256-env milestone or uncensored collection now
+  costs about `46--51 s`; the paired 128-env full-course screen costs about
+  `33 s`, and a 256-env full-course screen about `45 s`. LC075 collects phase-6
+  rows in `41.499 s`, versus LC045's `452.405 s` (`10.90x` faster); decoder fits
+  cost `0.58--2.63 s`. The process consumes roughly 98% of the real 34.97-core
+  cgroup quota, so the lightly loaded RTX 4090 reflects the native-physics
+  bottleneck, not an unused viable parallel path.
+- LC074's 6,000-step phase-6 collector is too short and empty. LC075 corrects
+  only the horizon and admits `20,007` rows from 18 queried agents, but its
+  record stop censors 16 queried trajectories. LC079 removes the record stop:
+  all 256 episodes complete in `50.401 s`, yielding `67,736` legal phase-6 rows
+  from 35 agents with two true successes, 33 failures, and zero censoring.
+  Feature/report SHA-256 values are `2a1dcf1be9c7...`/`c09030054d28...`.
+- LC076/LC077's ordinary teacher decoder and LC080/LC081's uncensored
+  success-anchored teacher decoder both fail closed-loop. LC081 loses both
+  paired parent successes (`2/128 -> 0/128`). Better teacher-action MSE is not
+  a causal proxy at phase 6; do not fit or screen either teacher family again
+  unchanged. LC078's tiny teacher-derived constant biases are also neutral.
+- Actual successful LC079 Puffer trajectories reveal the useful direction:
+  early phase-6 actions need more negative roll and more positive thrust.
+  LC082 screens `[+0.01,-0.05,+0.025,0]` and gains one raw-index-7 pass with no
+  paired loss. LC083 confirms `1/128 -> 4/128` with three paired gains and zero
+  losses. LC084's 64-pair full-course seed has no index-7 event in either group
+  and rejects that exact amplitude without promotion.
+- LC085 brackets the successful-action direction and selects half scale
+  `[+0.005,-0.025,+0.0125,0]`, which reaches index 7 earlier than full scale.
+  LC086 confirms `1/128 -> 3/128`, two paired gains, zero losses, and two fewer
+  pre-target terminals. LC087's higher-power 128-pair 24-gate screen promotes:
+  mean gates `3.3828125 -> 3.421875`, raw-index-7 reach `1 -> 3`, miss
+  `0.3203125 -> 0.3125`, unchanged crash `0.1015625`, and maximum raw index
+  `7 -> 9`. Candidate distribution is raw 7/8/9 at `1/1/1` agents. Promoted
+  checkpoint/report SHA-256 values are `128bc970f169...`/`5023b42ef9b9...`.
+- LC087 supersedes LC073 and LC048 as the offline whole-Puffer frontier. It is
+  still far from the 24-gate proxy and the official approximately-20+-gate
+  finish. Diagnose the raw-index-9 transition using LC087-owned legal states;
+  require a new causal screen, confirmation, and full-course promotion before
+  replay/shadow or any bounded Training request. No LC058--LC087 job sends a
+  FlightSim packet. Live Training remains frozen and Submission is forbidden.
