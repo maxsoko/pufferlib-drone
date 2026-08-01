@@ -359,3 +359,138 @@ class VQ2UnboundedProgressMLPResidualActor(VQ2PhaseRecurrentActor):
         mean = torch.tanh(pre_tanh_mean)
         log_std = self.log_std.clamp(-5.0, 1.0).expand_as(mean)
         return RecurrentActorOutput(mean, pre_tanh_mean, log_std), next_state
+
+
+class VQ2PhaseLocalAdapterActor(VQ2UnboundedProgressMLPResidualActor):
+    """Base long-course actor plus a recurrent adapter at one public phase.
+
+    The adapter consumes only the base policy's legal-observation recurrent
+    state. Its state remains zero before the configured phase, its output is
+    gated off everywhere else, and a zero output head is exactly base-equivalent.
+    """
+
+    def __init__(
+        self,
+        *,
+        target_phase: int,
+        hidden_size: int = 256,
+        residual_size: int = 64,
+        adapter_size: int = 64,
+        initial_std: float = 0.15,
+    ) -> None:
+        super().__init__(
+            hidden_size=hidden_size,
+            residual_size=residual_size,
+            initial_std=initial_std,
+        )
+        if not 0 <= target_phase <= LONG_COURSE_GATE_CAP:
+            raise ValueError("adapter target phase is outside the tracked course")
+        if adapter_size <= 0:
+            raise ValueError("adapter size must be positive")
+        self.target_phase = int(target_phase)
+        self.adapter_size = int(adapter_size)
+        self.phase_adapter_cell = nn.GRUCell(hidden_size, adapter_size)
+        self.phase_adapter_output = nn.Linear(adapter_size, ACTION_SIZE)
+        nn.init.zeros_(self.phase_adapter_output.weight)
+        nn.init.zeros_(self.phase_adapter_output.bias)
+
+    def load_base_state(self, base_state: dict[str, torch.Tensor]) -> None:
+        incompatible = self.load_state_dict(base_state, strict=False)
+        expected = {
+            "phase_adapter_cell.weight_ih",
+            "phase_adapter_cell.weight_hh",
+            "phase_adapter_cell.bias_ih",
+            "phase_adapter_cell.bias_hh",
+            "phase_adapter_output.weight",
+            "phase_adapter_output.bias",
+        }
+        if incompatible.unexpected_keys or set(incompatible.missing_keys) != expected:
+            raise RuntimeError("adapter base differs outside phase-local state")
+        nn.init.zeros_(self.phase_adapter_output.weight)
+        nn.init.zeros_(self.phase_adapter_output.bias)
+
+    def initial_state(
+        self,
+        batch_size: int,
+        *,
+        device: torch.device | str,
+        dtype: torch.dtype = torch.float32,
+    ) -> torch.Tensor:
+        if batch_size <= 0:
+            raise ValueError("batch size must be positive")
+        return torch.zeros(
+            1,
+            batch_size,
+            self.hidden_size + self.adapter_size,
+            device=device,
+            dtype=dtype,
+        )
+
+    def forward_step(
+        self,
+        observation: torch.Tensor,
+        state: torch.Tensor | None = None,
+    ) -> tuple[RecurrentActorOutput, torch.Tensor]:
+        if observation.ndim != 2 or observation.shape[-1] != PHASE_LEGAL_OBS_SIZE:
+            raise ValueError("phase-local adapter step accepts [batch,4119] only")
+        batch = observation.shape[0]
+        if state is None:
+            state = self.initial_state(
+                batch, device=observation.device, dtype=observation.dtype
+            )
+        expected = (1, batch, self.hidden_size + self.adapter_size)
+        if tuple(state.shape) != expected:
+            raise ValueError("phase-local adapter recurrent state shape changed")
+        base_state = state[..., : self.hidden_size]
+        adapter_state = state[0, :, self.hidden_size :]
+        base_output, next_base_state = (
+            VQ2UnboundedProgressMLPResidualActor.forward_sequence(
+                self, observation.unsqueeze(1), base_state
+            )
+        )
+        progress = observation[:, LEGAL_OBS_SIZE]
+        raw_index = torch.round(progress * OFFICIAL_PROGRESS_SCALE).to(torch.long)
+        active = raw_index == self.target_phase
+        candidate_adapter = self.phase_adapter_cell(
+            next_base_state[0], adapter_state
+        )
+        next_adapter = torch.where(
+            active[:, None], candidate_adapter, adapter_state
+        )
+        adapter_residual = self.phase_adapter_output(next_adapter)
+        adapter_residual = adapter_residual * active[:, None]
+        pre_tanh_mean = base_output.pre_tanh_mean[:, 0] + adapter_residual
+        mean = torch.tanh(pre_tanh_mean)
+        log_std = base_output.log_std[:, 0]
+        next_state = torch.cat((next_base_state, next_adapter[None]), dim=-1)
+        return RecurrentActorOutput(mean, pre_tanh_mean, log_std), next_state
+
+    def forward_sequence(
+        self,
+        observation: torch.Tensor,
+        state: torch.Tensor | None = None,
+    ) -> tuple[RecurrentActorOutput, torch.Tensor]:
+        if observation.ndim != 3 or observation.shape[-1] != PHASE_LEGAL_OBS_SIZE:
+            raise ValueError("phase-local adapter accepts [batch,time,4119] only")
+        batch, steps, _ = observation.shape
+        if state is None:
+            state = self.initial_state(
+                batch, device=observation.device, dtype=observation.dtype
+            )
+        means: list[torch.Tensor] = []
+        pre_tanh_means: list[torch.Tensor] = []
+        log_stds: list[torch.Tensor] = []
+        next_state = state
+        for step in range(steps):
+            output, next_state = self.forward_step(observation[:, step], next_state)
+            means.append(output.mean)
+            pre_tanh_means.append(output.pre_tanh_mean)
+            log_stds.append(output.log_std)
+        return (
+            RecurrentActorOutput(
+                torch.stack(means, dim=1),
+                torch.stack(pre_tanh_means, dim=1),
+                torch.stack(log_stds, dim=1),
+            ),
+            next_state,
+        )
