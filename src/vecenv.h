@@ -349,6 +349,12 @@ Env* my_vec_init(int* num_envs_out, int* buffer_env_starts, int* buffer_env_coun
         ? 0
         : (int)seed_group_item->value;
     if (env_seed_group_size < 0) env_seed_group_size = 0;
+    DictItem* seed_offset_item = dict_get_unsafe(
+        vec_kwargs, "env_seed_index_offset");
+    int env_seed_index_offset = seed_offset_item == NULL
+        ? 0
+        : (int)seed_offset_item->value;
+    if (env_seed_index_offset < 0) env_seed_index_offset = 0;
 
     // Allocate max possible envs (1 agent per env worst case)
     Env* envs = (Env*)calloc(total_agents, sizeof(Env));
@@ -359,6 +365,7 @@ Env* my_vec_init(int* num_envs_out, int* buffer_env_starts, int* buffer_env_coun
         int env_seed_index = env_seed_group_size > 0
             ? num_envs % env_seed_group_size
             : num_envs;
+        env_seed_index += env_seed_index_offset;
         srand(env_seed_index);
         envs[num_envs].rng = (unsigned int)env_seed_index;
         my_init(&envs[num_envs], env_kwargs);
