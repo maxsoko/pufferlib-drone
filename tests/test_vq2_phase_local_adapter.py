@@ -44,3 +44,12 @@ def test_adapter_sequence_matches_repeated_steps() -> None:
             means.append(output.mean)
     assert torch.equal(sequence.mean, torch.stack(means, dim=1))
     assert torch.equal(sequence_state, step_state)
+
+
+def test_adapter_split_states_are_contiguous() -> None:
+    actor = VQ2PhaseLocalAdapterActor(target_phase=15)
+    state = actor.initial_state(5, device="cpu")
+    base = state[..., : actor.hidden_size].contiguous()
+    adapter = state[0, :, actor.hidden_size :].contiguous()
+    assert base.is_contiguous()
+    assert adapter.is_contiguous()

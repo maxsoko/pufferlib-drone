@@ -441,8 +441,8 @@ class VQ2PhaseLocalAdapterActor(VQ2UnboundedProgressMLPResidualActor):
         expected = (1, batch, self.hidden_size + self.adapter_size)
         if tuple(state.shape) != expected:
             raise ValueError("phase-local adapter recurrent state shape changed")
-        base_state = state[..., : self.hidden_size]
-        adapter_state = state[0, :, self.hidden_size :]
+        base_state = state[..., : self.hidden_size].contiguous()
+        adapter_state = state[0, :, self.hidden_size :].contiguous()
         base_output, next_base_state = (
             VQ2UnboundedProgressMLPResidualActor.forward_sequence(
                 self, observation.unsqueeze(1), base_state
