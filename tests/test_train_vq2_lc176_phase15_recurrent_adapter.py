@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import inspect
 import numpy as np
+import torch
 
 from scripts.collect_vq2_lc119_phase6_9_exact_milestone_features import FEATURE_DTYPE
 import scripts.train_vq2_lc176_phase15_recurrent_adapter as lc176
@@ -47,3 +48,12 @@ def test_lc176_build_actor_is_zero_adapter_parent() -> None:
     actor = lc176.build_actor(parent)
     for name, value in parent["model_state"].items():
         assert np.array_equal(actor.state_dict()[name].numpy(), value.numpy())
+
+
+def test_lc176_default_sequence_weights_are_per_agent_normalized() -> None:
+    mask = torch.tensor([[True, True, False], [True, True, True]])
+    weights = lc176.sequence_weights(
+        mask, np.array([2, 3]), device=torch.device("cpu")
+    )
+    assert torch.allclose(weights.sum(dim=1), torch.ones(2))
+    assert weights[0, 2] == 0.0

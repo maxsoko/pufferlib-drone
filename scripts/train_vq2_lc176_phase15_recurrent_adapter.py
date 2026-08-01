@@ -44,6 +44,7 @@ NEXT_AUTHORITY_ADMITTED = (
     "Run one teacher-free LC169-versus-LC176 raw-16 screen; no FlightSim authority."
 )
 NEXT_AUTHORITY_REJECTED = "Reject LC176; do not screen or run FlightSim."
+TEMPORAL_WEIGHT_SEGMENTS: tuple[tuple[int, int, float], ...] = ()
 PARENT_DIR = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap/vq2_lc169_phase15_failure_state_dagger2_fit_001"
 PARENT_CHECKPOINT = PARENT_DIR / "policy_selected.pt"
 PARENT_CHECKPOINT_SHA256 = "8ae1a6d9aebd01d584344f006724f5a81699a011a759356283ada1f271ece1b7"
@@ -186,6 +187,18 @@ def materialize_sequences(records: np.ndarray) -> tuple[np.ndarray, ...]:
     return hidden, base, teacher, mask, lengths
 
 
+def sequence_weights(
+    mask: torch.Tensor, lengths: np.ndarray, *, device: torch.device
+) -> torch.Tensor:
+    weights = mask.float()
+    for start, end, weight in TEMPORAL_WEIGHT_SEGMENTS:
+        if start < 0 or end <= start or weight <= 0.0:
+            raise ValueError("invalid temporal weight segment")
+        weights[:, start:end] *= weight
+    normalizer = weights.sum(dim=1, keepdim=True).clamp_min(1.0)
+    return weights / normalizer
+
+
 def evaluate(
     gru: nn.GRU,
     head: nn.Linear,
@@ -210,7 +223,7 @@ def evaluate(
             recurrent_output, _ = gru(x)
             action = torch.tanh(base_tensor + head(recurrent_output))
             row_error = (action - target).square().mean(dim=-1)
-            weights = valid.float() / torch.from_numpy(lengths[selected]).to(device)[:, None]
+            weights = sequence_weights(valid, lengths[selected], device=device)
             weighted_error += float((row_error * weights).sum())
             agent_count += len(selected)
     return weighted_error / agent_count
@@ -297,7 +310,7 @@ def fit(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda", resume: boo
             recurrent_output, _ = gru(x)
             action = torch.tanh(base_tensor + head(recurrent_output))
             row_error = (action - target).square().mean(dim=-1)
-            weights = valid.float() / torch.from_numpy(lengths[selected]).to(device)[:, None]
+            weights = sequence_weights(valid, lengths[selected], device=device)
             loss = (row_error * weights).sum() / len(selected)
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
@@ -383,6 +396,7 @@ def fit(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda", resume: boo
             "learning_rate": LEARNING_RATE,
             "maximum_gradient_norm": MAX_GRADIENT_NORM,
             "minimum_validation_improvement": MINIMUM_VALIDATION_IMPROVEMENT,
+            "temporal_weight_segments": [list(item) for item in TEMPORAL_WEIGHT_SEGMENTS],
         },
         "wall_time_seconds": time.perf_counter() - started,
         "source_identity": identity,
