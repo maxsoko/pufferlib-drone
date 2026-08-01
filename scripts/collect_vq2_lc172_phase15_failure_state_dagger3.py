@@ -140,7 +140,7 @@ def corrected_writer(path: Path, payload: dict[str, Any]) -> None:
             if corrected["training_dataset_admitted"] else
             "Reject LC172; do not fit or run FlightSim."
         )
-    prior.BASE_WRITE_JSON_ONCE(path, corrected)
+    prior.prior.BASE_WRITE_JSON_ONCE(path, corrected)
 
 
 def configure() -> tuple[Any, ...]:

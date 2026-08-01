@@ -16,3 +16,7 @@ def test_lc172_configuration() -> None:
         assert lc172.prior.FEATURE_SCHEMA == lc172.FEATURE_SCHEMA
     finally:
         lc172.restore(originals)
+
+
+def test_lc172_base_writer_binding() -> None:
+    assert callable(lc172.prior.prior.BASE_WRITE_JSON_ONCE)
