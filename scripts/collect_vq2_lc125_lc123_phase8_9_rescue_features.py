@@ -55,6 +55,7 @@ TARGET_RAW_INDEX = 10
 # Backward-compatible hook for later paired anchor/rescue collection. LC125's
 # source-locked default continues to record only intervention rows.
 CAPTURE_CONTROL_FEATURES = False
+CAPTURE_CONTROL_TEACHER_TARGETS = False
 PARENT_DIR = (
     ROOT / "logs/drone_race_full_policy_six_gate_bootstrap"
     / "vq2_lc123_phase6_success_rescue_anchor_001"
@@ -326,6 +327,8 @@ def collect(
                     ).cpu().numpy()
                     targets = student_np[selected_agents].copy()
                     selected_teacher = teacher_mask[selected_agents]
+                    if CAPTURE_CONTROL_TEACHER_TARGETS:
+                        selected_teacher |= selected_agents < GROUP_SIZE
                     targets[selected_teacher] = teacher[selected_agents[selected_teacher]]
                     pending["teacher_action"] = targets
                     pending["phase_index"] = phase_index[selected_agents].astype(np.uint8)
@@ -511,6 +514,7 @@ def collect(
         "query_agents": int(np.unique(records["agent_index"]).size),
         "query_outcome_success_agents": success_agents.tolist(),
         "query_outcome_failure_agents": failure_agents.tolist(),
+        "control_features_use_teacher_targets": CAPTURE_CONTROL_TEACHER_TARGETS,
         "teacher_action_envelope_violations": feature_envelope_violations,
         "loader_overrides": overrides,
         "single_cuda_context": True, "single_native_vector": True,
