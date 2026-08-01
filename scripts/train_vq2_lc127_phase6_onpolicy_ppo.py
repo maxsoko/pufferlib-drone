@@ -177,11 +177,29 @@ def residual_pre_tanh(
     return base + feature @ output_weight.T + output_bias
 
 
-def normal_log_probability(
-    sample: torch.Tensor, mean: torch.Tensor, standard_deviation: float
+def exploration_scale(
+    reference: torch.Tensor, standard_deviation: float | tuple[float, ...]
 ) -> torch.Tensor:
-    variance = float(standard_deviation) ** 2
-    constant = math.log(2.0 * math.pi * variance)
+    scale = torch.as_tensor(
+        standard_deviation, dtype=reference.dtype, device=reference.device
+    )
+    if not bool((scale > 0.0).all()):
+        raise ValueError("exploration standard deviation must be positive")
+    if scale.ndim == 0:
+        return scale
+    if scale.shape != (reference.shape[-1],):
+        raise ValueError("per-channel exploration scale does not match actions")
+    return scale
+
+
+def normal_log_probability(
+    sample: torch.Tensor,
+    mean: torch.Tensor,
+    standard_deviation: float | tuple[float, ...],
+) -> torch.Tensor:
+    scale = exploration_scale(sample, standard_deviation)
+    variance = scale.square()
+    constant = torch.log(2.0 * math.pi * variance)
     return -0.5 * (((sample - mean).square() / variance) + constant).sum(dim=-1)
 
 
@@ -339,7 +357,7 @@ def rollout(
                     current_mean = result.pre_tanh_mean.index_select(0, index)
                     noise = torch.randn(
                         current_mean.shape, device=device, generator=generator
-                    ) * EXPLORATION_STD
+                    ) * exploration_scale(current_mean, EXPLORATION_STD)
                     sampled_pre = current_mean + noise
                     sampled_action = torch.tanh(sampled_pre)
                     plant.index_copy_(0, index, sampled_action)

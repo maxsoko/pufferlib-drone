@@ -15,6 +15,11 @@ def test_lc127_source_lock_and_log_probability() -> None:
     assert log_probability.shape == (3,)
     assert torch.isfinite(log_probability).all()
     assert torch.equal(log_probability, log_probability[:1].expand_as(log_probability))
+    channel_probability = lc127.normal_log_probability(
+        sample, mean, (0.05, 0.05, 0.05, 0.002)
+    )
+    assert channel_probability.shape == (3,)
+    assert torch.isfinite(channel_probability).all()
 
 
 def test_lc127_trajectory_advantage_is_centered() -> None:
