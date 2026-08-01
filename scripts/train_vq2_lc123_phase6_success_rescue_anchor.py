@@ -45,6 +45,8 @@ LEARNING_RATE = 1e-3
 ANCHOR_COEFFICIENT = 1e-3
 GRADIENT_CLIP = 1.0
 TARGET_ACTION_CLIP = 0.999
+EXPECTED_QUERY_AGENTS = 19
+EXPECTED_SUCCESS_AGENTS = 4
 SCALES = (0.10, 0.30, 0.50, 1.0)
 MINIMUM_SUCCESS_IMPROVEMENT = 1.20
 MAXIMUM_FAILURE_PARENT_DRIFT_MSE = 0.00025
@@ -205,7 +207,10 @@ def fit(
     present, outcome = regression.terminal_outcome_by_agent(
         all_agents, all_steps, all_terminals
     )
-    if present.size != 19 or int((outcome[present] == 1).sum()) != 4:
+    if (
+        present.size != EXPECTED_QUERY_AGENTS
+        or int((outcome[present] == 1).sum()) != EXPECTED_SUCCESS_AGENTS
+    ):
         raise RuntimeError("LC123 exact milestone outcomes changed")
     training_agents, validation_agents = stratified_agent_split(present, outcome)
     train_weights_np = regression.trajectory_class_weights(
