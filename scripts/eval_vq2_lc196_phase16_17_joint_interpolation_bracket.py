@@ -80,8 +80,13 @@ def candidate_state_for_index(parent_state: dict[str, torch.Tensor], candidate_i
     for phase, scale in scales.items():
         for name in PARAMETER_NAMES:
             parent_row = parent_state[name][phase]
-            direction = fitted[name][phase] - parent_row
-            state[name][phase].copy_(parent_row + scale * direction)
+            if scale == 0.0:
+                state[name][phase].copy_(parent_row)
+            elif scale == 1.0:
+                state[name][phase].copy_(fitted[name][phase])
+            else:
+                direction = fitted[name][phase] - parent_row
+                state[name][phase].copy_(parent_row + scale * direction)
     return state
 
 
