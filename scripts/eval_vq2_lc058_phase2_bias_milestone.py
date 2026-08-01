@@ -51,6 +51,8 @@ TOTAL_AGENTS = GROUP_SIZE * GROUPS
 EPISODES = TOTAL_AGENTS
 THREADS = 32
 SEED = 431580
+ENV_SEED_GROUP_SIZE = GROUP_SIZE
+ENV_SEED_INDEX_OFFSET = 0
 NUM_GATES = 24
 MAX_STEPS = 3500
 TARGET_RAW_INDEX = 3
@@ -303,7 +305,9 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
         pufferl, num_gates=NUM_GATES, agents=TOTAL_AGENTS,
         episodes=EPISODES, seed=SEED, threads=THREADS,
     )
-    config["vec"]["env_seed_group_size"] = GROUP_SIZE
+    config["vec"]["env_seed_group_size"] = ENV_SEED_GROUP_SIZE
+    if ENV_SEED_INDEX_OFFSET:
+        config["vec"]["env_seed_index_offset"] = ENV_SEED_INDEX_OFFSET
     environment = config["env"]
     environment.update({
         "evaluation_episode_limit": 1,
@@ -511,6 +515,8 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
         "minimum_pass_gain": MINIMUM_PASS_GAIN,
         "total_agents": TOTAL_AGENTS, "episodes": EPISODES, "threads": THREADS,
         "seed": SEED, "num_gates": NUM_GATES, "target_raw_index": TARGET_RAW_INDEX,
+        "environment_seed_group_size": ENV_SEED_GROUP_SIZE,
+        "environment_seed_index_offset": ENV_SEED_INDEX_OFFSET,
         "max_steps": MAX_STEPS, "vector_steps": vector_steps,
         "wall_time_seconds": wall, "inference_seconds": inference_seconds,
         "initial_seed_groups_exact": initial_groups_exact,

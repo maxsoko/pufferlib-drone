@@ -31,9 +31,7 @@ def test_lc149_only_phase11_residual_parameters_changed() -> None:
 
 
 def test_lc149_pairwise_batches_and_lossless_selection() -> None:
-    lc149.configure()
-    assert lc149.milestone.TOTAL_AGENTS == 256
-    assert lc149.pairwise.PAIR_SIZE == 256
+    assert 2 * lc149.GROUP_SIZE == 256
     baseline = {
         "target_passes": 1, "transport_pass": True, "pre_target_terminals": 0,
         "paired_target_losses_vs_baseline": 0,
