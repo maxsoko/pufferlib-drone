@@ -31,6 +31,8 @@ def test_lc140_checkpoint_changes_only_phase9_output_bias() -> None:
     checkpoint, frozen = lc140.checkpoint_with_delta(parent, delta)
     assert frozen
     assert checkpoint["schema"] == lc140.CHECKPOINT_SCHEMA
+    assert checkpoint[lc140.FROZEN_STATE_FIELD]
+    assert checkpoint[lc140.DELTA_FIELD] == delta.tolist()
     before = parent["model_state"]
     after = checkpoint["model_state"]
     for name in before:

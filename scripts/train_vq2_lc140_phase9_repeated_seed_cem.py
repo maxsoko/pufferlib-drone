@@ -53,6 +53,9 @@ INITIAL_STD = np.array((0.08, 0.08, 0.08, 0.01), dtype=np.float32)
 MINIMUM_STD = np.array((0.008, 0.008, 0.008, 0.001), dtype=np.float32)
 MAXIMUM_ABS_DELTA = np.array((0.35, 0.35, 0.35, 0.05), dtype=np.float32)
 PHASE_OUTPUT_BIAS = "indexed_phase_residual_output_bias"
+# Backward-compatible report/checkpoint label hook for later phase searches.
+FROZEN_STATE_FIELD = "frozen_non_phase9_state_exact"
+DELTA_FIELD = "phase9_pre_tanh_output_bias_delta"
 PARENT_DIR = (
     ROOT / "logs/drone_race_full_policy_six_gate_bootstrap"
     / "vq2_lc105_phase7_endpoint_full_course_001"
@@ -172,8 +175,8 @@ def checkpoint_with_delta(
         "deployment_candidate": False,
         "parent_checkpoint_sha256": PARENT_CHECKPOINT_SHA256,
         "target_phase": TARGET_PHASE,
-        "phase9_pre_tanh_output_bias_delta": delta.tolist(),
-        "frozen_non_phase9_state_exact": frozen_exact,
+        DELTA_FIELD: delta.tolist(),
+        FROZEN_STATE_FIELD: frozen_exact,
     }
     return payload, frozen_exact
 
@@ -449,7 +452,7 @@ def train(
         "selected_candidate": selected,
         "parent_checkpoint_sha256": PARENT_CHECKPOINT_SHA256,
         "parent_state_sha256": state_sha256(parent["model_state"]),
-        "frozen_non_phase9_state_exact": frozen_exact,
+        FROZEN_STATE_FIELD: frozen_exact,
         "generations": generations,
         "configuration": {
             "total_agents": TOTAL_AGENTS, "threads": THREADS,
