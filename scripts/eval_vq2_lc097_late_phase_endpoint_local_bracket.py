@@ -449,7 +449,8 @@ def run(
         "initial_seed_groups_exact": initial_groups_exact,
         "single_cuda_context": True, "single_native_vector": True,
         "actor_execution_contract": (
-            "seven independently loaded complete saved Puffer checkpoints, each executed over the full 448-agent batch"
+            f"{GROUPS} independently loaded complete saved Puffer checkpoints, "
+            f"each executed over the full {TOTAL_AGENTS}-agent batch"
         ),
         "loader_overrides": overrides, "items": items,
         "minimum_mean_advance_gain": MINIMUM_MEAN_ADVANCE_GAIN,
