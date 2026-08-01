@@ -50,6 +50,7 @@ GENERATIONS = 4
 ELITES = 64
 CEM_SMOOTHING = 0.70
 INITIAL_STD = np.array((0.08, 0.08, 0.08, 0.01), dtype=np.float32)
+INITIAL_MEAN = np.zeros(ACTION_SIZE, dtype=np.float32)
 MINIMUM_STD = np.array((0.008, 0.008, 0.008, 0.001), dtype=np.float32)
 MAXIMUM_ABS_DELTA = np.array((0.35, 0.35, 0.35, 0.05), dtype=np.float32)
 PHASE_OUTPUT_BIAS = "indexed_phase_residual_output_bias"
@@ -393,7 +394,7 @@ def train(
 
     identity = source_identity()
     device = torch.device(device_name)
-    mean = np.zeros(ACTION_SIZE, dtype=np.float32)
+    mean = INITIAL_MEAN.copy()
     standard_deviation = INITIAL_STD.copy()
     generations: list[dict[str, Any]] = []
     selected: dict[str, Any] | None = None
@@ -464,6 +465,7 @@ def train(
             "target_phase": TARGET_PHASE, "target_raw_index": TARGET_RAW_INDEX,
             "maximum_generations": GENERATIONS, "elites": ELITES,
             "cem_smoothing": CEM_SMOOTHING,
+            "initial_mean": INITIAL_MEAN.tolist(),
             "initial_standard_deviation": INITIAL_STD.tolist(),
             "minimum_standard_deviation": MINIMUM_STD.tolist(),
             "maximum_absolute_delta": MAXIMUM_ABS_DELTA.tolist(),

@@ -13,6 +13,7 @@ def test_lc140_source_lock() -> None:
     assert lc140.ENV_SEED_INDEX == 15
     assert lc140.TARGET_PHASE == 9
     assert lc140.TARGET_RAW_INDEX == 10
+    assert np.array_equal(lc140.INITIAL_MEAN, np.zeros(4, dtype=np.float32))
 
 
 def test_lc140_candidates_are_zero_plus_bounded_antithetic_pairs() -> None:
