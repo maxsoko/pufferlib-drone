@@ -27,6 +27,7 @@ from scripts.eval_vq2_variable_gate_oracle import sha256_path
 import scripts.train_vq2_lc176_phase15_recurrent_adapter as prior
 
 
+BASE_SEQUENCE_CONTRACT = prior.sequence_contract
 TAG = "vq2_lc202_phase16_17_stacked_adapter_001"
 SCHEMA = "vq2_lc202_phase16_17_stacked_adapter_report_v1"
 CHECKPOINT_SCHEMA = "vq2_lc202_phase16_17_stacked_adapter_checkpoint_v1"
@@ -118,7 +119,7 @@ def verify_inputs() -> dict[str, Any]:
 
 
 def sequence_contract(records: np.ndarray) -> dict[str, Any]:
-    contract = prior.sequence_contract(records)
+    contract = BASE_SEQUENCE_CONTRACT(records)
     if contract != EXPECTED_SEQUENCE_CONTRACT:
         raise RuntimeError(f"LC202 sequence contract changed: {contract}")
     return contract
