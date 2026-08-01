@@ -58,6 +58,9 @@ MAX_GRADIENT_NORM = 0.5
 ANCHOR_COEFFICIENT = 1e-4
 EXPLORATION_STD = 0.01
 MAXIMUM_UPDATE_DELTA_L2 = 4.0
+# Backward-compatible opt-in for later experiments. LC127's source-locked
+# sparse gate-rank behavior remains exact at the default zero value.
+PHASE_RETURN_ADVANTAGE_WEIGHT = 0.0
 PARENT_DIR = (
     ROOT / "logs/drone_race_full_policy_six_gate_bootstrap"
     / "vq2_lc105_phase7_endpoint_full_course_001"
@@ -186,10 +189,29 @@ def trajectory_advantages(
     maximum_raw_index: np.ndarray,
     passed: np.ndarray,
     agents: np.ndarray,
+    phase_return: np.ndarray | None = None,
 ) -> tuple[np.ndarray, dict[str, float]]:
     unique = np.unique(agents)
     score = maximum_raw_index[unique].astype(np.float64)
     score += 4.0 * passed[unique].astype(np.float64)
+    return_metrics: dict[str, float] = {}
+    if PHASE_RETURN_ADVANTAGE_WEIGHT:
+        if phase_return is None or phase_return.shape != maximum_raw_index.shape:
+            raise ValueError("phase-return advantages require one return per agent")
+        selected_return = phase_return[unique].astype(np.float64)
+        return_mean = float(selected_return.mean())
+        return_standard_deviation = float(selected_return.std())
+        normalized_return = (
+            (selected_return - return_mean)
+            / max(return_standard_deviation, 1e-6)
+        )
+        score += PHASE_RETURN_ADVANTAGE_WEIGHT * normalized_return
+        return_metrics = {
+            "queried_phase_return_mean": return_mean,
+            "queried_phase_return_std": return_standard_deviation,
+            "queried_phase_return_min": float(selected_return.min()),
+            "queried_phase_return_max": float(selected_return.max()),
+        }
     mean = float(score.mean())
     standard_deviation = float(score.std())
     normalized = (score - mean) / max(standard_deviation, 1e-6)
@@ -200,6 +222,7 @@ def trajectory_advantages(
         "queried_score_std": standard_deviation,
         "queried_score_min": float(score.min()),
         "queried_score_max": float(score.max()),
+        **return_metrics,
     }
 
 
@@ -207,7 +230,7 @@ def rollout(
     state: dict[str, torch.Tensor],
     *, iteration: int,
     device: torch.device,
-) -> tuple[np.ndarray, dict[str, Any], np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, dict[str, Any], np.ndarray, np.ndarray, np.ndarray]:
     from pufferlib import _C, pufferl
 
     payload = torch.load(PARENT_CHECKPOINT, map_location="cpu", weights_only=False)
@@ -236,6 +259,7 @@ def rollout(
         vector.obs_ptr, (TOTAL_AGENTS, ENV_OBS_SIZE), torch.float32
     )
     terminals = _cpu_tensor(vector.terminals_ptr, (TOTAL_AGENTS,), torch.float32)
+    rewards = _cpu_tensor(vector.rewards_ptr, (TOTAL_AGENTS,), torch.float32)
     actions_cpu = torch.zeros((TOTAL_AGENTS, ACTION_SIZE), dtype=torch.float32)
     action_weight = state["action_head.weight"].to(device)
     action_bias = state["action_head.bias"].to(device)
@@ -245,6 +269,7 @@ def rollout(
     held = np.zeros(TOTAL_AGENTS, dtype=np.float32)
     previous_held = held.copy()
     maximum_raw_index = np.zeros(TOTAL_AGENTS, dtype=np.int32)
+    phase_return = np.zeros(TOTAL_AGENTS, dtype=np.float64)
     phase_changes_off_tick = 0
     phase_decreases = 0
     phase_skips = 0
@@ -341,6 +366,7 @@ def rollout(
                 actions_cpu.copy_(torch.from_numpy(plant_np))
                 vector.cpu_step(actions_cpu.data_ptr())
                 vector_steps = step + 1
+                phase_return[exploration_mask] += rewards.numpy()[exploration_mask]
                 executed = observations.numpy()[
                     :, ACTION_HISTORY.start : ACTION_HISTORY.start + ACTION_SIZE
                 ]
@@ -363,6 +389,11 @@ def rollout(
     finally:
         vector.close()
     records = np.concatenate(chunks) if chunks else np.empty(0, dtype=ROLLOUT_DTYPE)
+    query_agents = (
+        np.unique(records["agent_index"])
+        if records.size else np.empty(0, dtype=np.int64)
+    )
+    queried_phase_return = phase_return[query_agents]
     clipped = np.minimum(maximum_raw_index, TARGET_RAW_INDEX)
     distribution = {
         str(index): int((clipped == index).sum())
@@ -376,12 +407,13 @@ def rollout(
         and phase_decreases == 0
         and phase_skips == 0
         and raw_encoding_max_error <= 1e-6
+        and np.isfinite(queried_phase_return).all()
         and resolved.all()
     )
     metrics = {
         "iteration": iteration,
         "records": int(records.size),
-        "query_agents": int(np.unique(records["agent_index"]).size),
+        "query_agents": int(query_agents.size),
         "target_passes": int(passed.sum()),
         "raw9_or_later": int((maximum_raw_index >= 9).sum()),
         "mean_maximum_raw_index": float(maximum_raw_index.mean()),
@@ -398,15 +430,31 @@ def rollout(
         "phase_decreases": phase_decreases,
         "phase_skips": phase_skips,
         "raw_progress_encoding_max_error": raw_encoding_max_error,
+        "queried_phase_return_mean": (
+            float(queried_phase_return.mean()) if query_agents.size else None
+        ),
+        "queried_phase_return_std": (
+            float(queried_phase_return.std()) if query_agents.size else None
+        ),
+        "queried_phase_return_min": (
+            float(queried_phase_return.min()) if query_agents.size else None
+        ),
+        "queried_phase_return_max": (
+            float(queried_phase_return.max()) if query_agents.size else None
+        ),
+        "queried_phase_return_nonfinite": int(
+            (~np.isfinite(queried_phase_return)).sum()
+        ),
         "loader_overrides": overrides,
     }
-    return records, metrics, maximum_raw_index, passed
+    return records, metrics, maximum_raw_index, passed, phase_return
 
 
 def ppo_update(
     records: np.ndarray,
     maximum_raw_index: np.ndarray,
     passed: np.ndarray,
+    phase_return: np.ndarray,
     state: dict[str, torch.Tensor],
     *, iteration: int,
     device: torch.device,
@@ -415,7 +463,7 @@ def ppo_update(
         raise RuntimeError("LC127 rollout reached no phase-6 states")
     agents = np.asarray(records["agent_index"], dtype=np.int64)
     advantage_by_agent, score_metrics = trajectory_advantages(
-        maximum_raw_index, passed, agents
+        maximum_raw_index, passed, agents, phase_return
     )
     counts = np.bincount(agents, minlength=TOTAL_AGENTS)
     row_weights_np = 1.0 / counts[agents].astype(np.float64)
@@ -581,7 +629,7 @@ def train(
             "state_sha256": state_sha256(state),
         }
         checkpoints.append(checkpoint_item)
-        records, rollout_report, maximum_raw_index, passed = rollout(
+        records, rollout_report, maximum_raw_index, passed, phase_return = rollout(
             state, iteration=iteration, device=device
         )
         rollout_report["checkpoint"] = checkpoint_path.name
@@ -589,7 +637,7 @@ def train(
         rollout_reports.append(rollout_report)
         if iteration < ROLLOUTS:
             state, update_report = ppo_update(
-                records, maximum_raw_index, passed, state,
+                records, maximum_raw_index, passed, phase_return, state,
                 iteration=iteration, device=device,
             )
             update_reports.append(update_report)
@@ -640,6 +688,7 @@ def train(
             "maximum_gradient_norm": MAX_GRADIENT_NORM,
             "anchor_coefficient": ANCHOR_COEFFICIENT,
             "exploration_standard_deviation": EXPLORATION_STD,
+            "phase_return_advantage_weight": PHASE_RETURN_ADVANTAGE_WEIGHT,
             "target_phase": TARGET_PHASE, "target_raw_index": TARGET_RAW_INDEX,
             "total_agents": TOTAL_AGENTS, "threads": THREADS,
             "num_proxy_gates": NUM_GATES, "max_steps": MAX_STEPS,

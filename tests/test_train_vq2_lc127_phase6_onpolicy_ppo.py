@@ -29,6 +29,22 @@ def test_lc127_trajectory_advantage_is_centered() -> None:
     assert advantage[8] > advantage[4] > advantage[2]
 
 
+def test_lc127_optional_phase_return_breaks_sparse_tie(monkeypatch) -> None:
+    monkeypatch.setattr(lc127, "PHASE_RETURN_ADVANTAGE_WEIGHT", 1.0)
+    maximum = np.zeros(lc127.TOTAL_AGENTS, dtype=np.int32)
+    maximum[[2, 4, 8]] = 8
+    passed = np.zeros(lc127.TOTAL_AGENTS, dtype=bool)
+    phase_return = np.zeros(lc127.TOTAL_AGENTS, dtype=np.float64)
+    phase_return[[2, 4, 8]] = [-3.0, 1.0, 9.0]
+    agents = np.asarray([2, 2, 4, 8, 8, 8], dtype=np.int64)
+    advantage, metrics = lc127.trajectory_advantages(
+        maximum, passed, agents, phase_return
+    )
+    assert abs(float(advantage[[2, 4, 8]].mean())) < 1e-6
+    assert advantage[8] > advantage[4] > advantage[2]
+    assert metrics["queried_phase_return_std"] > 0.0
+
+
 def test_lc127_only_phase6_is_trainable() -> None:
     payload = lc127.verify_inputs()
     state = payload["model_state"]
