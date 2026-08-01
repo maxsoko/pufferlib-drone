@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import torch
+
 import scripts.eval_vq2_lc061_phase2_bias_full_course as lc061
 import scripts.eval_vq2_lc062_phase2_bias_full_course as lc062
 from scripts.eval_vq2_variable_gate_oracle import sha256_path
@@ -33,3 +35,32 @@ def test_lc062_uses_a_distinct_report_and_checkpoint_schema() -> None:
     assert lc062.SCHEMA != lc061.SCHEMA
     assert lc062.CHECKPOINT_SCHEMA != lc061.CHECKPOINT_SCHEMA
     assert lc062._BASE_VERIFY_INPUTS is not lc062.verify_inputs
+
+
+def test_lc061_default_execution_hook_preserves_active_recurrent_state() -> None:
+    class Output:
+        pre_tanh_mean = torch.zeros((2, 4))
+
+    class Actor:
+        def forward_step(self, actor_input, recurrent):
+            del actor_input
+            return Output(), recurrent + 1.0
+
+    execution = {"actor": Actor(), "recurrent": torch.zeros((1, 2, 3))}
+    original = lc061.apply_candidate_actions
+    try:
+        lc061.apply_candidate_actions = (
+            lambda output, next_state, progress, context: output.pre_tanh_mean
+        )
+        action = lc061.execute_actor_actions(
+            execution,
+            torch.zeros((2, 1)),
+            torch.tensor([True, False]),
+            torch.zeros((2, 1)),
+            None,
+        )
+    finally:
+        lc061.apply_candidate_actions = original
+    assert action.shape == (2, 4)
+    assert torch.equal(execution["recurrent"][0, 0], torch.ones(3))
+    assert torch.equal(execution["recurrent"][0, 1], torch.zeros(3))

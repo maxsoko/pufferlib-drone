@@ -69,6 +69,9 @@ NEXT_AUTHORITY_SELECTED = (
 NEXT_AUTHORITY_NONE = "Reject the candidate and retain the parent checkpoint."
 PROMOTION_TARGET_RAW_INDEX = 3
 SURGERY_PAYLOAD_KEY = "phase2_surgery"
+ACTOR_EXECUTION_CONTRACT = (
+    "one parent actor plus vectorized post-forward candidate action surgery"
+)
 
 
 def build_candidate_context(
@@ -88,6 +91,34 @@ def apply_candidate_actions(
 ) -> torch.Tensor:
     del next_recurrent
     return milestone.apply_phase2_bias(actor_output.pre_tanh_mean, held_progress, context)
+
+
+def initialize_actor_execution(
+    payload: dict[str, Any], *, device: torch.device
+) -> dict[str, Any]:
+    actor = milestone.load_actor(payload, device)
+    return {
+        "actor": actor,
+        "recurrent": actor.initial_state(TOTAL_AGENTS, device=device),
+    }
+
+
+def execute_actor_actions(
+    execution: dict[str, Any],
+    actor_input: torch.Tensor,
+    active: torch.Tensor,
+    held_progress: torch.Tensor,
+    candidate_context: Any,
+) -> torch.Tensor:
+    actor_output, next_recurrent = execution["actor"].forward_step(
+        actor_input, execution["recurrent"]
+    )
+    execution["recurrent"] = preserve_frozen_state(
+        execution["recurrent"], next_recurrent, active
+    )
+    return apply_candidate_actions(
+        actor_output, next_recurrent, held_progress, candidate_context
+    )
 
 
 def build_selected_candidate_state(
@@ -211,7 +242,7 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
 
     identity = source_identity()
     device = torch.device(device_name)
-    actor = milestone.load_actor(payload, device)
+    actor_execution = initialize_actor_execution(payload, device=device)
     config, overrides = load_config(
         pufferl, num_gates=NUM_GATES, agents=TOTAL_AGENTS,
         episodes=EPISODES, seed=SEED, threads=THREADS,
@@ -239,7 +270,6 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
     observations = _cpu_tensor(vector.obs_ptr, (TOTAL_AGENTS, ENV_OBS_SIZE), torch.float32)
     terminals = _cpu_tensor(vector.terminals_ptr, (TOTAL_AGENTS,), torch.float32)
     actions_cpu = torch.zeros((TOTAL_AGENTS, ACTION_SIZE), dtype=torch.float32)
-    recurrent = actor.initial_state(TOTAL_AGENTS, device=device)
     candidate_context = build_candidate_context(payload, device=device)
     done = torch.zeros(TOTAL_AGENTS, dtype=torch.bool)
     held = np.zeros(TOTAL_AGENTS, dtype=np.float32)
@@ -296,10 +326,8 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
                 actor_input = torch.cat((legal, progress), dim=1)
                 active = active_cpu.to(device)
                 inference_started = time.perf_counter()
-                actor_output, next_recurrent = actor.forward_step(actor_input, recurrent)
-                recurrent = preserve_frozen_state(recurrent, next_recurrent, active)
-                action = apply_candidate_actions(
-                    actor_output, next_recurrent, progress, candidate_context
+                action = execute_actor_actions(
+                    actor_execution, actor_input, active, progress, candidate_context
                 )
                 action = torch.where(active[:, None], action, torch.zeros_like(action))
                 inference_seconds += time.perf_counter() - inference_started
@@ -427,6 +455,7 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
         "vector_steps": vector_steps, "wall_time_seconds": wall,
         "inference_seconds": inference_seconds, "initial_seed_groups_exact": initial_groups_exact,
         "single_cuda_context": True, "single_native_vector": True,
+        "actor_execution_contract": ACTOR_EXECUTION_CONTRACT,
         "loader_overrides": overrides, "source_identity": identity,
         "safety": {
             "runtime_teacher_actions": 0, "student_updates": 0,
