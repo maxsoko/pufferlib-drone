@@ -50,6 +50,9 @@ MAX_STEPS = 12_000
 PHASE_MIN = 8
 PHASE_MAX_EXCLUSIVE = 10
 TARGET_RAW_INDEX = 10
+# Backward-compatible hook for later paired anchor/rescue collection. LC125's
+# source-locked default continues to record only intervention rows.
+CAPTURE_CONTROL_FEATURES = False
 PARENT_DIR = (
     ROOT / "logs/drone_race_full_policy_six_gate_bootstrap"
     / "vq2_lc123_phase6_success_rescue_anchor_001"
@@ -299,7 +302,15 @@ def collect(
                     held * OFFICIAL_PROGRESS_SCALE
                 ).astype(np.int32)
                 teacher_mask = intervention_mask(active_np, phase_index)
-                selected_agents = np.flatnonzero(teacher_mask)
+                capture_mask = teacher_mask.copy()
+                if CAPTURE_CONTROL_FEATURES:
+                    control = group_slice(0)
+                    capture_mask[control] = (
+                        active_np[control]
+                        & (phase_index[control] >= PHASE_MIN)
+                        & (phase_index[control] < PHASE_MAX_EXCLUSIVE)
+                    )
+                selected_agents = np.flatnonzero(capture_mask)
                 pending = np.empty(selected_agents.size, dtype=FEATURE_DTYPE)
                 if selected_agents.size:
                     index = torch.from_numpy(selected_agents).to(device)
@@ -309,7 +320,10 @@ def collect(
                     pending["base_pre_tanh"] = result.pre_tanh_mean.index_select(
                         0, index
                     ).cpu().numpy()
-                    pending["teacher_action"] = teacher[selected_agents]
+                    targets = student_np[selected_agents].copy()
+                    selected_teacher = teacher_mask[selected_agents]
+                    targets[selected_teacher] = teacher[selected_agents[selected_teacher]]
+                    pending["teacher_action"] = targets
                     pending["phase_index"] = phase_index[selected_agents].astype(np.uint8)
                     pending["agent_index"] = selected_agents.astype(np.uint16)
                     pending["step"] = np.uint16(step)
