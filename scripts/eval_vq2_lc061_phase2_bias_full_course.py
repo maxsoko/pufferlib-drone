@@ -67,6 +67,8 @@ NEXT_AUTHORITY_SELECTED = (
     "rediagnose its next bottleneck."
 )
 NEXT_AUTHORITY_NONE = "Reject the candidate and retain the parent checkpoint."
+PROMOTION_TARGET_RAW_INDEX = 3
+SURGERY_PAYLOAD_KEY = "phase2_surgery"
 
 
 def build_candidate_context(
@@ -370,6 +372,10 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
             "maximum_raw_index": int(maximum_index),
             "maximum_raw_index_distribution": distribution,
             "gate3_passes": int((maximum_raw_index[selected] >= 3).sum()),
+            "promotion_target_raw_index": PROMOTION_TARGET_RAW_INDEX,
+            "promotion_target_passes": int(
+                (maximum_raw_index[selected] >= PROMOTION_TARGET_RAW_INDEX).sum()
+            ),
             "crash_rate": float(metrics["env/crash"]),
             "miss_rate": float(metrics["env/missed_gate"]),
             "timeout_rate": float(metrics["env/timeout"]),
@@ -394,7 +400,7 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
             "best_epoch": 0,
             "optimizer_updates": 0,
             "numerically_admitted": True,
-            "phase2_surgery": checkpoint_surgery_metadata(
+            SURGERY_PAYLOAD_KEY: checkpoint_surgery_metadata(
                 items[1]["candidate_state_sha256"]
             ),
         }
@@ -411,6 +417,11 @@ def run(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda",
         "checkpoint_sha256": candidate_checkpoint_sha256,
         "mean_gate_gain": items[1]["mean_gates_passed"] - items[0]["mean_gates_passed"],
         "gate3_pass_gain": items[1]["gate3_passes"] - items[0]["gate3_passes"],
+        "promotion_target_raw_index": PROMOTION_TARGET_RAW_INDEX,
+        "promotion_target_pass_gain": (
+            items[1]["promotion_target_passes"]
+            - items[0]["promotion_target_passes"]
+        ),
         "items": items, "group_size": GROUP_SIZE, "total_agents": TOTAL_AGENTS,
         "seed": SEED, "num_gates": NUM_GATES, "max_steps": MAX_STEPS,
         "vector_steps": vector_steps, "wall_time_seconds": wall,
