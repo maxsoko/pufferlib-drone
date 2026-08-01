@@ -202,8 +202,8 @@ def evaluate(
             base_tensor = torch.from_numpy(base[selected, :size]).to(device)
             target = torch.from_numpy(teacher[selected, :size]).to(device)
             valid = torch.from_numpy(mask[selected, :size]).to(device)
-            output, _ = gru(x)
-            action = torch.tanh(base_tensor + head(output))
+            recurrent_output, _ = gru(x)
+            action = torch.tanh(base_tensor + head(recurrent_output))
             row_error = (action - target).square().mean(dim=-1)
             weights = valid.float() / torch.from_numpy(lengths[selected]).to(device)[:, None]
             weighted_error += float((row_error * weights).sum())
@@ -281,8 +281,8 @@ def fit(*, output: Path = DEFAULT_OUTPUT, device_name: str = "cuda", resume: boo
             base_tensor = torch.from_numpy(base[selected, :size]).to(device)
             target = torch.from_numpy(teacher[selected, :size]).to(device)
             valid = torch.from_numpy(mask[selected, :size]).to(device)
-            output, _ = gru(x)
-            action = torch.tanh(base_tensor + head(output))
+            recurrent_output, _ = gru(x)
+            action = torch.tanh(base_tensor + head(recurrent_output))
             row_error = (action - target).square().mean(dim=-1)
             weights = valid.float() / torch.from_numpy(lengths[selected]).to(device)[:, None]
             loss = (row_error * weights).sum() / len(selected)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import ast
+import inspect
 import numpy as np
 
 from scripts.collect_vq2_lc119_phase6_9_exact_milestone_features import FEATURE_DTYPE
@@ -29,3 +31,12 @@ def test_lc176_agent_split_and_model_contract() -> None:
     assert (validation >= 256).sum() == 64
     assert lc176.TARGET_PHASE == 15
     assert lc176.ADAPTER_SIZE == 64
+
+
+def test_lc176_fit_does_not_shadow_output_path() -> None:
+    tree = ast.parse(inspect.getsource(lc176.fit))
+    stores = {
+        node.id for node in ast.walk(tree)
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store)
+    }
+    assert "output" not in stores
