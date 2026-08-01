@@ -75,6 +75,26 @@ TEST = ROOT / "tests/test_collect_vq2_lc125_lc123_phase8_9_rescue_features.py"
 DEFAULT_OUTPUT = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
 
 
+def feature_components(
+    actor: Any,
+    result: Any,
+    next_recurrent: torch.Tensor,
+    index: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Return the saved base hidden state and pre-tanh action for selected rows.
+
+    Later source-locked collectors may override this hook for actors carrying
+    auxiliary recurrent state. The default is byte-equivalent to the original
+    whole-Puffer feature path.
+    """
+
+    del actor
+    return (
+        next_recurrent[0].index_select(0, index),
+        result.pre_tanh_mean.index_select(0, index),
+    )
+
+
 def group_slice(group: int) -> slice:
     if group not in (0, 1):
         raise ValueError("LC125 group must be control or intervention")
@@ -319,12 +339,11 @@ def collect(
                 pending = np.empty(selected_agents.size, dtype=FEATURE_DTYPE)
                 if selected_agents.size:
                     index = torch.from_numpy(selected_agents).to(device)
-                    pending["hidden"] = next_recurrent[0].index_select(
-                        0, index
-                    ).cpu().numpy().astype(np.float16)
-                    pending["base_pre_tanh"] = result.pre_tanh_mean.index_select(
-                        0, index
-                    ).cpu().numpy()
+                    saved_hidden, saved_base_pre_tanh = feature_components(
+                        actor, result, next_recurrent, index
+                    )
+                    pending["hidden"] = saved_hidden.cpu().numpy().astype(np.float16)
+                    pending["base_pre_tanh"] = saved_base_pre_tanh.cpu().numpy()
                     targets = student_np[selected_agents].copy()
                     selected_teacher = teacher_mask[selected_agents]
                     if CAPTURE_CONTROL_TEACHER_TARGETS:
