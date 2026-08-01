@@ -409,6 +409,8 @@ def collect(
     lengths = np.zeros(AGENTS, dtype=np.int32)
     teacher_steps_by_agent = np.zeros(AGENTS, dtype=np.int32)
     query_steps_by_agent = np.zeros(AGENTS, dtype=np.int32)
+    last_query_step_by_agent = np.full(AGENTS, -1, dtype=np.int32)
+    last_query_terminal_by_agent = np.zeros(AGENTS, dtype=bool)
     phase_changes_off_tick = phase_decreases = phase_skips = 0
     raw_phase_encoding_max_error = executed_action_max_error = 0.0
     feature_records = nonfinite_values = teacher_action_envelope_violations = 0
@@ -499,6 +501,8 @@ def collect(
                 teacher_steps_by_agent += teacher_mask.astype(np.int32)
                 query_steps_by_agent += query_mask.astype(np.int32)
                 if selected.size:
+                    last_query_step_by_agent[selected] = step
+                    last_query_terminal_by_agent[selected] = terminal[selected]
                     records = np.empty(selected.size, dtype=FEATURE_DTYPE)
                     selected_device = torch.from_numpy(selected).to(device)
                     records["hidden"] = candidate[0].index_select(
@@ -544,6 +548,11 @@ def collect(
     feature_sha = sha256_path(partial)
     metrics = flatten_log(pufferl, native_log)
     wall = time.perf_counter() - started
+    queried = last_query_step_by_agent >= 0
+    outcome_complete = queried & done
+    outcome_success = outcome_complete & ~last_query_terminal_by_agent
+    outcome_failure = outcome_complete & last_query_terminal_by_agent
+    outcome_censored = queried & ~done
     report: dict[str, Any] = {
         "schema": SCHEMA, "tag": TAG, "completed": True,
         "training_dataset_admitted": False,
@@ -576,6 +585,10 @@ def collect(
         "query_steps_by_agent_max": int(query_steps_by_agent.max()),
         "query_agents": int((query_steps_by_agent > 0).sum()),
         "completed_agents": int(done.sum()),
+        "query_outcome_complete_agents": int(outcome_complete.sum()),
+        "query_outcome_success_agents": int(outcome_success.sum()),
+        "query_outcome_failure_agents": int(outcome_failure.sum()),
+        "query_outcome_censored_agents": int(outcome_censored.sum()),
         "teacher_query_actions_recorded": int(query_steps_by_agent.sum()),
         "feature_query_phase_min": FEATURE_QUERY_PHASE_MIN,
         "feature_query_phase_max_exclusive": FEATURE_QUERY_PHASE_MAX_EXCLUSIVE,
