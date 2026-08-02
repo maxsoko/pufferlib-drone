@@ -11581,3 +11581,68 @@ Candidate 028 and FullLap are unauthorized until Shadow 030 passes.
   a strict teacher-free `128/128` raw-16 screen before treating any checkpoint
   as the next offline source. Live VQ2 Training stays frozen and Submission is
   forbidden.
+
+### VQ2 all-24 source trajectory and robustness rejection — LC186--LC227, 2026-08-01
+
+- The official VQ2 event contains approximately 20 gates or more by direct
+  simulator inspection. The native course remains a 24-gate proxy. Six gates
+  are not the VQ2 objective, raw index `24` is not an official finish, and only
+  nonnegative official `race_finish_time_ns` proves a valid lap. The delivery
+  deadline is 2026-08-02.
+- LC186--LC216 extend the seed-15 source trajectory through raw index `24`.
+  LC216 freezes a recurrent Puffer action sequence for phases 16--23 while
+  carrying LC213's prefix exactly. Checkpoint SHA-256 is
+  `672af0c4b014bb7d7399e2d709f268a487a83294b7b2a72ebfc79a48896a95b9`.
+  LC217 and the separately tagged LC218 each pass the exact-context all-24
+  proxy `128/128`, with zero pre-target terminal and exact action transport.
+  LC218 report SHA-256 is
+  `3ae103609608cd090b9e0ccbf00f73e38bd3e2aa5ab21e9930046171da2d5800`.
+  These are source-trajectory results, not broad admission or an official lap.
+- LC219 exports the complete recurrent actor to pure NumPy. Archive SHA-256 is
+  `248d3574d3354862891b27942d239fb0d123dc8832e8c1e04db5fe12c0f3da1f`;
+  random-step PyTorch parity is below `3e-7`. The Windows runtime now builds the
+  exact 4,119-value legal ABI from a 64x64 soft red mask, gyro, four actuator
+  values, three-action history, camera timing, and public progress. Classical
+  gate geometry is bypassed for this policy.
+- Zero-control Windows shadow LC221 passes in active VQ2 Training: `639`
+  recurrent steps at `63.9 Hz`, `112` camera frames, `1,784` telemetry
+  messages, maximum catch-up `5`, exact manifest hashes, and zero reset, arm,
+  disarm, control command, or setpoint. Report SHA-256 is
+  `7c8bd6f5b6e2b9267f9d9d33b68da2659566fab74049c6e1d8ca49af55c153c7`.
+  Its heartbeat registration is not control authority.
+- LC222's combined moderate perturbation fails before raw index `2`. LC223
+  isolates raw-2 behavior: reset, camera dropout, edge dropout, rolling
+  shutter, plant gain/hover, and plant lag/drag pass `32/32`; randomized camera
+  extrinsic and the original combined profile fail. The camera extrinsic is a
+  fixed measured calibration, but this raw-2 screen is too short to establish
+  downstream robustness.
+- LC224 holds the camera extrinsic fixed and combines the other factors on a
+  fresh seed/offset. Both actors pass two gates but fail before Gate 3 in
+  `32/32`; report SHA-256 is
+  `5dde24811c5f672bb27fbbf5e3bbbbb940727e945c4d8b54f982d16961f52e6c`.
+  LC225 confirms all reset/perception/plant groupings reach raw index `2`.
+- LC226 localizes the failure at Gate 3 using paired `8+8` actors. Plant-only
+  and perception-plus-plant pass `8/8`; perception-only, reset-plus-perception,
+  reset-plus-plant, and the full fixed-camera combination fail `0/8`. The
+  reset-plus-perception branch persists to the complete `45,000`-step bound.
+  These nonlinear outcomes do not identify one safe perturbation subset.
+- LC227 then tests the unperturbed/default control at the same fresh
+  seed/offset and it also fails Gate 3 `0/8`, stopping at raw index `2` after
+  `5,650` steps. Report SHA-256 is
+  `d2994cb13d7bccc37e1b6ae13e075b67ff06a7d9921dd82f709b183a8359150e`.
+  The remaining factor profiles were stopped because the control failure makes
+  that attribution invalid. LC216's phase-2 tensors are byte-identical to
+  LC105; the established broad Gate-3 reach is only `34/128`. Therefore LC216
+  is a brittle repeated-start source trajectory and is rejected for live use.
+- The Vast layout remains efficient: one CUDA process and 32 native threads
+  saturate the real 34.97-core quota. Successful raw-3 branches resolve around
+  `2,470--2,697` steps in `23--24 s`; long persistent misses, not idle GPU,
+  dominate wall time. Continue with reduced milestone bounds and only one
+  source-locked candidate per screen.
+- No LC186--LC227 offline job sends a FlightSim packet. LC216 has not been
+  warmed on the source-locked N399 official Gate-1 prefix and does not satisfy
+  the post-N399 admission contract. Keep VQ2 Training actuation frozen and
+  Submission forbidden. The deadline-critical path is to repair the earliest
+  broad Gate-3/start-state failure, preserve the all-24 continuation, then pass
+  N399-prefix replay before considering one separately preregistered bounded
+  Training attempt.

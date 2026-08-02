@@ -17525,6 +17525,39 @@ until Shadow 031 passes.
   Any failure rejects N522 and forbids an unchanged retry. VQ2 Submission
   remains forbidden.
 
+## LC216--LC227 all-24 source trajectory and admission rejection — 2026-08-01
+
+- Official VQ2 remains approximately 20 gates or more; the native 24-gate
+  course is only a proxy. Six gates are not the objective. Require official
+  `race_finish_time_ns >= 0` for any valid-lap claim.
+- LC216 checkpoint SHA
+  `672af0c4b014bb7d7399e2d709f268a487a83294b7b2a72ebfc79a48896a95b9`
+  extends the recurrent source trajectory through all 24 proxy gates. LC217
+  and LC218 each pass `128/128` exact-context episodes, but this is repeated-
+  start evidence. LC218 report SHA is
+  `3ae103609608cd090b9e0ccbf00f73e38bd3e2aa5ab21e9930046171da2d5800`.
+- The pure-NumPy export SHA is
+  `248d3574d3354862891b27942d239fb0d123dc8832e8c1e04db5fe12c0f3da1f`.
+  Zero-control active-Training shadow LC221 passes at `63.9 Hz` with `639`
+  recurrent steps and zero lifecycle/control/setpoint counts; report SHA is
+  `7c8bd6f5b6e2b9267f9d9d33b68da2659566fab74049c6e1d8ca49af55c153c7`.
+- LC222--LC226 progressively isolate fresh-context behavior. LC224's fixed-
+  camera combined screen passes two gates but fails Gate 3 in all `32/32`;
+  report SHA is
+  `5dde24811c5f672bb27fbbf5e3bbbbb940727e945c4d8b54f982d16961f52e6c`.
+  LC226 shows only plant and perception-plus-plant reach raw index `3`; four
+  other groupings fail `0/8`.
+- LC227's default control also fails Gate 3 `0/8` at the fresh seed/offset,
+  proving the primary defect is repeated-start brittleness rather than one
+  perturbation. Report SHA is
+  `d2994cb13d7bccc37e1b6ae13e075b67ff06a7d9921dd82f709b183a8359150e`.
+  Stop the remaining LC227 profiles and reject LC216 for live use.
+- No offline job sent a FlightSim packet. LC216 also lacks the mandatory N399
+  official-prefix warm/replay. VQ2 Training control remains frozen and
+  Submission remains forbidden. Repair broad Gate-3/start-state robustness,
+  preserve the 24-gate continuation, and pass source-locked N399-prefix replay
+  before preregistering any bounded Training attempt.
+
 ## N522 rejection and emergent visual-policy redirection — 2026-07-27
 
 - N522 `vq2_n522_corrected_geometry_gate2_bounded_004` ran exactly once and is
