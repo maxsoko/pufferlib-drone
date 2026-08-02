@@ -84,6 +84,15 @@ GATE_PROGRESS_ADAPTER_OBSERVATION_FIELDS = (
     "reserved_gate_progress_8",
 )
 
+VQ2_VISUAL_MASK_SIZE = 4096
+VQ2_VISUAL_BODY_RATE_SCALE_RAD_S = 20.0
+VQ2_VISUAL_PROGRESS_SCALE = 6.0
+VQ2_VISUAL_OBSERVATION_SIZE = 4119
+VQ2_VISUAL_ACTION_HISTORY_OFFSET = VQ2_VISUAL_MASK_SIZE + 3 + 4
+VQ2_VISUAL_NEW_FRAME_OFFSET = VQ2_VISUAL_ACTION_HISTORY_OFFSET + 12
+VQ2_VISUAL_FRAME_AGE_OFFSET = VQ2_VISUAL_NEW_FRAME_OFFSET + 1
+VQ2_VISUAL_PROGRESS_OFFSET = VQ2_VISUAL_FRAME_AGE_OFFSET + 1
+
 GATE_PHASE_ONEHOT_ADAPTER_OBSERVATION_FIELDS = (
     "official_gate_progress_norm",
     "official_gate_one_active",
@@ -802,6 +811,87 @@ def build_policy_observation(
     return observation
 
 
+def build_vq2_visual_policy_observation(
+    telemetry: TelemetryState,
+    *,
+    visual_mask: Sequence[float],
+    action_history: Sequence[Sequence[float]],
+    new_frame: bool,
+    frame_age_s: float,
+    official_gate_index: int,
+) -> tuple[float, ...]:
+    """Build the competition-legal 4,119-value LC216 runtime ABI."""
+
+    if len(visual_mask) != VQ2_VISUAL_MASK_SIZE:
+        raise ValueError("VQ2 visual mask must contain 4,096 values")
+    if len(action_history) != 3 or any(len(row) != 4 for row in action_history):
+        raise ValueError("VQ2 action history must have shape [3,4]")
+    if official_gate_index < 0:
+        raise ValueError("official gate index must be nonnegative")
+    mask = tuple(clamp(float(value), 0.0, 1.0) for value in visual_mask)
+    body_rates = tuple(
+        clamp(
+            safe_float(value) / VQ2_VISUAL_BODY_RATE_SCALE_RAD_S,
+            -1.0,
+            1.0,
+        )
+        for value in (telemetry.xgyro, telemetry.ygyro, telemetry.zgyro)
+    )
+    actuator = telemetry.actuator_outputs or ()
+    motor_feedback = tuple(
+        clamp(safe_float(actuator[index]) if index < len(actuator) else 0.0, 0.0, 1.0)
+        for index in range(4)
+    )
+    history = tuple(
+        clamp(float(value), -1.0, 1.0)
+        for row in action_history
+        for value in row
+    )
+    progress = float(official_gate_index) / VQ2_VISUAL_PROGRESS_SCALE
+    observation = (
+        *mask,
+        *body_rates,
+        *motor_feedback,
+        *history,
+        1.0 if new_frame else 0.0,
+        clamp(float(frame_age_s) / 0.25, 0.0, 1.0),
+        progress,
+        progress,
+    )
+    if len(observation) != VQ2_VISUAL_OBSERVATION_SIZE:
+        raise RuntimeError("VQ2 visual policy observation ABI changed")
+    if not all(math.isfinite(value) for value in observation):
+        raise ValueError("VQ2 visual policy observation contains nonfinite values")
+    return observation
+
+
+def vq2_visual_observation_after_action(
+    observation: Sequence[float],
+    action: Sequence[float],
+    *,
+    state_hz: float,
+) -> tuple[float, ...]:
+    """Advance public action history for a fixed-time recurrent catch-up tick."""
+
+    if len(observation) != VQ2_VISUAL_OBSERVATION_SIZE or len(action) != 4:
+        raise ValueError("VQ2 observation/action shape changed")
+    values = [float(value) for value in observation]
+    offset = VQ2_VISUAL_ACTION_HISTORY_OFFSET
+    previous = values[offset : offset + 8]
+    values[offset : offset + 12] = [
+        *(clamp(float(value), -1.0, 1.0) for value in action),
+        *previous,
+    ]
+    values[VQ2_VISUAL_NEW_FRAME_OFFSET] = 0.0
+    if state_hz > 0.0:
+        values[VQ2_VISUAL_FRAME_AGE_OFFSET] = clamp(
+            values[VQ2_VISUAL_FRAME_AGE_OFFSET] + 1.0 / (state_hz * 0.25),
+            0.0,
+            1.0,
+        )
+    return tuple(values)
+
+
 PolicyCallable = Callable[[tuple[float, ...]], Sequence[float]]
 
 
@@ -874,6 +964,7 @@ def build_deployment_manifest(policy_callable: PolicyCallable | None) -> dict:
         "policy_callable": None if callable_file is None else Path(callable_file),
         "policy_contract": scripts_dir / "drone_policy_contract.py",
         "gate_detector": scripts_dir / "drone_gate_detector.py",
+        "vq2_soft_red_mask": scripts_dir / "vq2_soft_red_mask.py",
         "camera_receiver": scripts_dir / "drone_camera_receiver.py",
         "sitl_adapter": scripts_dir / "drone_sitl_adapter.py",
         "state_estimator": scripts_dir / "drone_state_estimator.py",
@@ -2349,6 +2440,19 @@ def run_smoke(args) -> CompetitionSmokeReport:
             "or 'course-fsm'"
         )
     fixed_rate_attitude_mode = control_mode in {"course-fsm", "policy-attitude"}
+    policy_vq2_visual_observation = bool(
+        getattr(args, "policy_vq2_visual_observation", False)
+    )
+    if policy_vq2_visual_observation:
+        if control_mode != "policy-attitude":
+            raise ValueError(
+                "policy_vq2_visual_observation requires control_mode=policy-attitude"
+            )
+        if bool(getattr(args, "no_camera", False)):
+            raise ValueError("policy_vq2_visual_observation requires the camera")
+        from vq2_soft_red_mask import soft_red_mask_from_jpeg
+    else:
+        soft_red_mask_from_jpeg = None
     official_reset_on_start = bool(getattr(args, "official_reset_on_start", False))
     official_reset_start_timeout_s = float(
         getattr(args, "official_reset_start_timeout_s", 12.0)
@@ -2615,6 +2719,14 @@ def run_smoke(args) -> CompetitionSmokeReport:
     next_policy_trace_s = 0.0
     last_guidance_detection_s = None
     next_course_vision_s = 0.0
+    policy_visual_mask = (
+        np.zeros(VQ2_VISUAL_MASK_SIZE, dtype=np.float32)
+        if policy_vq2_visual_observation
+        else None
+    )
+    policy_visual_frame_received_s = None
+    policy_visual_new_frame_pending = False
+    policy_visual_action_history = [[0.0] * 4 for _ in range(3)]
     vision_metrics = SmokeVisionMetrics()
     approach_diagnostics = ApproachDiagnostics()
     final_approach_state = AttitudeFinalApproachState()
@@ -3026,9 +3138,16 @@ def run_smoke(args) -> CompetitionSmokeReport:
                 )
                 if frames:
                     if fixed_rate_attitude_mode:
-                        next_course_vision_s = now_s + 1.0 / 15.0
+                        next_course_vision_s = now_s + 1.0 / (
+                            30.0 if policy_vq2_visual_observation else 15.0
+                        )
                     frame = frames[-1]
                     vision_metrics.frames_seen += 1
+                    if policy_vq2_visual_observation:
+                        assert soft_red_mask_from_jpeg is not None
+                        policy_visual_mask = soft_red_mask_from_jpeg(frame.jpeg)
+                        policy_visual_frame_received_s = now_s
+                        policy_visual_new_frame_pending = True
                     final_phase_edge_preference = (
                         control_mode == "policy-attitude"
                         and raw_gate_observation_enabled(
@@ -3052,17 +3171,21 @@ def run_smoke(args) -> CompetitionSmokeReport:
                         if policy_final_edge_phase_started_s is None
                         else now_s - policy_final_edge_phase_started_s
                     )
-                    detection = detector.detect_jpeg(
-                        frame.jpeg,
-                        prefer_edge_frame=final_phase_edge_preference,
-                        prefer_any_edge_frame=final_phase_any_edge_priority_enabled(
-                            final_phase_edge_preference=final_phase_edge_preference,
-                            configured=policy_final_prefer_any_edge_frame,
-                            phase_elapsed_s=final_edge_phase_elapsed_s,
-                            delay_s=policy_final_any_edge_delay_s,
-                        ),
+                    detection = (
+                        None
+                        if policy_vq2_visual_observation
+                        else detector.detect_jpeg(
+                            frame.jpeg,
+                            prefer_edge_frame=final_phase_edge_preference,
+                            prefer_any_edge_frame=final_phase_any_edge_priority_enabled(
+                                final_phase_edge_preference=final_phase_edge_preference,
+                                configured=policy_final_prefer_any_edge_frame,
+                                phase_elapsed_s=final_edge_phase_elapsed_s,
+                                delay_s=policy_final_any_edge_delay_s,
+                            ),
+                        )
                     )
-                    if guidance_detector is not None:
+                    if guidance_detector is not None and not policy_vq2_visual_observation:
                         guidance_detection = guidance_detector.detect_jpeg(frame.jpeg)
                         if guidance_detection is not None:
                             last_guidance_detection_s = now_s
@@ -3561,6 +3684,26 @@ def run_smoke(args) -> CompetitionSmokeReport:
                             1.0,
                         ),
                     )
+                    if policy_vq2_visual_observation:
+                        if official_gate_index is None:
+                            raise RuntimeError(
+                                "VQ2 visual policy requires official race status"
+                            )
+                        if policy_visual_mask is None:
+                            raise RuntimeError("VQ2 visual mask state is unavailable")
+                        frame_age_s = (
+                            1.0
+                            if policy_visual_frame_received_s is None
+                            else max(0.0, now_s - policy_visual_frame_received_s)
+                        )
+                        observation = build_vq2_visual_policy_observation(
+                            telemetry,
+                            visual_mask=policy_visual_mask,
+                            action_history=policy_visual_action_history,
+                            new_frame=policy_visual_new_frame_pending,
+                            frame_age_s=frame_age_s,
+                            official_gate_index=official_gate_index,
+                        )
                     policy_steps_due = fixed_policy_steps_due(
                         elapsed_s=now_s - started_s,
                         state_hz=policy_state_hz,
@@ -3594,6 +3737,12 @@ def run_smoke(args) -> CompetitionSmokeReport:
                             thrust=setpoint.thrust,
                         )
                         last_cmd_norm = attitude_last_cmd_normalized(action)
+                        if policy_vq2_visual_observation:
+                            policy_visual_action_history = [
+                                list(action.normalized),
+                                policy_visual_action_history[0],
+                                policy_visual_action_history[1],
+                            ]
                         trace_now_s = (
                             now_s
                             if policy_state_hz <= 0.0
@@ -3620,10 +3769,20 @@ def run_smoke(args) -> CompetitionSmokeReport:
                             next_policy_trace_s = (
                                 trace_now_s + 1.0 / policy_trace_hz
                             )
-                        step_observation = policy_observation_with_last_command(
-                            step_observation,
-                            last_cmd_norm,
+                        step_observation = (
+                            vq2_visual_observation_after_action(
+                                step_observation,
+                                action.normalized,
+                                state_hz=policy_state_hz,
+                            )
+                            if policy_vq2_visual_observation
+                            else policy_observation_with_last_command(
+                                step_observation,
+                                last_cmd_norm,
+                            )
                         )
+                    if policy_vq2_visual_observation and policy_steps_due > 0:
+                        policy_visual_new_frame_pending = False
                 elif control_mode == "visual-servo-attitude":
                     fresh_control_pose = None
                     fresh_control_detection = None
@@ -4387,43 +4546,56 @@ def run_smoke(args) -> CompetitionSmokeReport:
                     / max(float(sitl_report.duration_s), 1e-9)
                 ),
             },
-            "observation_fields": [
-                *OBSERVATION_FIELDS[:-1],
-                (
-                    "official_active_gate_index_norm"
-                    if getattr(args, "policy_race_phase_observation", False)
-                    else OBSERVATION_FIELDS[-1]
-                ),
-                *(
-                    PHASE_ADAPTER_OBSERVATION_FIELDS
-                    if getattr(args, "policy_phase_adapter_observation", False)
-                    else ()
-                ),
-                *(
-                    GATE_PROGRESS_ADAPTER_OBSERVATION_FIELDS
-                    if getattr(
-                        args, "policy_gate_progress_adapter_observation", False
-                    )
-                    else ()
-                ),
-                *(
+            "observation_fields": (
+                [
+                    "vq2_soft_red_mask[4096]",
+                    "body_rates_normalized[3]",
+                    "actuator_feedback[4]",
+                    "executed_action_history[12]",
+                    "new_camera_frame",
+                    "camera_frame_age_normalized",
+                    "official_gate_progress_unbounded",
+                    "held_official_gate_progress_unbounded",
+                ]
+                if policy_vq2_visual_observation
+                else [
+                    *OBSERVATION_FIELDS[:-1],
                     (
-                        HYBRID_GATE_PHASE_ONEHOT_ADAPTER_OBSERVATION_FIELDS
+                        "official_active_gate_index_norm"
+                        if getattr(args, "policy_race_phase_observation", False)
+                        else OBSERVATION_FIELDS[-1]
+                    ),
+                    *(
+                        PHASE_ADAPTER_OBSERVATION_FIELDS
+                        if getattr(args, "policy_phase_adapter_observation", False)
+                        else ()
+                    ),
+                    *(
+                        GATE_PROGRESS_ADAPTER_OBSERVATION_FIELDS
+                        if getattr(
+                            args, "policy_gate_progress_adapter_observation", False
+                        )
+                        else ()
+                    ),
+                    *(
+                        (
+                            HYBRID_GATE_PHASE_ONEHOT_ADAPTER_OBSERVATION_FIELDS
+                            if getattr(
+                                args,
+                                "policy_hybrid_prefix_confidence_observation",
+                                False,
+                            )
+                            else GATE_PHASE_ONEHOT_ADAPTER_OBSERVATION_FIELDS
+                        )
                         if getattr(
                             args,
-                            "policy_hybrid_prefix_confidence_observation",
+                            "policy_gate_phase_onehot_adapter_observation",
                             False,
                         )
-                        else GATE_PHASE_ONEHOT_ADAPTER_OBSERVATION_FIELDS
-                    )
-                    if getattr(
-                        args,
-                        "policy_gate_phase_onehot_adapter_observation",
-                        False,
-                    )
-                    else ()
-                ),
-            ],
+                        else ()
+                    ),
+                ]
+            ),
             "action_fields": list(ATTITUDE_ACTION_FIELDS),
             "motion_filter": policy_gate_motion_state.snapshot(),
             "deployment_manifest": build_deployment_manifest(policy_callable),
@@ -4694,6 +4866,14 @@ def main() -> None:
             "active_gate_index for phase-conditioned full policies."
         ),
     )
+    parser.add_argument(
+        "--policy-vq2-visual-observation",
+        action="store_true",
+        help=(
+            "Build the LC216 4,119-value soft-mask/IMU/actuator/action-history/"
+            "official-progress ABI directly from public VQ2 runtime inputs."
+        ),
+    )
     parser.add_argument("--policy-race-phase-denominator", type=int, default=3)
     parser.add_argument(
         "--policy-phase-adapter-observation",
@@ -4851,6 +5031,7 @@ def main() -> None:
     observation_modes = sum(
         bool(value)
         for value in (
+            args.policy_vq2_visual_observation,
             args.policy_race_phase_observation,
             args.policy_phase_adapter_observation,
             args.policy_gate_progress_adapter_observation,

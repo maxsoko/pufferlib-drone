@@ -457,6 +457,57 @@ def test_policy_observation_appends_six_gate_progress_without_replacing_yaw():
     )
 
 
+def test_vq2_visual_policy_observation_matches_legal_runtime_layout():
+    telemetry = smoke.TelemetryState(
+        xgyro=2.0,
+        ygyro=-4.0,
+        zgyro=40.0,
+        actuator_outputs=(0.2, 0.4, 0.6, 1.2),
+    )
+    history = (
+        (0.1, 0.2, 0.3, 0.4),
+        (-0.1, -0.2, -0.3, -0.4),
+        (0.5, 0.6, 0.7, 0.8),
+    )
+    observation = smoke.build_vq2_visual_policy_observation(
+        telemetry,
+        visual_mask=[0.25] * smoke.VQ2_VISUAL_MASK_SIZE,
+        action_history=history,
+        new_frame=True,
+        frame_age_s=0.125,
+        official_gate_index=20,
+    )
+
+    assert len(observation) == 4119
+    assert observation[:4096] == pytest.approx([0.25] * 4096)
+    assert observation[4096:4099] == pytest.approx((0.1, -0.2, 1.0))
+    assert observation[4099:4103] == pytest.approx((0.2, 0.4, 0.6, 1.0))
+    assert observation[4103:4115] == pytest.approx(sum(history, ()))
+    assert observation[4115:4117] == pytest.approx((1.0, 0.5))
+    assert observation[4117:] == pytest.approx((20.0 / 6.0, 20.0 / 6.0))
+
+
+def test_vq2_visual_catchup_advances_action_history_and_frame_age():
+    observation = smoke.build_vq2_visual_policy_observation(
+        smoke.TelemetryState(),
+        visual_mask=[0.0] * smoke.VQ2_VISUAL_MASK_SIZE,
+        action_history=((0.1, 0.2, 0.3, 0.4), (0.5, 0.6, 0.7, 0.8), (0.0,) * 4),
+        new_frame=True,
+        frame_age_s=0.0,
+        official_gate_index=3,
+    )
+    advanced = smoke.vq2_visual_observation_after_action(
+        observation, (-1.0, -0.5, 0.5, 1.0), state_hz=64.0
+    )
+
+    assert advanced[4103:4115] == pytest.approx(
+        (-1.0, -0.5, 0.5, 1.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8)
+    )
+    assert advanced[4115] == 0.0
+    assert advanced[4116] == pytest.approx(1.0 / 16.0)
+    assert advanced[4117:] == observation[4117:]
+
+
 def test_policy_observation_appends_native_parity_six_gate_onehot():
     telemetry = smoke.TelemetryState()
     for gate_index in range(6):
