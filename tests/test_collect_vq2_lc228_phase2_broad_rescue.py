@@ -20,3 +20,16 @@ def test_lc228_contract() -> None:
     assert target.TARGET_RAW_INDEX == 3
     assert target.ENV_SEED_INDEX_OFFSET == 287
     assert target.MAX_STEPS == 12_000
+
+
+def test_lc228_sequence_feature_contract() -> None:
+    class Result:
+        pre_tanh_mean = torch.zeros(target.TOTAL_AGENTS, 4)
+
+    recurrent = torch.zeros(1, target.TOTAL_AGENTS, 321)
+    index = torch.tensor([0, 255, 256, 511])
+    hidden, pre_tanh = target.sequence_feature_components(
+        object(), Result(), recurrent, index
+    )
+    assert hidden.shape == (4, 256)
+    assert pre_tanh.shape == (4, 4)

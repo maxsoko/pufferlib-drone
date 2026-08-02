@@ -28,9 +28,9 @@ import scripts.collect_vq2_lc125_lc123_phase8_9_rescue_features as base
 BASE_WRITE_JSON_ONCE = base.write_json_once
 BASE_ACTOR_LOADER = base.milestone.load_actor
 
-TAG = "vq2_lc228_phase2_broad_rescue_001"
-SCHEMA = "vq2_lc228_phase2_broad_rescue_report_v1"
-FEATURE_SCHEMA = "vq2_lc228_phase2_broad_rescue_feature_v1"
+TAG = "vq2_lc228r_phase2_broad_rescue_001"
+SCHEMA = "vq2_lc228r_phase2_broad_rescue_report_v1"
+FEATURE_SCHEMA = "vq2_lc228r_phase2_broad_rescue_feature_v1"
 GROUP_SIZE = 256
 TOTAL_AGENTS = 512
 MAX_STEPS = 12_000
@@ -139,6 +139,23 @@ def split_actor_loader(payload: dict[str, Any], device: torch.device) -> SplitBa
     return SplitBatchActor((load_actor(payload, device), load_actor(payload, device)))
 
 
+def sequence_feature_components(
+    actor: SplitBatchActor,
+    result: Any,
+    next_recurrent: torch.Tensor,
+    index: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Store only the base 256-state Puffer, excluding adapter/counter state."""
+
+    del actor
+    if next_recurrent.shape != (1, TOTAL_AGENTS, 321):
+        raise RuntimeError("LC228R action-sequence recurrent ABI changed")
+    return (
+        next_recurrent[0, :, :256].index_select(0, index),
+        result.pre_tanh_mean.index_select(0, index),
+    )
+
+
 def corrected_writer(path: Path, payload: dict[str, Any]) -> None:
     corrected = dict(payload)
     if path.name == "report.json" and corrected.get("schema") == SCHEMA:
@@ -191,6 +208,9 @@ def corrected_writer(path: Path, payload: dict[str, Any]) -> None:
             "two independent complete recurrent LC216 Puffers over 256 rows each"
         )
         corrected["control_features_use_teacher_targets"] = True
+        corrected["feature_hidden_contract"] = (
+            "LC216 base recurrent state only, 256 values; adapter and sequence counter excluded"
+        )
         corrected["next_authority"] = (
             "Fit one phase-2 whole-Puffer residual on the broad LC216 failure/rescue corpus; no FlightSim authority."
             if corrected["training_dataset_admitted"] else
@@ -210,7 +230,7 @@ def configure() -> tuple[Any, ...]:
         base.PARENT_REPORT, base.PARENT_REPORT_SHA256,
         base.PREREGISTRATION, base.RUNNER, base.TEST, base.DEFAULT_OUTPUT,
         base.verify_inputs, base.source_identity, base.write_json_once,
-        base.milestone.load_actor,
+        base.milestone.load_actor, base.feature_components,
     )
     base.TAG, base.SCHEMA, base.FEATURE_SCHEMA = TAG, SCHEMA, FEATURE_SCHEMA
     base.GROUP_SIZE, base.TOTAL_AGENTS, base.MAX_STEPS = (
@@ -232,6 +252,7 @@ def configure() -> tuple[Any, ...]:
     )
     base.verify_inputs, base.source_identity = verify_inputs, source_identity
     base.write_json_once, base.milestone.load_actor = corrected_writer, split_actor_loader
+    base.feature_components = sequence_feature_components
     return originals
 
 
@@ -246,7 +267,7 @@ def restore(originals: tuple[Any, ...]) -> None:
         base.PARENT_REPORT, base.PARENT_REPORT_SHA256,
         base.PREREGISTRATION, base.RUNNER, base.TEST, base.DEFAULT_OUTPUT,
         base.verify_inputs, base.source_identity, base.write_json_once,
-        base.milestone.load_actor,
+        base.milestone.load_actor, base.feature_components,
     ) = originals
 
 
