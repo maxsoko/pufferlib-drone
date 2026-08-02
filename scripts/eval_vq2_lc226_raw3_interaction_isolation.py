@@ -64,7 +64,12 @@ def set_profile(profile: str) -> None:
 
 
 def verify_inputs() -> dict[str, Any]:
-    parent = BASE_VERIFY_INPUTS()
+    original_group_size = base.GROUP_SIZE
+    base.GROUP_SIZE = 32
+    try:
+        parent = BASE_VERIFY_INPUTS()
+    finally:
+        base.GROUP_SIZE = original_group_size
     for profile, digest in LC225_REPORT_SHA256.items():
         path = lc225_report(profile)
         if sha256_path(path) != digest:

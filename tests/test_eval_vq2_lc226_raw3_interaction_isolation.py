@@ -7,6 +7,12 @@ def test_lc226_source_lock() -> None:
     assert target.verify_inputs()["model"]["sequence_length"] == 2_329
 
 
+def test_lc226_source_lock_survives_outer_group_patch(monkeypatch) -> None:
+    monkeypatch.setattr(target.base, "GROUP_SIZE", target.GROUP_SIZE)
+    assert target.verify_inputs()["model"]["sequence_length"] == 2_329
+    assert target.base.GROUP_SIZE == target.GROUP_SIZE
+
+
 def test_lc226_profiles_and_bound(monkeypatch) -> None:
     assert target.PROFILES is target.base.PROFILES
     monkeypatch.setattr(
