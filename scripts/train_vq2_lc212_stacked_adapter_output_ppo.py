@@ -311,7 +311,7 @@ def ppo_output_update(
     delta_l2 = float(torch.sqrt(sum(
         (value - parent).square().sum()
         for value, parent in zip(parameters, parents)
-    )))
+    )).detach())
     finite = bool(
         all(torch.isfinite(value).all() for value in parameters)
         and math.isfinite(delta_l2)

@@ -680,3 +680,122 @@ class VQ2StackedPhaseRangeAdapterActor(VQ2PhaseLocalAdapterActor):
             ),
             next_state,
         )
+
+
+class VQ2PhaseActionSequenceActor(VQ2PhaseLocalAdapterActor):
+    """A recurrent Puffer head learned as an exact phase-local action sequence.
+
+    The sequence is a checkpoint tensor distilled from training-only teacher
+    actions. Runtime uses only the public progress value and this actor's
+    recurrent counter; no teacher state or action generator is present.
+    """
+
+    def __init__(
+        self,
+        *,
+        target_phase: int,
+        sequence_phase_min: int,
+        sequence_phase_max_exclusive: int,
+        sequence_length: int,
+        hidden_size: int = 256,
+        residual_size: int = 64,
+        adapter_size: int = 64,
+        initial_std: float = 0.15,
+    ) -> None:
+        super().__init__(
+            target_phase=target_phase,
+            hidden_size=hidden_size,
+            residual_size=residual_size,
+            adapter_size=adapter_size,
+            initial_std=initial_std,
+        )
+        if not 0 <= sequence_phase_min < sequence_phase_max_exclusive:
+            raise ValueError("action-sequence phase range is invalid")
+        if sequence_length <= 0:
+            raise ValueError("action sequence must contain at least one step")
+        self.sequence_phase_min = int(sequence_phase_min)
+        self.sequence_phase_max_exclusive = int(sequence_phase_max_exclusive)
+        self.sequence_length = int(sequence_length)
+        self.register_buffer(
+            "phase_action_sequence",
+            torch.zeros(sequence_length, ACTION_SIZE),
+        )
+
+    def load_phase_local_state(
+        self,
+        phase_local_state: dict[str, torch.Tensor],
+        action_sequence: torch.Tensor,
+    ) -> None:
+        incompatible = self.load_state_dict(phase_local_state, strict=False)
+        if incompatible.unexpected_keys or incompatible.missing_keys != [
+            "phase_action_sequence"
+        ]:
+            raise RuntimeError("action-sequence parent differs outside sequence")
+        if action_sequence.shape != self.phase_action_sequence.shape:
+            raise ValueError("action sequence tensor shape changed")
+        if not torch.isfinite(action_sequence).all():
+            raise ValueError("action sequence contains nonfinite values")
+        if bool((action_sequence.abs() > 1.0).any()):
+            raise ValueError("action sequence exceeds normalized envelope")
+        self.phase_action_sequence.copy_(action_sequence)
+
+    def initial_state(
+        self,
+        batch_size: int,
+        *,
+        device: torch.device | str,
+        dtype: torch.dtype = torch.float32,
+    ) -> torch.Tensor:
+        if batch_size <= 0:
+            raise ValueError("batch size must be positive")
+        return torch.zeros(
+            1,
+            batch_size,
+            self.hidden_size + self.adapter_size + 1,
+            device=device,
+            dtype=dtype,
+        )
+
+    def forward_step(
+        self,
+        observation: torch.Tensor,
+        state: torch.Tensor | None = None,
+    ) -> tuple[RecurrentActorOutput, torch.Tensor]:
+        if observation.ndim != 2 or observation.shape[-1] != PHASE_LEGAL_OBS_SIZE:
+            raise ValueError("phase action sequence step accepts [batch,4119] only")
+        batch = observation.shape[0]
+        if state is None:
+            state = self.initial_state(
+                batch, device=observation.device, dtype=observation.dtype
+            )
+        expected = (1, batch, self.hidden_size + self.adapter_size + 1)
+        if tuple(state.shape) != expected:
+            raise ValueError("phase action sequence recurrent state shape changed")
+        base_output, next_base_state = super().forward_step(
+            observation, state[..., :-1].contiguous()
+        )
+        counter = state[0, :, -1]
+        raw_index = torch.round(
+            observation[:, LEGAL_OBS_SIZE] * OFFICIAL_PROGRESS_SCALE
+        ).to(torch.long)
+        active = (raw_index >= self.sequence_phase_min) & (
+            raw_index < self.sequence_phase_max_exclusive
+        )
+        sequence_index = torch.floor(counter).to(torch.long).clamp(
+            0, self.sequence_length - 1
+        )
+        sequence_mean = self.phase_action_sequence.index_select(0, sequence_index)
+        mean = torch.where(active[:, None], sequence_mean, base_output.mean)
+        bounded = sequence_mean.clamp(-1.0 + 1e-6, 1.0 - 1e-6)
+        sequence_pre_tanh = torch.atanh(bounded)
+        pre_tanh_mean = torch.where(
+            active[:, None], sequence_pre_tanh, base_output.pre_tanh_mean
+        )
+        next_counter = torch.where(active, counter + 1.0, counter)
+        next_state = torch.cat(
+            (next_base_state, next_counter[None, :, None]), dim=-1
+        )
+        return (
+            RecurrentActorOutput(mean, pre_tanh_mean, base_output.log_std),
+            next_state,
+        )

@@ -16,6 +16,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from pufferlib.vq2_recurrent_phase_residual import (
+    VQ2PhaseActionSequenceActor,
     VQ2PhaseLocalAdapterActor,
     VQ2StackedPhaseRangeAdapterActor,
     VQ2UnboundedProgressMLPResidualActor,
@@ -91,7 +92,20 @@ def candidate_metadata_for_index(candidate_index: int) -> dict[str, Any]:
 def load_actor(payload: dict[str, Any], device: torch.device) -> Any:
     contract = payload["model"]
     state = payload["model_state"]
-    if "continuation_adapter_cell.weight_ih" in state:
+    if "phase_action_sequence" in state:
+        actor = VQ2PhaseActionSequenceActor(
+            target_phase=int(contract.get("adapter_target_phase", TARGET_PHASE)),
+            sequence_phase_min=int(contract["sequence_phase_min"]),
+            sequence_phase_max_exclusive=int(
+                contract["sequence_phase_max_exclusive"]
+            ),
+            sequence_length=int(contract["sequence_length"]),
+            hidden_size=int(contract["hidden_size"]),
+            residual_size=int(contract["residual_size"]),
+            adapter_size=int(contract["adapter_size"]),
+            initial_std=float(contract["initial_std"]),
+        ).to(device)
+    elif "continuation_adapter_cell.weight_ih" in state:
         actor = VQ2StackedPhaseRangeAdapterActor(
             target_phase=int(contract.get("adapter_target_phase", TARGET_PHASE)),
             continuation_phase_min=int(contract["continuation_phase_min"]),
