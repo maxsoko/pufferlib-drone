@@ -13,3 +13,12 @@ def test_lc218_confirmation_contract() -> None:
     assert target.base.TARGET_RAW_INDEX == 24
     assert target.base.GROUP_SIZE == 128
     assert target.base.PAIR_SIZE == 256
+
+
+def test_lc218_delegated_verifier_does_not_recurse() -> None:
+    snapshot = target.configure_outer()
+    try:
+        parent = target.base.verify_inputs()
+    finally:
+        target.restore(snapshot)
+    assert parent["model"]["sequence_length"] == 2_329

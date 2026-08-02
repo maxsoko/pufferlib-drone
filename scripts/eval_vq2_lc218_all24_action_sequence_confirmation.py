@@ -18,6 +18,7 @@ import scripts.eval_vq2_lc217_all24_action_sequence_milestone as base
 
 
 BASE_CONFIGURE = base.configure
+BASE_VERIFY_INPUTS = base.verify_inputs
 TAG = "vq2_lc218_all24_action_sequence_confirmation_001"
 SCHEMA = "vq2_lc218_all24_action_sequence_confirmation_report_v1"
 SEED = 432_218
@@ -30,7 +31,10 @@ DEFAULT_OUTPUT = ROOT / "logs/drone_race_full_policy_six_gate_bootstrap" / TAG
 
 
 def verify_inputs() -> dict[str, Any]:
-    parent = base.verify_inputs()
+    # ``configure_outer`` temporarily installs this function on ``base`` so
+    # the delegated run binds the independent LC218 inputs.  Keep an immutable
+    # reference to LC217's verifier to avoid recursively calling ourselves.
+    parent = BASE_VERIFY_INPUTS()
     if sha256_path(LC217_REPORT) != LC217_REPORT_SHA256:
         raise RuntimeError("LC218 bound LC217 report changed")
     promoted = json.loads(LC217_REPORT.read_text())
