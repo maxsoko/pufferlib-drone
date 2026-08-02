@@ -203,6 +203,40 @@ def normal_log_probability(
     return -0.5 * (((sample - mean).square() / variance) + constant).sum(dim=-1)
 
 
+def rollout_feature_components(
+    actor: Any,
+    next_recurrent: torch.Tensor,
+    current_mean: torch.Tensor,
+    selected_index: torch.Tensor,
+    state: dict[str, torch.Tensor],
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Return the frozen feature and additive baseline used by PPO.
+
+    Later experiments may replace this hook to optimize a different Puffer
+    submodule without duplicating the native closed-loop rollout machinery.
+    The default is source-exact for LC127's phase residual head.
+    """
+    del actor, current_mean
+    hidden = next_recurrent[0].index_select(0, selected_index)
+    action_weight = state["action_head.weight"].to(hidden.device)
+    action_bias = state["action_head.bias"].to(hidden.device)
+    return hidden, hidden @ action_weight.T + action_bias
+
+
+def frozen_update_scope_exact(
+    state: dict[str, torch.Tensor], parent_state: dict[str, torch.Tensor]
+) -> bool:
+    """Prove that LC127 changed only its selected phase-residual row."""
+    exact = True
+    for name, value in state.items():
+        if name in PARAMETER_NAMES:
+            keep = torch.arange(value.shape[0]) != TARGET_PHASE
+            exact &= torch.equal(value[keep], parent_state[name][keep])
+        else:
+            exact &= torch.equal(value, parent_state[name])
+    return bool(exact)
+
+
 def trajectory_advantages(
     maximum_raw_index: np.ndarray,
     passed: np.ndarray,
@@ -279,8 +313,6 @@ def rollout(
     terminals = _cpu_tensor(vector.terminals_ptr, (TOTAL_AGENTS,), torch.float32)
     rewards = _cpu_tensor(vector.rewards_ptr, (TOTAL_AGENTS,), torch.float32)
     actions_cpu = torch.zeros((TOTAL_AGENTS, ACTION_SIZE), dtype=torch.float32)
-    action_weight = state["action_head.weight"].to(device)
-    action_bias = state["action_head.bias"].to(device)
 
     resolved = np.zeros(TOTAL_AGENTS, dtype=bool)
     passed = np.zeros(TOTAL_AGENTS, dtype=bool)
@@ -361,8 +393,9 @@ def rollout(
                     sampled_pre = current_mean + noise
                     sampled_action = torch.tanh(sampled_pre)
                     plant.index_copy_(0, index, sampled_action)
-                    hidden = next_recurrent[0].index_select(0, index)
-                    base_pre_tanh = hidden @ action_weight.T + action_bias
+                    hidden, base_pre_tanh = rollout_feature_components(
+                        actor, next_recurrent, current_mean, index, state
+                    )
                     old_log_probability = normal_log_probability(
                         sampled_pre, current_mean, EXPLORATION_STD
                     )
@@ -681,13 +714,7 @@ def train(
             item for item in checkpoints
             if item["iteration"] == selected["iteration"]
         )
-    frozen_exact = True
-    for name, value in state.items():
-        if name in PARAMETER_NAMES:
-            keep = torch.arange(value.shape[0]) != TARGET_PHASE
-            frozen_exact &= torch.equal(value[keep], parent_state[name][keep])
-        else:
-            frozen_exact &= torch.equal(value, parent_state[name])
+    frozen_exact = frozen_update_scope_exact(state, parent_state)
     training_valid &= frozen_exact
     report = {
         "schema": SCHEMA, "tag": TAG, "completed": True,
